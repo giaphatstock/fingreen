@@ -93,42 +93,76 @@ export function saveOpenRouterKey(key) {
   }
 }
 
-// Chuẩn hóa định dạng trích dẫn nguồn dữ liệu theo phong cách FinGreen AI
+// Chuẩn hóa định dạng trích dẫn nguồn dữ liệu theo phong cách FinGreen AI & loại bỏ link rác giữa văn bản
 function formatFinGreenSources(text) {
   if (!text) return ''
 
-  // Regex tìm khối nguồn tham khảo dạng:
-  // Nguồn tham khảo: [Vietcap](...), [XTB](...)
-  // hoặc Nguồn: ...
-  const sourceBlockRegex = /(?:[\r\n]+---)?[\s\r\n]*(?:\*{0,2}(?:Nguồn(?:\s+tin|\s+tham\s+khảo|\s+báo|\s+dữ\s+liệu)?|Sources?):\*{0,2})\s*([\s\S]*?)(?=(?:[\r\n]+---)|(?:[\r\n]+>)|$)/i
+  // 1. Thu thập tất cả các liên kết markdown [domain/text](http...) xuất hiện trong bài
+  const markdownLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g
+  const allFoundSources = []
+  let match
 
-  const match = text.match(sourceBlockRegex)
-  if (!match) return text
+  while ((match = markdownLinkRegex.exec(text)) !== null) {
+    const linkText = match[1].trim()
+    const url = match[2].trim()
 
-  const rawSources = match[1].trim()
-  if (!rawSources) return text
-
-  // Trích xuất các tên trang/nguồn
-  const links = [...rawSources.matchAll(/\[([^\]]+)\](?:\([^)]+\))?/g)]
-  let sourceNames = []
-  if (links.length > 0) {
-    sourceNames = links.map(m => m[1].replace(/https?:\/\/[^\s]+/g, '').trim()).filter(Boolean)
+    // Lấy domain hoặc tên nguồn gọn gàng
+    let sourceName = linkText
+    if (/https?:\/\//i.test(sourceName) || sourceName.includes('/')) {
+      try {
+        sourceName = new URL(url).hostname.replace(/^www\./, '')
+      } catch (e) {
+        sourceName = linkText.replace(/https?:\/\//i, '').split('/')[0]
+      }
+    }
+    // Lược bỏ www. nếu có
+    sourceName = sourceName.replace(/^www\./i, '')
+    if (sourceName && sourceName.length > 1 && !allFoundSources.includes(sourceName)) {
+      allFoundSources.push(sourceName)
+    }
   }
 
-  if (sourceNames.length === 0) {
-    sourceNames = rawSources
+  // 2. Tìm khối nguồn tham khảo cũ ở cuối nếu có (để lấy thêm tên nguồn nếu mô hình tự viết dạng text)
+  const sourceBlockRegex = /(?:[\r\n]+---)?[\s\r\n]*(?:\*{0,2}(?:📊\s*)?(?:Nguồn(?:\s+tin|\s+tham\s+khảo|\s+báo|\s+dữ\s+liệu)?|Sources?):\*{0,2})\s*([\s\S]*?)(?=(?:[\r\n]+---)|(?:[\r\n]+>)|$)/i
+  const existingSourceBlock = text.match(sourceBlockRegex)
+  if (existingSourceBlock && existingSourceBlock[1]) {
+    const rawSources = existingSourceBlock[1].trim()
+    const extracted = rawSources
+      .replace(/\[([^\]]+)\](?:\([^\)]+\))?/g, '$1')
       .split(/[,;\n•\/\-]+/)
-      .map(s => s.replace(/\[|\]|\*|\(|\)/g, '').trim())
-      .filter(s => s.length > 1 && !s.startsWith('http'))
+      .map(s => s.replace(/[\*\_\[\]\(\)]/g, '').replace(/https?:\/\/[^\s]+/g, '').replace(/^www\./i, '').trim())
+      .filter(s => s.length > 1 && !s.includes('http') && !s.toLowerCase().includes('fingreen'))
+
+    extracted.forEach(name => {
+      if (!allFoundSources.includes(name)) {
+        allFoundSources.push(name)
+      }
+    })
   }
 
-  if (sourceNames.length === 0) return text
+  // 3. XÓA BỎ HOÀN TOÀN khối trích dẫn nguồn cũ (nếu có) để tránh lặp
+  let cleaned = text.replace(sourceBlockRegex, '')
 
-  const uniqueNames = Array.from(new Set(sourceNames)).join(', ')
-  const formattedSource = `📊 **Nguồn dữ liệu:** Được tổng hợp và phân tích bởi **FinGreen AI** (tham chiếu dữ liệu từ ${uniqueNames}).`
+  // 4. LOẠI BỎ TOÀN BỘ CÁC INLINE LINK [domain](url) TRONG THÂN BÀI VIẾT để chữ sạch đẹp, không bị rối mắt
+  // Thay thế "... [f247.com](http...) ..." thành "..."
+  cleaned = cleaned.replace(/\s*\[([^\]]+)\]\(https?:\/\/[^\)]+\)/g, '')
 
-  // Thay thế khối cũ bằng định dạng chuẩn
-  return text.replace(sourceBlockRegex, `\n\n${formattedSource}`)
+  // 5. XÓA CÁC BIỂU TƯỢNG 📊 ĐỨNG CÔ ĐỘC TRÊN DÒNG RIÊNG (do mô hình tạo ngắt quãng)
+  cleaned = cleaned.replace(/[\r\n]+\s*📊\s*[\r\n]+/g, '\n\n')
+
+  // 6. Nếu có nguồn tìm kiếm được, tạo dòng Nguồn dữ liệu FinGreen AI chuẩn duy nhất ở cuối bài
+  if (allFoundSources.length > 0) {
+    const cleanList = allFoundSources
+      .filter(s => !/fingreen/i.test(s))
+      .slice(0, 6) // Giữ tối đa 6 nguồn chính
+      .join(', ')
+
+    if (cleanList) {
+      cleaned = cleaned.trim() + `\n\n📊 **Nguồn dữ liệu:** Được tổng hợp và phân tích bởi **FinGreen AI** (tham chiếu dữ liệu từ ${cleanList}).`
+    }
+  }
+
+  return cleaned
 }
 
 // Hàm làm sạch output của AI & chuẩn hóa thuật ngữ pháp lý an toàn (Chặn lặp disclaimer 2 lần)
@@ -217,7 +251,9 @@ Tuyệt đối không nhầm sang chỉ trả lời thị giá khớp lệnh!`
 NGƯỜI DÙNG ĐANG HỎI CÂU HỎI THÔNG TIN / TIN TỨC / TẠI SAO / LỊCH SỬ / GIAO DỊCH CỔ PHẦN:
 - TỰ ĐỘNG TRA CỨU TIN TỨC THỜI GIAN THỰC & BÁO CHÍ (CafeF, Vietstock, VnEconomy, Tin Nhanh Chứng Khoán, Tuổi Trẻ...).
 - Trả lời rõ ràng, chính xác, cập nhật nhất về nguyên nhân, sự kiện hoặc danh tính được hỏi (Ví dụ: tại sao giá vonfram tăng, ai bán cổ phần, ai sáng lập, chiến lược đầu tư...).
-- TRÍCH DẪN NGUỒN CHUẨN MỰC: Ở cuối câu trả lời, hãy trình bày nguồn tham chiếu theo mẫu:
+- QUY ĐỊNH BẮT BUỘC VỀ TRÌNH BÀY NGUỒN:
+  + TUYỆT ĐỐI KHÔNG chèn link markdown, URL hoặc tên nguồn vào giữa các câu hoặc cuối mỗi đoạn văn trong thân bài (ví dụ: không viết [f247.com](...), không viết [vietstock](...)). Thân bài phải hoàn toàn là văn bản phân tích liền mạch, đẹp mắt.
+  + CHỈ ĐẶT DUY NHẤT 1 DÒNG NGUỒN Ở CUỐI BÀI theo mẫu:
 📊 **Nguồn dữ liệu:** Được tổng hợp và phân tích bởi **FinGreen AI** (tham chiếu dữ liệu từ [Tên nguồn 1], [Tên nguồn 2]...).
 - TUYỆT ĐỐI KHÔNG xuất bài phân tích kỹ thuật hay biểu mẫu cổ phiếu rập khuôn!`
   } else if (intent.isFactual) {
