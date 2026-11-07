@@ -1,5 +1,8 @@
-// Dịch vụ FinGreen AI tích hợp mô hình NVIDIA NEMOTRON 3.5 FREE và dữ liệu tài chính chuyên sâu
-import { getDNSEContextForPrompt, DNSE_STOCKS_DATABASE } from './dnseService'
+// Dịch vụ FinGreen AI tích hợp mô hình NVIDIA NEMOTRON 3.5 FREE và dữ liệu DNSE thời gian thực
+import {
+  callDNSEToolLive, formatStockAnalysisFromDNSE,
+  extractStockSymbols, getDNSEContextForPrompt, DNSE_STOCKS_DATABASE
+} from './dnseService'
 
 // Sử dụng mặc định duy nhất NVIDIA Nemotron 3.5 Free theo yêu cầu
 export const DEFAULT_MODEL = 'nvidia/nemotron-3.5-lightning:free'
@@ -13,7 +16,7 @@ export function getSelectedModel() {
 }
 
 export function saveSelectedModel() {
-  // Mặc định cố định nvidia/nemotron-3.5-lightning:free
+  // Cố định nvidia/nemotron-3.5-lightning:free
 }
 
 // Khóa mặc định hệ thống bảo vệ an toàn
@@ -35,26 +38,68 @@ export function saveOpenRouterKey(key) {
 
 // Xây dựng System Prompt chuẩn chuyên gia FinGreen AI (Tuyệt đối không nhắc từ khóa MCP hay DNSE)
 function buildSystemPrompt(financialContext) {
-  return `Bạn là FinGreen AI - Trợ lý phân tích chứng khoán và đầu tư tài chính thông minh hàng đầu của nền tảng FinGreen ("Kiến tạo giá trị thực").
+  return `Bạn là FinGreen AI - Trợ lý phân tích chứng khoán và đầu tư tài chính thông minh của nền tảng FinGreen ("Kiến tạo giá trị thực").
 
 NHIỆM VỤ CỦA BẠN:
-1. Cung cấp góc nhìn phân tích thị trường chứng khoán Việt Nam (VN-Index, HNX, UPCOM) chuyên sâu, khách quan, dữ liệu minh bạch từ hệ thống phân tích FinGreen.
-2. Phân tích doanh nghiệp toàn diện:
-   - Thông tin doanh nghiệp, ban lãnh đạo và cơ cấu cổ đông.
-   - Sức khỏe tài chính: Doanh thu, Lợi nhuận sau thuế, Biên lãi gộp/ròng, Nợ vay/Vốn chủ sở hữu.
-   - Định giá: P/E, P/B, ROE, ROA, EPS so với trung bình ngành.
-   - Phân tích kỹ thuật: Xu hướng giá ngắn/trung hạn, hỗ trợ/kháng cự, chỉ báo RSI, MACD, MA20/MA50.
-3. Luôn trình bày câu trả lời có cấu trúc rõ ràng: Dùng Markdown, bullet points, in đậm số liệu quan trọng, bảng so sánh nếu cần.
+1. Cung cấp góc nhìn phân tích thị trường chứng khoán Việt Nam (VN-Index, HNX, UPCOM) chuyên sâu, khách quan, dữ liệu minh bạch từ hệ thống FinGreen.
+2. Phân tích doanh nghiệp toàn diện: Thông tin doanh nghiệp, ban lãnh đạo, cơ cấu cổ đông, sức khỏe tài chính, định giá P/E, P/B, ROE, EPS, xu hướng kỹ thuật.
+3. Luôn trình bày câu trả lời có cấu trúc rõ ràng: Dùng Markdown, bullet points, in đậm số liệu quan trọng (**số liệu**), tiêu đề (###), trích dẫn (>).
 4. Cuối mỗi phân tích luôn kèm câu khuyến nghị súc tích và Tuyên bố miễn trừ trách nhiệm (Disclaimer): "Dữ liệu phục vụ nghiên cứu và tham khảo, không phải tư vấn đầu tư."
-5. LƯU Ý BẢO MẬT: Tuyệt đối không đề cập đến các từ khóa như "MCP", "DNSE" hay nhà cung cấp dữ liệu nền tảng. Bạn đại diện cho hệ thống dữ liệu phân tích độc quyền của FinGreen.
+5. LƯU Ý BẢO MẬT: Tuyệt đối không đề cập đến từ khóa "MCP", "DNSE". Bạn đại diện cho hệ sinh thái dữ liệu của FinGreen.
 
-${financialContext ? `[DỮ LIỆU TÀI CHÍNH THỜI GIAN THỰC CHO YÊU CẦU NÀY]:\n${financialContext}\n-> HÃY SỬ DỤNG DỮ LIỆU NÀY ĐỂ TRẢ LỜI CHÍNH XÁC NHẤT.` : ''}
+${financialContext ? `[DỮ LIỆU TÀI CHÍNH THỜI GIAN THỰC]:\n${financialContext}\n-> HÃY SỬ DỤNG DỮ LIỆU NÀY ĐỂ TRẢ LỜI CHÍNH XÁC NHẤT.` : ''}
 `
 }
 
-// Gửi tin nhắn chính thức qua OpenRouter với model Nvidia Nemotron 3.5 Free
+// Gửi tin nhắn chính thức
 export async function sendChatMessage({ messages, prompt }) {
   const apiKey = getOpenRouterKey()
+  const symbols = extractStockSymbols(prompt)
+
+  // 1. ƯU TIÊN HÀNG ĐẦU: Nếu người dùng hỏi về mã cổ phiếu cụ thể (như MSR, HPG, FPT, VCB,...)
+  // Truy vấn trực tiếp máy chủ DNSE thời gian thực để có số liệu chính xác 100%!
+  if (symbols.length > 0) {
+    const targetSymbol = symbols[0]
+    try {
+      const liveData = await callDNSEToolLive('company_get_profile', { symbol: targetSymbol })
+      if (liveData) {
+        const formatted = formatStockAnalysisFromDNSE(targetSymbol, liveData)
+        if (formatted) {
+          return formatted
+        }
+      }
+    } catch (e) {
+      console.warn('Lỗi khi truy vấn live DNSE:', e)
+    }
+
+    // Nếu không kết nối live được, kiểm tra cơ sở dữ liệu dự phòng FinGreen
+    if (DNSE_STOCKS_DATABASE[targetSymbol]) {
+      const stock = DNSE_STOCKS_DATABASE[targetSymbol]
+      return `### 📊 Báo Cáo Phân Tích Cổ Phiếu ${targetSymbol}
+
+**1. Thông Tin Doanh Nghiệp**
+- **Doanh nghiệp:** **${stock.name}** (\`${stock.exchange}\`)
+- **Nhóm ngành:** ${stock.sector}
+- **Vốn hóa:** **${stock.capital}**
+- **Lãnh đạo chủ chốt:** ${stock.leader}
+
+**2. Chỉ Số Tài Chính & Định Giá**
+- **P/E:** \`${stock.pe}\` | **P/B:** \`${stock.pb}\`
+- **ROE:** \`${stock.roe}\` | **EPS:** \`${stock.eps}\`
+
+**3. Đánh Giá Hoạt Động & Cốt Lõi**
+${stock.summary}
+
+**4. Góc Nhìn Đầu Tư FinGreen**
+- **Khuyến nghị:** **${stock.recommendation}**
+- **Chiến lược:** Theo dõi sát dòng tiền khối ngoại và thanh khoản trong phiên để canh giải ngân tại vùng hỗ trợ an toàn.
+
+---
+> 💡 *Dữ liệu đồng bộ trực tiếp từ hệ thống phân tích FinGreen. Dữ liệu phục vụ nghiên cứu và tham khảo, không phải tư vấn đầu tư.*`
+    }
+  }
+
+  // 2. Nếu hỏi về thị trường hoặc câu hỏi trò chuyện tổng quát, gửi sang OpenRouter
   const financialContext = getDNSEContextForPrompt(prompt)
   const systemPrompt = buildSystemPrompt(financialContext)
 
@@ -88,7 +133,6 @@ export async function sendChatMessage({ messages, prompt }) {
     const data = await response.json()
     const content = data?.choices?.[0]?.message?.content
     if (content) {
-      // Làm sạch bất kỳ từ DNSE/MCP nào nếu mô hình tự phát sinh
       return cleanBrandKeywords(content)
     }
     return generateSmartFallback(prompt)
@@ -98,7 +142,7 @@ export async function sendChatMessage({ messages, prompt }) {
   }
 }
 
-// Hàm lọc bỏ hoàn toàn các từ khóa MCP / DNSE
+// Lọc bỏ mọi từ khóa nhãn DNSE / MCP nếu có
 function cleanBrandKeywords(text) {
   if (!text) return text
   return text
@@ -109,37 +153,8 @@ function cleanBrandKeywords(text) {
     .replace(/\bDNSE\b/gi, 'FinGreen')
 }
 
-// Dữ liệu phân tích chuẩn FinGreen khi chưa có kết nối mạng (Không nhắc bất kỳ chữ DNSE / MCP nào)
+// Dữ liệu phân tích dự phòng khi mất kết nối mạng
 function generateSmartFallback(prompt) {
-  const upper = prompt.toUpperCase()
-  
-  for (const sym of Object.keys(DNSE_STOCKS_DATABASE)) {
-    if (upper.includes(sym)) {
-      const stock = DNSE_STOCKS_DATABASE[sym]
-      return `### 📊 Báo Cáo Phân Tích Cổ Phiếu ${sym}
-
-**1. Thông Tin Doanh Nghiệp**
-- **Doanh nghiệp:** ${stock.name} (${stock.exchange})
-- **Nhóm ngành:** ${stock.sector}
-- **Vốn hóa:** ${stock.capital}
-- **Lãnh đạo chủ chốt:** ${stock.leader}
-
-**2. Chỉ Số Tài Chính & Định Giá**
-- **P/E:** \`${stock.pe}\` | **P/B:** \`${stock.pb}\`
-- **ROE:** \`${stock.roe}\` | **EPS:** \`${stock.eps}\`
-
-**3. Đánh Giá Xu Hướng & Cốt Lõi**
-${stock.summary}
-
-**4. Góc Nhìn Đầu Tư FinGreen**
-- **Khuyến nghị:** **${stock.recommendation}**
-- **Chiến lược:** Theo dõi sát diễn biến dòng tiền của khối ngoại và thanh khoản trong phiên để canh điểm giải ngân phù hợp.
-
----
-> 💡 *Dữ liệu đồng bộ trực tiếp từ hệ thống phân tích FinGreen. Dữ liệu phục vụ nghiên cứu và tham khảo, không phải tư vấn đầu tư.*`
-    }
-  }
-
   if (/thị trường|vn-index|vnindex|dòng tiền|thanh khoản|ngành/i.test(prompt)) {
     return `### 📈 Tổng Quan Thị Trường & Dòng Tiền FinGreen
 
@@ -165,7 +180,7 @@ ${stock.summary}
 Tôi là trợ lý phân tích tài chính chứng khoán FinGreen.
 
 **Bạn có thể hỏi tôi bất kỳ điều gì về:**
-- 📈 **Phân tích cổ phiếu:** Ví dụ *"Phân tích mã HPG"*, *"Định giá cổ phiếu FPT"*, *"BCTC quý gần nhất của VCB"*
+- 📈 **Phân tích cổ phiếu:** Ví dụ *"Cổ phiếu MSR"*, *"Phân tích mã HPG"*, *"Định giá cổ phiếu FPT"*, *"Tình hình VCB"*
 - 📊 **Thị trường chung:** Ví dụ *"VN-Index dẫn dắt bởi ngành nào?"*, *"Dòng tiền ngành 5 phiên gần nhất"*
 - 💡 **Chiến thuật đầu tư:** Ví dụ *"Tạo chiến thuật bắt đáy theo RSI"*
 

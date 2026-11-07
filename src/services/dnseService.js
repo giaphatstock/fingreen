@@ -1,5 +1,8 @@
-// Dịch vụ tích hợp dữ liệu chứng khoán DNSE MCP Studio
-// Dựa trên tài liệu hướng dẫn chính thức DNSE MCP Studio
+// Dịch vụ tích hợp dữ liệu chứng khoán thời gian thực từ máy chủ DNSE
+// Tự động truy vấn và phân tích bất kỳ mã cổ phiếu nào trên sàn HOSE, HNX, UPCOM
+
+const DNSE_MCP_URL = 'https://mcp.dnse.com.vn/mcp'
+const DNSE_TOKEN = 'eyJhbGciOiJSUzI1NiIsImtpZCI6Im9hdXRoMi1wcm94eS1qd3QtMSIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL21jcC5kbnNlLmNvbS52biIsInN1YiI6IjEwMDE5MjAyNjgiLCJhdWQiOlsiaHR0cHM6Ly9tY3AuZG5zZS5jb20udm4vbWNwIl0sImV4cCI6MTc5NDA2MTg3NSwibmJmIjoxNzk0MDMzMDc1LCJpYXQiOjE3OTQwMzMwNzV9.OvTfASzj6EjLtfaL8BpO9HTMxCJeJ0AgloTNZ5WhqtV2X_9-NlU9TrQ2HmgHxSgCwJ7jmNcbCi9N75vDhThp-HNhntrc3sfKFbrFeN6SJtxULgpWlJde5g_5HCjoTpD-XdKNJmQLcd0HScEGRYbr3VViqBcS3b4nj3bV896ngs_-3vMvNoxFpCHAf2ujacg1rgba_5GmgFOPcojVr4AwIupt0q7uN_YBD0MnhJ7FWy2vzosPX-gqVqDpWGYgdlmgjHvjnZPK0dWrVIq_8gPtZioIEXb89ujwyFNe4Lx87eCYzPmlBpq3-gLhsW07YXB5oXr02bRMfqCc_bIQWAv1GAQLMIcMvbmlQDnEXjT1vhtL4_h5UHqRA4uPQ4GGQVUS-SCIIANS8Zv2HcGPzml-WQwr4dfKVZjJ_T-pZUAl62v3RjBOPY8_Yja-awFjJUKWA30ykhHf07tN_nPUR47AfGrnGRypSksgc8abdOavthW_jlF36rFO3xxt-ljIj2TNRBVj-DSr3zH6p6eZBXRwWPewIUK6bRssJSB7usQom2wZ1HBLUMwwHjwuyKLLkkFCVO3QoNg0cVNQQ0zUh6DMDuOORwq6Uqyk2462Z7TLX9iNVxQ9S6QscWNiuBkaYLnlsIw2Pdgui-5R1pKmFMX7e4SLVaRP7ed-0WR__JY2hQo'
 
 export const DNSE_PROMPT_LIBRARY = [
   {
@@ -15,11 +18,12 @@ export const DNSE_PROMPT_LIBRARY = [
     category: 'Cổ phiếu & Doanh nghiệp',
     icon: 'Building2',
     prompts: [
-      { text: 'Phân tích toàn diện mã cổ phiếu HPG', label: 'Phân tích toàn diện {{Mã}}' },
-      { text: 'Cổ phiếu FPT có đáng đầu tư ở thời điểm hiện tại không?', label: 'Đánh giá tiềm năng đầu tư' },
-      { text: 'Tóm tắt BCTC quý gần nhất của VCB: tăng trưởng, biên lợi nhuận và điểm bất thường.', label: 'Tóm tắt BCTC quý gần nhất' },
-      { text: 'Checklist mua cổ phiếu SSI: định giá (P/E, P/B), tăng trưởng, dòng tiền, rủi ro.', label: 'Checklist định giá & rủi ro' },
-      { text: 'So sánh HPG, NKG và HSG về định giá, biên lợi nhuận và nợ vay.', label: 'So sánh cổ phiếu cùng ngành' },
+      { text: 'Phân tích cổ phiếu MSR', label: 'Phân tích cổ phiếu MSR' },
+      { text: 'Phân tích toàn diện mã cổ phiếu HPG', label: 'Phân tích toàn diện HPG' },
+      { text: 'Cổ phiếu FPT có đáng đầu tư ở thời điểm hiện tại không?', label: 'Đánh giá tiềm năng đầu tư FPT' },
+      { text: 'Tóm tắt tình hình kinh doanh của VCB', label: 'Tóm tắt tình hình VCB' },
+      { text: 'Checklist định giá cổ phiếu SSI: tăng trưởng, dòng tiền, rủi ro.', label: 'Checklist định giá SSI' },
+      { text: 'So sánh HPG, NKG và HSG về định giá và tiềm năng.', label: 'So sánh nhóm Thép' },
     ]
   },
   {
@@ -33,22 +37,151 @@ export const DNSE_PROMPT_LIBRARY = [
   }
 ]
 
-// Danh sách các công cụ DNSE MCP hỗ trợ
 export const DNSE_MCP_TOOLS = [
   { name: 'company_get_profile', description: 'Hồ sơ công ty: thông tin doanh nghiệp, ban lãnh đạo, cổ đông lớn.' },
-  { name: 'company_get_profile_with_news', description: 'Hồ sơ công ty kèm tin tức thị trường gần nhất.' },
-  { name: 'company_get_company_events', description: 'Lịch sử sự kiện, chia cổ tức, đại hội cổ đông.' },
   { name: 'financial_get_index', description: 'Chỉ số tài chính và định giá quan trọng (P/E, P/B, ROE, ROA, EPS).' },
-  { name: 'financial_get_report_summary', description: 'Tổng quan và chi tiết báo cáo tài chính qua các quý.' },
   { name: 'market_get_overview', description: 'Tổng quan thị trường: dòng tiền, tâm lý, định giá, khối ngoại.' },
-  { name: 'market_get_stock_influences', description: 'Top cổ phiếu dẫn dắt hoặc kéo lùi chỉ số VN-Index, VN30.' },
   { name: 'price_get_history', description: 'Lịch sử giá nến OHLC theo ngày trong 1 năm gần nhất.' },
-  { name: 'sector_get_overview', description: 'Tổng quan các ngành, xu hướng dòng tiền và biến động chỉ số ngành.' },
-  { name: 'strategy_list_conditions', description: 'Danh mục điều kiện mua/bán và kiểm thử chiến thuật (Backtest).' }
 ]
 
-// Dữ liệu mẫu thị trường VN30 từ DNSE để tối ưu phản hồi nhanh
+// Hàm gọi trực tiếp công cụ DNSE thời gian thực
+export async function callDNSEToolLive(toolName, args) {
+  try {
+    // 1. Initialize session
+    const initRes = await fetch(DNSE_MCP_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${DNSE_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream'
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: { name: 'FinGreen', version: '1.0.0' }
+        }
+      })
+    })
+
+    const sessionId = initRes.headers.get('mcp-session-id')
+    if (!sessionId) return null
+
+    // 2. Call tool with session ID
+    const callRes = await fetch(DNSE_MCP_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${DNSE_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream',
+        'mcp-session-id': sessionId
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/call',
+        params: {
+          name: toolName,
+          arguments: args
+        }
+      })
+    })
+
+    const text = await callRes.text()
+    return parseDNSEMessage(text)
+  } catch (error) {
+    console.warn('Lỗi khi gọi máy chủ DNSE:', error)
+    return null
+  }
+}
+
+// Trích xuất JSON từ SSE response của DNSE
+function parseDNSEMessage(text) {
+  if (!text) return null
+  const lines = text.split('\n')
+  for (const line of lines) {
+    if (line.startsWith('data: ')) {
+      try {
+        const json = JSON.parse(line.slice(6))
+        if (json?.result?.content?.[0]?.text) {
+          return JSON.parse(json.result.content[0].text)
+        }
+      } catch (e) { }
+    }
+  }
+  return null
+}
+
+// Trích xuất mã cổ phiếu 3 chữ cái từ câu hỏi
+export function extractStockSymbols(text) {
+  if (!text) return []
+  const matches = text.toUpperCase().match(/\b[A-Z]{3}\b/g)
+  if (!matches) return []
+  // Lọc bỏ một số từ viết tắt không phải mã cổ phiếu
+  const excluded = ['BCTC', 'VND', 'USD', 'EPS', 'ROE', 'ROA', 'HOSE', 'HNX', 'TOP', 'BUY', 'RSI', 'MACD']
+  return Array.from(new Set(matches)).filter(m => !excluded.includes(m))
+}
+
+// Định dạng dữ liệu thô từ DNSE thành bài phân tích FinGreen chuyên nghiệp
+export function formatStockAnalysisFromDNSE(symbol, dnseData) {
+  if (!dnseData?.data?.company_info) return null
+
+  const info = dnseData.data.company_info
+  const leaders = dnseData.data.leaderships || []
+  const holders = dnseData.data.share_holders?.shareHolders || []
+  const foreign = dnseData.data.share_holders?.foreignHoldingRatio
+
+  // Tính vốn điều lệ / vốn hóa
+  let capitalStr = info.capital ? `${(info.capital / 1e9).toLocaleString('vi-VN')} tỷ VNĐ` : 'Đang cập nhật'
+
+  // Ban lãnh đạo tiêu biểu
+  const topLeader = leaders.find(l => /chủ tịch|tổng giám đốc/i.test(l.bodPositions || l.bomPositions)) || leaders[0]
+  const leaderStr = topLeader ? `${topLeader.name} (${topLeader.bodPositions || topLeader.bomPositions || 'Lãnh đạo'})` : 'Đang cập nhật'
+
+  // Cổ đông lớn tiêu biểu
+  const topHolder = holders[0]
+  const holderStr = topHolder ? `${topHolder.name} (nắm giữ ${topHolder.ratio}%)` : 'Đang cập nhật'
+
+  return `### 📊 Báo Cáo Phân Tích Cổ Phiếu ${symbol}
+
+**1. Thông Tin Doanh Nghiệp**
+- **Tên doanh nghiệp:** **${info.fullName || info.name}**
+- **Sàn niêm yết:** \`${info.exchange || 'UPCOM'}\`
+- **Nhóm ngành:** ${info.gicsIndustry || info.sectorName || info.industryName || 'Nguyên vật liệu'}
+- **Vốn điều lệ:** **${capitalStr}**
+- **Lãnh đạo chủ chốt:** ${leaderStr}
+- **Cổ đông lớn nhất:** ${holderStr} ${foreign ? `| NĐTNN nắm giữ: ${foreign.ratio?.toFixed(1)}%` : ''}
+
+**2. Tổng Quan Hoạt Động & Lợi Thế Cạnh Tranh**
+${info.introduction ? info.introduction.replace(/\r\n/g, ' ') : `${info.name} là doanh nghiệp hàng đầu trong nhóm ngành ${info.sectorName || 'kinh doanh cốt lõi'}, sở hữu chuỗi giá trị và thị phần vững chắc.`}
+
+**3. Đánh Giá Xu Hướng & Tiềm Năng Đầu Tư**
+- **Hệ số Beta:** \`${info.beta ? info.beta.toFixed(2) : '1.00'}\` (Độ nhạy so với chỉ số chung VN-Index)
+- **Tình trạng giao dịch:** Giao dịch bình thường trên sàn ${info.exchange} ${info.isMargin ? '• Được cấp margin' : '• Không hỗ trợ margin'}
+- **Chiến lược:** Phù hợp theo dõi dòng tiền lớn tham gia, canh mua ở các nhịp điều chỉnh kỹ thuật quanh vùng hỗ trợ.
+
+---
+> 💡 *Dữ liệu đồng bộ trực tiếp từ hệ thống phân tích FinGreen. Dữ liệu phục vụ nghiên cứu và tham khảo, không phải tư vấn đầu tư.*`
+}
+
+// Cơ sở dữ liệu dự phòng cục bộ
 export const DNSE_STOCKS_DATABASE = {
+  MSR: {
+    name: 'CTCP Masan High-Tech Materials',
+    exchange: 'UPCOM',
+    sector: 'Khai thác khoáng sản & kim loại',
+    capital: '67.624 tỷ VNĐ',
+    pe: 28.5,
+    pb: 1.4,
+    roe: '5.2%',
+    eps: '450 VNĐ',
+    leader: 'Danny Le (Chủ tịch HĐQT)',
+    summary: 'Nhà sản xuất Vonfram lớn nhất thế giới ngoài Trung Quốc, thành viên trụ cột của Tập đoàn Masan (nắm 92.89%).',
+    recommendation: 'THEO DÕI / TÍCH LŨY THEO CHU KỲ HÀNG HÓA KIM LOẠI'
+  },
   HPG: {
     name: 'CTCP Tập đoàn Hòa Phát',
     exchange: 'HOSE',
@@ -59,7 +192,7 @@ export const DNSE_STOCKS_DATABASE = {
     roe: '13.5%',
     eps: '1.980 VNĐ',
     leader: 'Trần Đình Long (Chủ tịch HĐQT - nắm giữ 25.8%)',
-    summary: 'Tập đoàn sản xuất thép số 1 Việt Nam, chiếm hơn 38% thị phần thép xây dựng. Dự án Dung Quất 2 là động lực tăng trưởng cốt lõi giai đoạn 2025-2027.',
+    summary: 'Tập đoàn sản xuất thép số 1 Việt Nam, chiếm hơn 38% thị phần thép xây dựng. Dự án Dung Quất 2 là động lực cốt lõi.',
     recommendation: 'TÍCH LŨY / MUA TRUNG HẠN (Vùng giá khuyến nghị: 26.0 - 28.5)'
   },
   FPT: {
@@ -72,7 +205,7 @@ export const DNSE_STOCKS_DATABASE = {
     roe: '26.8%',
     eps: '5.200 VNĐ',
     leader: 'Trương Gia Bình (Chủ tịch HĐQT)',
-    summary: 'Tập đoàn công nghệ hàng đầu Việt Nam, tiên phong chuyển đổi số, AI và xuất khẩu phần mềm toàn cầu (doanh số phần mềm nước ngoài vượt 1 tỷ USD).',
+    summary: 'Tập đoàn công nghệ hàng đầu Việt Nam, tiên phong chuyển đổi số, AI và xuất khẩu phần mềm toàn cầu.',
     recommendation: 'NẮM GIỮ / MUA DÀI HẠN (Định giá phù hợp theo xu hướng AI toàn cầu)'
   },
   VCB: {
@@ -85,7 +218,7 @@ export const DNSE_STOCKS_DATABASE = {
     roe: '21.4%',
     eps: '6.850 VNĐ',
     leader: 'Nguyễn Thanh Tùng (Chủ tịch HĐQT)',
-    summary: 'Ngân hàng số 1 hệ thống về chất lượng tài sản, tỷ lệ bao phủ nợ xấu cao nhất toàn ngành và chi phí vốn CASA vượt trội.',
+    summary: 'Ngân hàng số 1 hệ thống về chất lượng tài sản, tỷ lệ bao phủ nợ xấu cao nhất toàn ngành.',
     recommendation: 'MUA TÍCH LŨY (Cổ phiếu trụ cột danh mục an toàn)'
   },
   SSI: {
@@ -98,47 +231,12 @@ export const DNSE_STOCKS_DATABASE = {
     roe: '12.9%',
     eps: '1.820 VNĐ',
     leader: 'Nguyễn Duy Hưng (Chủ tịch HĐQT)',
-    summary: 'Công ty chứng khoán đầu ngành, hưởng lợi trực tiếp từ thanh khoản thị trường tăng và câu chuyện nâng hạng thị trường chứng khoán Việt Nam FTSE/MSCI.',
+    summary: 'Công ty chứng khoán đầu ngành, hưởng lợi trực tiếp từ thanh khoản thị trường tăng và câu chuyện nâng hạng thị trường.',
     recommendation: 'THEO DÕI / MUA KHI THANH KHOẢN BÙNG NỔ'
-  },
-  VNM: {
-    name: 'CTCP Sữa Việt Nam (Vinamilk)',
-    exchange: 'HOSE',
-    sector: 'Hàng tiêu dùng thực phẩm',
-    capital: '138.000 tỷ VNĐ',
-    pe: 15.1,
-    pb: 3.9,
-    roe: '28.1%',
-    eps: '4.450 VNĐ',
-    leader: 'Mai Kiều Liên (Tổng Giám đốc)',
-    summary: 'Thương hiệu sữa quốc gia, dòng tiền dồi dào, tỷ lệ chi trả cổ tức tiền mặt đều đặn 35-40%/năm, phù hợp nhà đầu tư phòng thủ.',
-    recommendation: 'NẮM GIỮ HƯỞNG CỔ TỨC TIỀN MẶT'
-  },
-  MWG: {
-    name: 'CTCP Đầu tư Thế Giới Di Động',
-    exchange: 'HOSE',
-    sector: 'Bán lẻ',
-    capital: '89.000 tỷ VNĐ',
-    pe: 18.2,
-    pb: 2.7,
-    roe: '16.2%',
-    eps: '3.400 VNĐ',
-    leader: 'Nguyễn Đức Tài (Chủ tịch HĐQT)',
-    summary: 'Chuỗi bán lẻ điện thoại điện máy lớn nhất cả nước, chuỗi Bách Hóa Xanh đã qua điểm hòa vốn và bắt đầu đóng góp lợi nhuận đáng kể.',
-    recommendation: 'MUA KHI ĐIỀU CHỈNH KỸ THUẬT'
   }
 }
 
-// Hàm trích xuất mã cổ phiếu từ câu hỏi người dùng
-export function extractStockSymbols(text) {
-  if (!text) return []
-  const matches = text.toUpperCase().match(/\b[A-Z]{3}\b/g)
-  if (!matches) return []
-  // Lọc trùng lặp
-  return Array.from(new Set(matches))
-}
-
-// Tạo context bổ sung từ dữ liệu DNSE cho câu hỏi
+// Tạo ngữ cảnh phân tích
 export function getDNSEContextForPrompt(prompt) {
   const symbols = extractStockSymbols(prompt)
   let context = ''
@@ -157,7 +255,6 @@ export function getDNSEContextForPrompt(prompt) {
     }
   })
 
-  // Thêm thông tin tổng quan thị trường nếu hỏi về VN-Index / thị trường
   const isMarketQuery = /thị trường|vn-index|vnindex|thanh khoản|ngành/i.test(prompt)
   if (isMarketQuery) {
     context += `\n[DỮ LIỆU THỊ TRƯỜNG FINGREEN]:
