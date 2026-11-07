@@ -2,27 +2,25 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import {
-  Bot, X, Send, Maximize2, Settings, Sparkles, Loader2,
-  TrendingUp, RefreshCw, Key, HelpCircle, Lock, ArrowRight
+  Bot, X, Send, Maximize2, Loader2, ArrowRight, Lock
 } from 'lucide-react'
-import {
-  sendChatMessage, getOpenRouterKey, saveOpenRouterKey,
-  getSelectedModel, saveSelectedModel, AVAILABLE_MODELS
-} from '../../services/aiService'
-import { DNSE_PROMPT_LIBRARY } from '../../services/dnseService'
+import { sendChatMessage } from '../../services/aiService'
+import MarkdownRenderer from '../common/MarkdownRenderer'
 import toast from 'react-hot-toast'
 
+const WELCOME_MESSAGE = `Xin chào! Tôi là **FinGreen AI**, trợ lý phân tích chứng khoán thông minh.
+
+Tôi có thể giúp bạn phân tích mã cổ phiếu, báo cáo tài chính, dòng tiền ngành hay kiểm thử chiến thuật đầu tư!`
+
 export default function FinGreenRobot() {
-  const { user, isAdmin } = useAuth()
+  const { user } = useAuth()
   const navigate = useNavigate()
 
   // Trạng thái mở/đóng cửa sổ chat mini
   const [isOpen, setIsOpen] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
 
   // Vị trí con robot (Draggable)
   const [position, setPosition] = useState(() => {
-    // Vị trí mặc định ở góc dưới bên phải
     return { x: window.innerWidth - 84, y: window.innerHeight - 96 }
   })
   const [isDragging, setIsDragging] = useState(false)
@@ -33,16 +31,12 @@ export default function FinGreenRobot() {
     {
       id: 'welcome',
       role: 'assistant',
-      content: 'Xin chào! Tôi là **FinGreen AI**, trợ lý phân tích chứng khoán tích hợp dữ liệu **DNSE MCP Studio** và **OpenRouter**.\n\nTôi có thể giúp bạn phân tích mã cổ phiếu, báo cáo tài chính, dòng tiền ngành hay kiểm thử chiến thuật đầu tư!',
+      content: WELCOME_MESSAGE,
       timestamp: new Date()
     }
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-
-  // Cấu hình AI
-  const [apiKey, setApiKey] = useState(getOpenRouterKey())
-  const [selectedModel, setSelectedModel] = useState(getSelectedModel())
 
   const chatEndRef = useRef(null)
 
@@ -67,7 +61,7 @@ export default function FinGreenRobot() {
 
   // Xử lý kéo chuột (Drag)
   const handleMouseDown = (e) => {
-    if (e.button !== 0) return // Chỉ nhận chuột trái
+    if (e.button !== 0) return
     setIsDragging(true)
     dragStartRef.current = {
       startX: e.clientX,
@@ -100,7 +94,6 @@ export default function FinGreenRobot() {
         dragStartRef.current.hasMoved = true
       }
 
-      // Giới hạn trong viewport
       const newX = Math.max(16, Math.min(window.innerWidth - 76, dragStartRef.current.initialX + deltaX))
       const newY = Math.max(16, Math.min(window.innerHeight - 86, dragStartRef.current.initialY + deltaY))
 
@@ -146,7 +139,6 @@ export default function FinGreenRobot() {
 
   // Click vào con robot
   const handleRobotClick = () => {
-    // Nếu vừa kéo chuột di chuyển thì không kích hoạt mở đóng
     if (dragStartRef.current.hasMoved) return
     setIsOpen(prev => !prev)
   }
@@ -169,8 +161,7 @@ export default function FinGreenRobot() {
     try {
       const reply = await sendChatMessage({
         messages,
-        prompt: text,
-        model: selectedModel
+        prompt: text
       })
 
       const botMsg = {
@@ -187,15 +178,7 @@ export default function FinGreenRobot() {
     }
   }
 
-  const handleSaveSettings = (e) => {
-    e.preventDefault()
-    saveOpenRouterKey(apiKey)
-    saveSelectedModel(selectedModel)
-    setShowSettings(false)
-    toast.success('Đã lưu cấu hình AI thành công!')
-  }
-
-  // Tính toán vị trí hiển thị cửa sổ chat (tránh tràn mép)
+  // Vị trí hiển thị cửa sổ chat
   const chatWindowStyle = {
     position: 'fixed',
     bottom: `${Math.max(16, window.innerHeight - position.y + 12)}px`,
@@ -224,39 +207,35 @@ export default function FinGreenRobot() {
         title="FinGreen AI Assistant (Kéo chuột để di chuyển - Click để chat)"
       >
         <div className="relative">
-          {/* Hiệu ứng hào quang phát sáng Pulse */}
+          {/* Hào quang phát sáng Pulse */}
           <div className="absolute -inset-1.5 bg-gradient-to-r from-primary-500 via-purple-500 to-indigo-500 rounded-full blur-md opacity-75 group-hover:opacity-100 animate-pulse transition-opacity" />
 
-          {/* Vỏ ngoài con Robot */}
+          {/* Vỏ ngoài Robot */}
           <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-[#5154F0] via-[#4338CA] to-[#1E1B4B] border-2 border-white/40 shadow-xl flex items-center justify-center overflow-hidden">
-            
             {/* Khuôn mặt Robot */}
             <div className="flex flex-col items-center justify-center">
-              {/* Đôi mắt LED AI thông minh */}
               <div className="flex items-center gap-2 mb-1">
                 <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-cyan-300 shadow-[0_0_8px_#22d3ee] animate-pulse" />
                 <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-cyan-300 shadow-[0_0_8px_#22d3ee] animate-pulse" />
               </div>
-              {/* Miệng LED âm thanh */}
               <div className="w-4 sm:w-5 h-1 bg-cyan-200/80 rounded-full shadow-[0_0_6px_#22d3ee]" />
             </div>
 
-            {/* Huy hiệu AI phát sáng */}
+            {/* Huy hiệu AI */}
             <span className="absolute bottom-1 px-1.5 py-0.2 bg-emerald-500 text-white font-extrabold text-[8px] sm:text-[9px] rounded-full shadow-sm tracking-tighter">
               AI
             </span>
           </div>
 
-          {/* Tooltip nhỏ khi hover */}
           {!isOpen && (
             <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity bg-black/85 text-white text-[11px] font-semibold py-1.5 px-3 rounded-xl whitespace-nowrap shadow-lg backdrop-blur-md border border-white/10 hidden sm:block">
-              🤖 FinGreen AI (DNSE MCP)
+              🤖 FinGreen AI (Bấm để chat)
             </div>
           )}
         </div>
       </div>
 
-      {/* 2. CỬA SỔ CHAT NHỎ (CHAT MINI WINDOW) */}
+      {/* 2. CỬA SỔ CHAT NHỎ (CHAT MINI WINDOW - HOÀN TOÀN KHÔNG CÓ NÚT SETTING) */}
       {isOpen && (
         <div
           style={chatWindowStyle}
@@ -271,35 +250,21 @@ export default function FinGreenRobot() {
               <div>
                 <h3 className="text-xs sm:text-sm font-bold flex items-center gap-1.5">
                   FinGreen AI
-                  <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-500 text-white">
-                    DNSE MCP
-                  </span>
                 </h3>
                 <p className="text-[10px] text-white/80 flex items-center gap-1 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
-                  Trực tuyến • Phân tích cổ phiếu
+                  Trực tuyến • Phân tích chứng khoán thông minh
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-1 text-white/80">
-              {/* Nút Cài đặt API (Chỉ Admin mới có quyền cấu hình) */}
-              {isAdmin && (
-                <button
-                  onClick={() => setShowSettings(!showSettings)}
-                  title="Cài đặt OpenRouter API Key & Model (Admin)"
-                  className="p-1.5 rounded-lg hover:bg-white/15 hover:text-white transition-colors text-amber-300"
-                >
-                  <Settings className="w-4 h-4" />
-                </button>
-              )}
-
               {/* Nút Toàn Màn hình */}
               <button
                 onClick={() => {
                   setIsOpen(false)
                   if (!user) {
-                    toast('Vui lòng đăng nhập để mở FinGreen AI Pro Workspace', { icon: '🔒' })
+                    toast('Vui lòng đăng nhập để mở FinGreen AI', { icon: '🔒' })
                     navigate('/dang-nhap?redirect=/ai')
                   } else {
                     navigate('/ai')
@@ -321,58 +286,7 @@ export default function FinGreenRobot() {
             </div>
           </div>
 
-          {/* Modal cài đặt nhanh OpenRouter (Chỉ Admin) */}
-          {isAdmin && showSettings && (
-            <div className="p-4 bg-[var(--bg-subtle)] border-b border-[var(--border-color)] text-xs space-y-3 animate-fade-in">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-[var(--text-main)] flex items-center gap-1">
-                  <Key className="w-3.5 h-3.5 text-primary-400" /> Cấu Hình OpenRouter & DNSE
-                </span>
-                <button onClick={() => setShowSettings(false)} className="text-[var(--text-muted)] hover:text-[var(--text-main)]">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <div>
-                <label className="block text-[11px] text-[var(--text-muted)] mb-1">OpenRouter API Key (Tùy chọn)</label>
-                <input
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="sk-or-v1-..."
-                  className="input-field py-1.5 px-3 text-xs w-full"
-                />
-                <p className="text-[10px] text-[var(--text-muted)] mt-1">
-                  Nếu để trống, hệ thống sẽ tự động dùng bộ dữ liệu DNSE MCP Studio phân tích trực tiếp.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-[11px] text-[var(--text-muted)] mb-1">Mô Hình AI (Model)</label>
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="input-field py-1.5 px-2 text-xs w-full"
-                >
-                  {AVAILABLE_MODELS.map(m => (
-                    <option key={m.id} value={m.id}>{m.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={handleSaveSettings}
-                  className="btn-primary py-1.5 px-4 text-xs font-semibold"
-                >
-                  Lưu Cấu Hình
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* KIỂM TRA ĐĂNG NHẬP: CHỈ LOGIN MỚI ĐƯỢC DÙNG HOẶC CHAT */}
+          {/* KIỂM TRA ĐĂNG NHẬP: CHỈ LOGIN MỚI ĐƯỢC DÙNG */}
           {!user ? (
             <div className="p-6 flex flex-col items-center justify-center text-center space-y-4 my-auto min-h-[300px]">
               <div className="w-14 h-14 rounded-2xl bg-primary-500/15 border border-primary-500/30 flex items-center justify-center shadow-inner">
@@ -383,7 +297,7 @@ export default function FinGreenRobot() {
                   Yêu Cầu Đăng Nhập Tài Khoản
                 </h4>
                 <p className="text-xs text-[var(--text-muted)] max-w-xs leading-relaxed">
-                  Để sử dụng Trợ lý <strong>FinGreen AI</strong> phân tích dữ liệu <strong>DNSE MCP Studio</strong>, bạn vui lòng đăng nhập tài khoản FinGreen.
+                  Để sử dụng Trợ lý <strong>FinGreen AI</strong> phân tích dữ liệu thị trường và cổ phiếu theo thời gian thực, bạn vui lòng đăng nhập tài khoản FinGreen.
                 </p>
               </div>
               <button
@@ -399,7 +313,7 @@ export default function FinGreenRobot() {
             </div>
           ) : (
             <>
-              {/* Nội dung tin nhắn chat */}
+              {/* Nội dung tin nhắn chat - DÙNG MarkdownRenderer ĐỂ IN ĐẬM VÀ ĐỊNH DẠNG CHUẨN */}
               <div className="flex-1 p-3.5 sm:p-4 overflow-y-auto space-y-3.5 min-h-[260px] max-h-[400px]">
                 {messages.map((m) => (
                   <div
@@ -412,13 +326,17 @@ export default function FinGreenRobot() {
                       </div>
                     )}
                     <div
-                      className={`rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed max-w-[85%] whitespace-pre-wrap ${
+                      className={`rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed max-w-[85%] ${
                         m.role === 'user'
-                          ? 'bg-primary-500 text-white rounded-br-none shadow-md shadow-primary-500/20'
+                          ? 'bg-primary-500 text-white rounded-br-none shadow-md shadow-primary-500/20 whitespace-pre-wrap'
                           : 'bg-[var(--bg-subtle)] text-[var(--text-main)] border border-[var(--border-color)] rounded-bl-none shadow-sm'
                       }`}
                     >
-                      {m.content}
+                      {m.role === 'assistant' ? (
+                        <MarkdownRenderer content={m.content} />
+                      ) : (
+                        m.content
+                      )}
                     </div>
                   </div>
                 ))}
@@ -428,7 +346,7 @@ export default function FinGreenRobot() {
                     <div className="w-7 h-7 rounded-xl bg-primary-500/20 text-primary-400 flex items-center justify-center text-xs border border-primary-500/30">
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     </div>
-                    <span>FinGreen AI đang phân tích dữ liệu DNSE...</span>
+                    <span>FinGreen AI đang phân tích dữ liệu...</span>
                   </div>
                 )}
                 <div ref={chatEndRef} />
@@ -467,7 +385,7 @@ export default function FinGreenRobot() {
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="Hỏi về mã cổ phiếu, DNSE BCTC, xu hướng..."
+                    placeholder="Hỏi về mã cổ phiếu, báo cáo tài chính, xu hướng..."
                     className="input-field py-2 px-3 text-xs flex-1 rounded-xl"
                     disabled={loading}
                   />

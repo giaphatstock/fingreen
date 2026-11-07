@@ -11,7 +11,7 @@ import {
 const NAV_ITEMS = [
   { path: '/', icon: Newspaper, label: 'Tin Tức & Phân Tích' },
   { path: '/hop-tac', icon: Handshake, label: 'Hợp Tác FinGreen' },
-  { path: '/ai', icon: Bot, label: 'FinGreen AI', requireAuth: true, badge: 'DNSE' },
+  { path: '/ai', icon: Bot, label: 'FinGreen AI', requireAuth: true },
 ]
 
 const PARTNER_NAV = [

@@ -146,7 +146,7 @@ export function getDNSEContextForPrompt(prompt) {
   symbols.forEach(sym => {
     if (DNSE_STOCKS_DATABASE[sym]) {
       const stock = DNSE_STOCKS_DATABASE[sym]
-      context += `\n[DỮ LIỆU DNSE MCP CHO MÃ ${sym}]:
+      context += `\n[DỮ LIỆU TÀI CHÍNH FINGREEN CHO MÃ ${sym}]:
 - Tên công ty: ${stock.name} (${stock.exchange})
 - Nhóm ngành: ${stock.sector}
 - Vốn hóa thị trường: ${stock.capital}
@@ -160,7 +160,7 @@ export function getDNSEContextForPrompt(prompt) {
   // Thêm thông tin tổng quan thị trường nếu hỏi về VN-Index / thị trường
   const isMarketQuery = /thị trường|vn-index|vnindex|thanh khoản|ngành/i.test(prompt)
   if (isMarketQuery) {
-    context += `\n[DỮ LIỆU THỊ TRƯỜNG DNSE MCP]:
+    context += `\n[DỮ LIỆU THỊ TRƯỜNG FINGREEN]:
 - Chỉ số VN-Index: Dao động quanh vùng 1.250 - 1.280 điểm.
 - Nhóm dẫn dắt: Ngân hàng (VCB, BID, TCB), Công nghệ (FPT), Thép (HPG).
 - Thanh khoản trung bình: 16.000 - 22.000 tỷ đồng/phiên.
