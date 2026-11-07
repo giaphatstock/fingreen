@@ -2,7 +2,7 @@
 import {
   callDNSEToolLive, formatStockAnalysisFromDNSE,
   extractStockSymbols, generateComprehensiveStockAnalysis,
-  getDNSEContextForPrompt
+  getDNSEContextForPrompt, STOCKS_KNOWLEDGE_BASE
 } from './dnseService'
 
 export const DEFAULT_MODEL = 'nvidia/nemotron-3.5-lightning:free'
@@ -33,63 +33,124 @@ export function saveOpenRouterKey(key) {
   }
 }
 
-// System prompt chặt chẽ, cấm tuyệt đối placeholder [X] và tiếng Trung
-function buildSystemPrompt(financialContext) {
-  return `Bạn là FinGreen AI - Trợ lý phân tích chứng khoán và đầu tư tài chính thông minh của FinGreen ("Kiến tạo giá trị thực").
+// Hàm làm sạch output của AI (loại bỏ từ khóa DNSE/MCP, chữ Hán, và placeholder lạ)
+function cleanAIOutput(text) {
+  if (!text) return ''
+  return text
+    // 1. Loại bỏ các từ khóa thương hiệu bên thứ 3
+    .replace(/DNSE MCP Studio/gi, 'Hệ thống Phân Tích FinGreen')
+    .replace(/DNSE MCP/gi, 'FinGreen AI')
+    .replace(/MCP Studio/gi, 'FinGreen Studio')
+    .replace(/\bMCP\b/gi, 'Hệ thống')
+    .replace(/\bDNSE\b/gi, 'FinGreen')
+    // 2. Loại bỏ chữ Hán / tiếng Trung lạ nếu có (thường gặp ở một số model đa ngôn ngữ)
+    .replace(/[\u4e00-\u9fa5]+/g, '')
+    // 3. Xóa các placeholder [X] hoặc tương tự
+    .replace(/\[X\]/g, 'phù hợp')
+    .replace(/\[Tên[^\]]*\]/g, 'doanh nghiệp')
+    .replace(/\[Mô tả[^\]]*\]/g, 'tiêu biểu')
+    .trim()
+}
 
-QUY TẮC BẮT BUỘC:
-1. CHỈ TRẢ LỜI BẰNG TIẾNG VIỆT 100%. Tuyệt đối không chêm chữ Hán hay từ ngữ nước ngoài lạ.
-2. TUYỆT ĐỐI KHÔNG ĐƯỢC sinh ra các placeholder trong ngoặc vuông như [X], [Mô tả], [Tên], [Số liệu]. Phải luôn dùng câu chữ phân tích thực tế hoặc định tính.
-3. TUYỆT ĐỐI KHÔNG nhắc đến các từ khóa kỹ thuật "MCP" hay "DNSE".
-4. Phân tích tài chính rõ ràng, có chiều sâu, dùng Markdown in đậm số liệu (**số liệu**), tiêu đề (###), bullet points (-).
-5. Cuối bài luôn kèm câu miễn trừ trách nhiệm: "Dữ liệu phục vụ nghiên cứu và tham khảo, không phải tư vấn đầu tư."
+// Xây dựng System Prompt với bối cảnh tài chính thực tế
+function buildSystemPrompt(stockContext, marketContext) {
+  return `Bạn là FinGreen AI - Trợ lý phân tích tài chính chứng khoán cấp cao của nền tảng FinGreen ("Kiến tạo giá trị thực").
 
-${financialContext ? `Bối cảnh thị trường hiện tại: ${financialContext}` : ''}
+NGUYÊN TẮC BẮT BUỘC:
+1. NGÔN NGỮ: 100% Tiếng Việt chuẩn mực, văn phong chuyên gia tài chính chứng khoán. Tuyệt đối không chêm chữ Hán, chữ Trung Quốc hay từ ngữ ngoại lai lạ.
+2. TRẢ LỜI ĐÚNG TRỌNG TÂM CÂU HỎI:
+   - Nếu người dùng hỏi về "BCTC" / "Báo cáo tài chính": Tập trung phân tích chuyên sâu các chỉ số tài chính (Doanh thu, Lợi nhuận sau thuế, Biên lãi gộp, Đòn bẩy nợ vay D/E, EPS, ROE) và các dự án động lực tăng trưởng.
+   - Nếu người dùng hỏi về một mã cổ phiếu (ví dụ: "cổ phiếu MSR", "STB", "HPG", "FPT"...): Trình bày bài phân tích toàn diện có cấu trúc rõ ràng:
+     ### 📊 Phân Tích Cổ Phiếu [MÃ]
+     **1. Thông Tin Doanh Nghiệp & Vị Thế Ngành**
+     **2. Sức Khỏe Tài Chính & Chỉ Số Định Giá (P/E, P/B, ROE, EPS)**
+     **3. Triển Vọng Kinh Doanh & Động Lực Tăng Trưởng Cốt Lõi**
+     **4. Góc Nhìn Đầu Tư & Khuyến Nghị FinGreen**
+   - Nếu người dùng hỏi về thị trường chung hay dòng tiền: Phân tích VN-Index, thanh khoản và nhóm ngành dẫn dắt.
+3. TUYỆT ĐỐI KHÔNG DÙNG PLACEHOLDER: Tuyệt đối không dùng các ký tự rỗng dạng [X], [Số liệu], [Tên]. Phải luôn dùng câu chữ phân tích thực tế hoặc định tính cụ thể.
+4. TUYỆT ĐỐI BẢO MẬT: Tuyệt đối không nhắc đến các từ kỹ thuật như "MCP" hay "DNSE". Mọi dữ liệu đều là từ "Hệ thống Phân Tích FinGreen".
+5. ĐỊNH DẠNG MARKDOWN: Sử dụng Markdown đẹp mắt: Tiêu đề (###), In đậm (**số liệu, từ khóa quan trọng**), Gạch đầu dòng (-), Bảng nếu so sánh chỉ số.
+6. KẾT THÚC: Cuối bài phân tích luôn có dòng miễn trừ:
+> 💡 *Dữ liệu phục vụ nghiên cứu và tham khảo từ hệ thống phân tích FinGreen, không phải tư vấn đầu tư.*
+
+${stockContext ? `---
+CƠ SỞ DỮ LIỆU THỰC TẾ XÁC THỰC DÀNH CHO CÂU HỎI NÀY:
+${stockContext}
+---` : ''}
+
+${marketContext ? `---
+BỐI CẢNH THỊ TRƯỜNG CHỨNG KHOÁN HIỆN TẠI:
+${marketContext}
+---` : ''}
 `
 }
 
-// Xử lý gửi tin nhắn phân tích
+// Xử lý gửi tin nhắn phân tích qua OpenRouter API
 export async function sendChatMessage({ messages, prompt }) {
   const apiKey = getOpenRouterKey()
   const symbols = extractStockSymbols(prompt)
 
-  // 1. NẾU CÓ MÃ CỔ PHIẾU (ví dụ: "cổ phiếu MSR", "HPG", "FPT", "VCB", "SSI",...):
-  // Trả về báo cáo phân tích thực tế chuẩn xác của FinGreen, ngăn chặn 100% lỗi template [X] rỗng
+  // 1. Thu thập dữ liệu bối cảnh cho các mã cổ phiếu được nhắc tới
+  let stockContext = ''
+  let targetSymbol = null
+
   if (symbols.length > 0) {
-    const targetSymbol = symbols[0]
-    
-    // Thử truy vấn dữ liệu thời gian thực
-    try {
-      const liveData = await callDNSEToolLive('company_get_profile', { symbol: targetSymbol })
-      if (liveData) {
-        const formatted = formatStockAnalysisFromDNSE(targetSymbol, liveData)
-        if (formatted) return formatted
+    targetSymbol = symbols[0]
+    for (const sym of symbols) {
+      // Thử gọi live data nếu có
+      let liveData = null
+      try {
+        liveData = await callDNSEToolLive('company_get_profile', { symbol: sym })
+      } catch (e) {
+        // bỏ qua lỗi live fetch
       }
-    } catch (e) {
-      // CORS hoặc mạng
+
+      if (liveData?.data?.company_info) {
+        const info = liveData.data.company_info
+        stockContext += `\nMã cổ phiếu ${sym} (Dữ liệu xác thực sàn ${info.exchange || 'HOSE/HNX/UPCOM'}):
+- Tên công ty: ${info.fullName || info.name}
+- Ngành: ${info.sectorName || info.industryName || 'Chung'}
+- Giới thiệu: ${info.introduction || ''}\n`
+      } else if (STOCKS_KNOWLEDGE_BASE[sym]) {
+        const s = STOCKS_KNOWLEDGE_BASE[sym]
+        stockContext += `\nMã cổ phiếu ${sym} (Dữ liệu thực tế FinGreen - Sàn ${s.exchange}):
+- Doanh nghiệp: ${s.name}
+- Nhóm ngành: ${s.sector}
+- Vốn hóa thị trường: ${s.capital}
+- Chỉ số tài chính cốt lõi: P/E: ${s.pe} | P/B: ${s.pb} | ROE: ${s.roe} | EPS: ${s.eps}
+- Lãnh đạo chủ chốt: ${s.leader}
+- Cơ cấu cổ đông: ${s.holder}
+- Cốt lõi kinh doanh & BCTC: ${s.summary}
+- Khuyến nghị chiến lược: ${s.recommendation}\n`
+      } else {
+        stockContext += `\nLưu ý mã cổ phiếu ${sym}: Đây là doanh nghiệp niêm yết trên thị trường chứng khoán Việt Nam (HOSE/HNX/UPCOM). Hãy phân tích chuyên sâu về ${sym} dựa trên kiến thức tài chính chứng khoán Việt Nam, không nhầm sang mã khác, không dùng [X].\n`
+      }
     }
-
-    // Luôn trả về báo cáo phân tích toàn diện chuẩn FinGreen (100% số liệu thực tế, không có [X])
-    return generateComprehensiveStockAnalysis(targetSymbol)
   }
 
-  // 2. NẾU LÀ CÂU HỎI THỊ TRƯỜNG CHUNG HOẶC TRÒ CHUYỆN
-  const isMarket = /thị trường|vn-index|vnindex|dòng tiền|thanh khoản|ngành/i.test(prompt)
-  if (isMarket) {
-    return generateMarketOverviewReport()
-  }
+  // 2. Thu thập bối cảnh thị trường
+  const marketContext = getDNSEContextForPrompt(prompt)
 
-  // 3. Gửi sang OpenRouter cho các câu hỏi tổng quát
-  const financialContext = getDNSEContextForPrompt(prompt)
-  const systemPrompt = buildSystemPrompt(financialContext)
+  // 3. Chuẩn bị prompt hoàn chỉnh
+  const systemPrompt = buildSystemPrompt(stockContext, marketContext)
+
+  // Lấy tối đa 8 tin nhắn gần nhất để làm ngữ cảnh hội thoại
+  const recentMessages = (messages || [])
+    .filter(m => m.id !== 'welcome')
+    .slice(-8)
+    .map(m => ({ role: m.role, content: m.content }))
 
   const formattedMessages = [
     { role: 'system', content: systemPrompt },
-    ...messages.map(m => ({ role: m.role, content: m.content })),
+    ...recentMessages,
     { role: 'user', content: prompt }
   ]
 
+  // 4. Gửi yêu cầu qua OpenRouter API
   try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 45000) // 45 giây timeout
+
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -101,56 +162,54 @@ export async function sendChatMessage({ messages, prompt }) {
       body: JSON.stringify({
         model: DEFAULT_MODEL,
         messages: formattedMessages,
-        temperature: 0.5,
+        temperature: 0.6,
       }),
+      signal: controller.signal
     })
 
-    if (!response.ok) {
-      return generateMarketOverviewReport()
-    }
+    clearTimeout(timeoutId)
 
-    const data = await response.json()
-    let content = data?.choices?.[0]?.message?.content
-    if (content) {
-      // Kiểm tra nếu mô hình sinh ra placeholder [X] hoặc chữ Trung Quốc, tự động lọc sạch
-      if (content.includes('[X]') || content.includes('任职')) {
-        return generateMarketOverviewReport()
+    if (response.ok) {
+      const data = await response.json()
+      const rawContent = data?.choices?.[0]?.message?.content
+      if (rawContent && rawContent.trim()) {
+        const cleaned = cleanAIOutput(rawContent)
+        // Nếu câu trả lời sạch và đầy đủ, trả về ngay
+        if (cleaned.length > 50) {
+          return cleaned
+        }
       }
-      return cleanBrandKeywords(content)
     }
-    return generateMarketOverviewReport()
   } catch (err) {
-    return generateMarketOverviewReport()
+    console.warn('OpenRouter request error, switching to FinGreen engine fallback:', err)
   }
+
+  // 5. NẾU OPENROUTER GẶP SỰ CỐ / RATE LIMIT / TIMEOUT:
+  // Fallback an toàn và chuyên nghiệp để người dùng không bao giờ gặp lỗi trống
+  if (targetSymbol) {
+    return generateComprehensiveStockAnalysis(targetSymbol)
+  }
+  return generateMarketOverviewReport()
 }
 
-function cleanBrandKeywords(text) {
-  if (!text) return text
-  return text
-    .replace(/DNSE MCP Studio/gi, 'Hệ thống Phân Tích FinGreen')
-    .replace(/DNSE MCP/gi, 'FinGreen')
-    .replace(/MCP Studio/gi, 'FinGreen Studio')
-    .replace(/\bMCP\b/gi, 'Hệ thống')
-    .replace(/\bDNSE\b/gi, 'FinGreen')
-}
-
-// Báo cáo thị trường chuẩn FinGreen
-function generateMarketOverviewReport() {
+// Báo cáo thị trường FinGreen fallback
+export function generateMarketOverviewReport() {
   return `### 📈 Tổng Quan Thị Trường & Dòng Tiền FinGreen
 
 **1. Diễn Biến Chỉ Số VN-Index**
 - **Vùng chỉ số:** VN-Index đang dao động tích lũy trong biên độ **1.250 – 1.280 điểm**.
-- **Thanh khoản:** Khối lượng giao dịch đạt khoảng **18.000 – 22.000 tỷ VNĐ**, dòng tiền có tính phân hóa cao.
+- **Thanh khoản:** Khối lượng giao dịch đạt khoảng **18.000 – 22.000 tỷ VNĐ**, dòng tiền có tính phân hóa cao giữa các nhóm ngành.
 
 **2. Phân Bổ Dòng Tiền Theo Nhóm Ngành**
-- 🟢 **Ngân hàng & Tài chính:** Dẫn dắt điểm số với các mã trụ VCB, BID, CTG, TCB.
+- 🟢 **Ngân hàng & Tài chính:** Dẫn dắt điểm số với các mã trụ VCB, BID, CTG, TCB, STB, MBB.
 - 🟢 **Công nghệ & Viễn thông:** Giữ nhịp tăng trưởng bền vững dẫn đầu bởi FPT.
-- 🟡 **Thép & Vật liệu:** HPG, NKG đang trong giai đoạn tích lũy chờ đón chu kỳ tiêu thụ mới.
+- 🟡 **Thép & Vật liệu:** HPG, NKG, HSG đang trong giai đoạn tích lũy chờ đón chu kỳ tiêu thụ mới và động lực từ đại dự án Dung Quất 2.
+- 🟡 **Khai khoáng & Kim loại:** MSR hưởng lợi từ xu hướng phục hồi chu kỳ giá Vonfram và kim loại chiến lược toàn cầu.
 
 **3. Chiến Thuật Giao Dịch Gợi Ý**
-- Ưu tiên nắm giữ danh mục các cổ phiếu đầu ngành có kết quả kinh doanh quý tăng trưởng trên 20% và P/E dưới mức trung bình 5 năm.
-- Tránh mua đuổi tại các phiên hưng phấn gần vùng kháng cự 1.280 điểm.
+- Ưu tiên nắm giữ danh mục các cổ phiếu đầu ngành có kết quả kinh doanh tăng trưởng bền vững và P/E dưới mức trung bình 5 năm.
+- Tránh mua đuổi tại các phiên hưng phấn gần vùng kháng cự kỹ thuật.
 
 ---
-> 💡 *Dữ liệu phục vụ nghiên cứu và tham khảo từ hệ thống phân tích FinGreen.*`
+> 💡 *Dữ liệu phục vụ nghiên cứu và tham khảo từ hệ thống phân tích FinGreen, không phải tư vấn đầu tư.*`
 }
