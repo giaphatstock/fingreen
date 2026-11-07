@@ -14,23 +14,26 @@ export const MANDATORY_DISCLAIMER = '⚠️ **Tuyên bố miễn trừ trách nh
 export const DEFAULT_FAST_MODEL = 'gemini-3.6-flash'
 export const DEFAULT_TURBO_MODEL = 'gemini-3.6-flash'
 
-// Danh sách gợi ý mô hình Google Gemini cho Admin
-export const SUGGESTED_FAST_MODELS = [
+// Danh sách tất cả mô hình Google Gemini hỗ trợ cho Admin Panel
+export const ALL_GEMINI_MODELS = [
   { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (Khuyên Dùng - Tốc Độ Nhanh & Ổn Định Nhất)', provider: 'Google' },
-  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash (Tốc Độ Cao)', provider: 'Google' },
+  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite (Nhẹ, Phản Hồi Rất Nhanh)', provider: 'Google' },
+  { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash Lite (Tốc Độ Cao, Ổn Định)', provider: 'Google' },
+  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash (Thế Hệ 3.5 Đầy Đủ)', provider: 'Google' },
   { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Thế Hệ Mới)', provider: 'Google' },
+  { id: 'gemini-3.7-flash', name: 'Gemini 3.7 Flash', provider: 'Google' },
+  { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite', provider: 'Google' },
+  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', provider: 'Google' },
+  { id: 'gemini-flash-latest', name: 'Gemini Flash Latest', provider: 'Google' },
+  { id: 'gemini-flash-lite-latest', name: 'Gemini Flash Lite Latest', provider: 'Google' },
+  { id: 'gemini-pro-latest', name: 'Gemini Pro Latest', provider: 'Google' },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Legacy / Cũ)', provider: 'Google' },
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Legacy / Cũ)', provider: 'Google' },
 ]
 
-export const SUGGESTED_TURBO_MODELS = [
-  { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (Khuyên Dùng - Toàn Diện & Phản Hồi Sâu)', provider: 'Google' },
-  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash (Chính Xác)', provider: 'Google' },
-  { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Thế Hệ Mới)', provider: 'Google' },
-]
-
-export const AVAILABLE_MODELS = [
-  ...SUGGESTED_FAST_MODELS,
-  ...SUGGESTED_TURBO_MODELS
-]
+export const SUGGESTED_FAST_MODELS = ALL_GEMINI_MODELS
+export const SUGGESTED_TURBO_MODELS = ALL_GEMINI_MODELS
+export const AVAILABLE_MODELS = ALL_GEMINI_MODELS
 
 // Quản lý cấu hình Model Nhanh (Flash)
 export function getFastModel() {
@@ -85,8 +88,9 @@ export function saveChatMode(mode) {
 }
 
 // API Key Google Gemini (Google AI Studio)
+// Hỗ trợ cả key AIzaSy... và AQ.Ab8...
 const DEFAULT_GEMINI_KEY = typeof atob !== 'undefined'
-  ? atob('QVEuQWI4Uk42STg5YUtCMzgzVTlzd3hDaWxvTGlSQndUTWpWRnZmdDBnNkJybWhSbk5NblE=')
+  ? atob('QUl6YVN5QjhtWWxISkw3RmFEQ3NUQ0hkMktJdUZDT21JVDE3WVVN')
   : ''
 
 export function getGeminiApiKey() {
