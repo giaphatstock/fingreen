@@ -9,7 +9,7 @@ import {
   Bot, Key, Sparkles, Check, Globe
 } from 'lucide-react'
 import {
-  getOpenRouterKey, saveOpenRouterKey,
+  getGeminiApiKey, saveGeminiApiKey,
   getFastModel, saveFastModel,
   getTurboModel, saveTurboModel,
   SUGGESTED_FAST_MODELS, SUGGESTED_TURBO_MODELS
@@ -59,8 +59,8 @@ export default function AdminPage() {
   const [searchUser, setSearchUser] = useState('')
   const [stats, setStats] = useState({ users: 0, posts: 0, pending: 0, applications: 0 })
 
-  // Cấu hình FinGreen AI & OpenRouter (Chỉ Admin)
-  const [aiApiKey, setAiApiKey] = useState(getOpenRouterKey())
+  // Cấu hình FinGreen AI & Google AI Studio (Chỉ Admin)
+  const [aiApiKey, setAiApiKey] = useState(getGeminiApiKey())
   const [fastModel, setFastModel] = useState(getFastModel())
   const [turboModel, setTurboModel] = useState(getTurboModel())
   const [testingAi, setTestingAi] = useState(false)
@@ -68,7 +68,7 @@ export default function AdminPage() {
 
   const handleSaveAiConfig = (e) => {
     e?.preventDefault()
-    saveOpenRouterKey(aiApiKey)
+    saveGeminiApiKey(aiApiKey)
     saveFastModel(fastModel)
     saveTurboModel(turboModel)
     toast.success('Đã lưu cấu hình FinGreen AI thành công!')
@@ -76,26 +76,24 @@ export default function AdminPage() {
 
   const handleTestAi = async () => {
     if (!aiApiKey.trim()) {
-      toast.error('Vui lòng nhập OpenRouter API Key trước khi test')
+      toast.error('Vui lòng nhập Google Gemini API Key trước khi test')
       return
     }
     setTestingAi(true)
     setTestResult(null)
     try {
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const modelToTest = turboModel || 'gemini-3.6-flash'
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToTest}:generateContent?key=${aiApiKey.trim()}`
+      const res = await fetch(url, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${aiApiKey.trim()}`,
-          'HTTP-Referer': 'https://fingreen.vn',
-          'X-Title': 'FinGreen',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: turboModel,
-          messages: [
+          contents: [
             {
               role: 'user',
-              content: 'Chào bạn! Hãy trả lời ngắn gọn 1 câu: FinGreen AI đã kết nối thành công chưa?'
+              parts: [{ text: 'Chào bạn! Hãy trả lời ngắn gọn 1 câu: FinGreen AI đã kết nối thành công với Google Gemini Studio chưa?' }]
             }
           ]
         })
@@ -106,11 +104,12 @@ export default function AdminPage() {
         throw new Error(data?.error?.message || `Lỗi HTTP ${res.status}`)
       }
 
+      const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Kết nối thành công!'
       setTestResult({
         success: true,
-        reply: data?.choices?.[0]?.message?.content || 'Kết nối thành công!'
+        reply
       })
-      toast.success('Kết nối OpenRouter API thành công!')
+      toast.success('Kết nối Google Gemini API thành công!')
     } catch (err) {
       setTestResult({
         success: false,
@@ -624,25 +623,25 @@ export default function AdminPage() {
                   <Shield className="w-4 h-4" /> Lưu ý phân quyền bảo mật:
                 </p>
                 <p className="text-[11px] leading-relaxed text-amber-200/90">
-                  Người dùng thông thường (thành viên, đối tác, cộng tác viên) <strong>KHÔNG</strong> có quyền xem hoặc chỉnh sửa OpenRouter API Key hay chọn Model. Tất cả các yêu cầu chat đều tự động sử dụng cấu hình do Admin thiết lập tại đây.
+                  Người dùng thông thường (thành viên, đối tác, cộng tác viên) <strong>KHÔNG</strong> có quyền xem hoặc chỉnh sửa Google Gemini API Key hay cấu hình AI. Tất cả các yêu cầu chat đều tự động sử dụng cấu hình do Admin thiết lập tại đây.
                 </p>
               </div>
 
               <form onSubmit={handleSaveAiConfig} className="space-y-4">
                 <div>
-                  <label className="label">OpenRouter API Key (sk-or-v1-...)</label>
+                  <label className="label">Google Gemini API Key (AI Studio)</label>
                   <div className="relative">
                     <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
                     <input
                       type="password"
                       value={aiApiKey}
                       onChange={(e) => setAiApiKey(e.target.value)}
-                      placeholder="sk-or-v1-..."
+                      placeholder="AQ.Ab8RN6I89a..."
                       className="input-field pl-10 text-xs sm:text-sm font-mono"
                     />
                   </div>
                   <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
-                    Lấy API key tại trang quản lý: <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className="text-primary-400 underline font-semibold">openrouter.ai/keys</a>
+                    Lấy API key miễn phí tại Google AI Studio: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-primary-400 underline font-semibold">aistudio.google.com/apikey</a>
                   </p>
                 </div>
 
@@ -674,7 +673,7 @@ export default function AdminPage() {
                       type="text"
                       value={fastModel}
                       onChange={(e) => setFastModel(e.target.value)}
-                      placeholder="e.g. google/gemini-2.0-flash-exp:free"
+                      placeholder="e.g. gemini-3.6-flash"
                       className="input-field py-1 px-2.5 text-xs font-mono flex-1"
                     />
                   </div>
@@ -688,7 +687,7 @@ export default function AdminPage() {
                       <span>Mô Hình Chế Độ "Turbo"</span>
                     </label>
                     <span className="text-[10px] text-[var(--text-muted)] italic">
-                      Thường tốn nhiều thời gian để suy nghĩ
+                      Chuyên sâu, phân tích toàn diện
                     </span>
                   </div>
                   <select
@@ -708,7 +707,7 @@ export default function AdminPage() {
                       type="text"
                       value={turboModel}
                       onChange={(e) => setTurboModel(e.target.value)}
-                      placeholder="e.g. nvidia/nemotron-3.5-lightning:free"
+                      placeholder="e.g. gemini-3.6-flash"
                       className="input-field py-1 px-2.5 text-xs font-mono flex-1"
                     />
                   </div>

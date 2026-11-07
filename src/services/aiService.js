@@ -10,21 +10,21 @@ import {
 // Tuyên bố miễn trừ trách nhiệm bắt buộc theo chuẩn mực pháp lý
 export const MANDATORY_DISCLAIMER = '⚠️ **Tuyên bố miễn trừ trách nhiệm:** Thông tin, số liệu và tín hiệu chỉ mang tính chất tham khảo, không phải lời khuyên đầu tư. Chúng tôi không đảm bảo tính toàn vẹn, chính xác của dữ liệu và không chịu trách nhiệm dưới mọi hình thức đối với sai sót, chậm trễ, tổn thất giao dịch hoặc việc người dùng tự ý trích dẫn, phát tán thông tin cho bên thứ ba. Nhà đầu tư tự chịu trách nhiệm cho mọi quyết định của mình.'
 
-// Mô hình mặc định thông minh & ổn định
-export const DEFAULT_FAST_MODEL = 'openai/gpt-4o-mini'
-export const DEFAULT_TURBO_MODEL = 'nvidia/nemotron-3.5-lightning:free'
+// Mô hình mặc định thông minh & ổn định trên Google AI Studio
+export const DEFAULT_FAST_MODEL = 'gemini-3.6-flash'
+export const DEFAULT_TURBO_MODEL = 'gemini-3.6-flash'
 
-// Danh sách gợi ý mô hình cho Admin
+// Danh sách gợi ý mô hình Google Gemini cho Admin
 export const SUGGESTED_FAST_MODELS = [
-  { id: 'openai/gpt-4o-mini', name: 'OpenAI GPT-4o Mini (Khuyên Dùng - Tốc Độ & Web Tốt)', provider: 'OpenAI' },
-  { id: 'google/gemini-2.0-flash-exp:free', name: 'Google Gemini 2.0 Flash (Free)', provider: 'Google' },
-  { id: 'nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA Nemotron 3.5 Lightning (Free)', provider: 'Nvidia' },
+  { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (Khuyên Dùng - Tốc Độ Nhanh & Ổn Định Nhất)', provider: 'Google' },
+  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash (Tốc Độ Cao)', provider: 'Google' },
+  { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Thế Hệ Mới)', provider: 'Google' },
 ]
 
 export const SUGGESTED_TURBO_MODELS = [
-  { id: 'nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA Nemotron 3.5 Lightning (Free)', provider: 'Nvidia' },
-  { id: 'openai/gpt-4o-mini', name: 'OpenAI GPT-4o Mini (Khuyên Dùng - Tốc Độ & Web Tốt)', provider: 'OpenAI' },
-  { id: 'google/gemini-2.0-flash-exp:free', name: 'Google Gemini 2.0 Flash (Free)', provider: 'Google' },
+  { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (Khuyên Dùng - Toàn Diện & Phản Hồi Sâu)', provider: 'Google' },
+  { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash (Chính Xác)', provider: 'Google' },
+  { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Thế Hệ Mới)', provider: 'Google' },
 ]
 
 export const AVAILABLE_MODELS = [
@@ -74,21 +74,33 @@ export function saveChatMode(mode) {
   }
 }
 
-// API Key OpenRouter
-const DEFAULT_API_KEY = typeof atob !== 'undefined'
-  ? atob('c2stb3ItdjEtZTU2Y2E1NGM1MDA5MTg2MzdmOTJkODI4NDViYzA2ZGZjM2U4NDMyN2Y2NDExNGNiOGI2MzRmMmNjYmI3ZWVlMQ==')
+// API Key Google Gemini (Google AI Studio)
+const DEFAULT_GEMINI_KEY = typeof atob !== 'undefined'
+  ? atob('QVEuQWI4Uk42STg5YUtCMzgzVTlzd3hDaWxvTGlSQndUTWpWRnZmdDBnNkJybWhSbk5NblE=')
   : ''
 
+export function getGeminiApiKey() {
+  return localStorage.getItem('fingreen_admin_gemini_key') ||
+    localStorage.getItem('fingreen_admin_openrouter_key') ||
+    import.meta.env.VITE_GEMINI_API_KEY ||
+    DEFAULT_GEMINI_KEY
+}
+
+export function saveGeminiApiKey(key) {
+  if (key) {
+    localStorage.setItem('fingreen_admin_gemini_key', key.trim())
+  } else {
+    localStorage.removeItem('fingreen_admin_gemini_key')
+  }
+}
+
+// Tương thích ngược với các tên cũ
 export function getOpenRouterKey() {
-  return localStorage.getItem('fingreen_admin_openrouter_key') || import.meta.env.VITE_OPENROUTER_API_KEY || DEFAULT_API_KEY
+  return getGeminiApiKey()
 }
 
 export function saveOpenRouterKey(key) {
-  if (key) {
-    localStorage.setItem('fingreen_admin_openrouter_key', key.trim())
-  } else {
-    localStorage.removeItem('fingreen_admin_openrouter_key')
-  }
+  saveGeminiApiKey(key)
 }
 
 // Chuẩn hóa định dạng trích dẫn nguồn dữ liệu theo phong cách FinGreen AI & loại bỏ link rác giữa văn bản
@@ -400,96 +412,78 @@ const STOCK_DATA_TOOL = {
   }
 }
 
-// Hàm chọn model thông minh: Tự động kích hoạt Web Search (:online) khi cần tra cứu tin tức hoặc BCTC trực tiếp từ web
-export function resolveModelWithWebSearch(baseModel, intent) {
-  if (!baseModel) return DEFAULT_TURBO_MODEL
-  // Kích hoạt tìm kiếm web khi: câu hỏi tin tức/sự kiện/tại sao HOẶC hỏi BCTC/định giá mà cần dữ liệu mới nhất từ báo chí
-  if (intent?.isNewsOrGeneral || intent?.isBCTC || intent?.isValuation) {
-    if (baseModel.endsWith(':online')) return baseModel
-    // Thêm hậu tố :online để OpenRouter tự động search Google/CafeF/Vietstock và trích nguồn
-    return `${baseModel}:online`
-  }
-  return baseModel
-}
-
-// Xử lý AI Agent thông minh: AI tự quyết định dùng Dữ liệu sàn/BCTC hay Web Search
-async function decideUserIntentWithAI(prompt, apiKey) {
-  try {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://fingreen.vn',
-        'X-Title': 'FinGreen',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'openai/gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-        tools: [STOCK_DATA_TOOL],
-        tool_choice: 'auto',
-        max_tokens: 150
-      })
-    })
-
-    if (!res.ok) return null
-    const data = await res.json()
-    const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0]
-    if (toolCall && toolCall.function?.name === 'get_stock_market_data') {
-      try {
-        const args = JSON.parse(toolCall.function.arguments)
-        return {
-          useStockData: true,
-          symbol: args.symbol?.toUpperCase()?.trim(),
-          queryType: args.queryType || 'full_analysis'
-        }
-      } catch (e) {}
-    }
-    return { useStockData: false }
-  } catch (e) {
-    return null
-  }
-}
-
-// Xử lý gửi tin nhắn phân tích qua OpenRouter API
-export async function sendChatMessage({ messages, prompt, mode }) {
-  const apiKey = getOpenRouterKey()
-  const { systemPrompt, targetSymbol, intent } = await gatherStockAndMarketContext(prompt)
-
-  const currentMode = mode || getChatMode() || 'fast'
-  const rawPrimary = currentMode === 'turbo' ? getTurboModel() : getFastModel()
-  const primaryModel = resolveModelWithWebSearch(rawPrimary, intent)
-  const fallbackModel = resolveModelWithWebSearch(DEFAULT_TURBO_MODEL, intent)
-
+// Hàm chuẩn hóa tin nhắn sang định dạng contents của Gemini API
+function formatGeminiContents(messages, prompt) {
+  const contents = []
   const recentMessages = (messages || [])
     .filter(m => m.id !== 'welcome')
     .slice(-8)
-    .map(m => ({ role: m.role, content: m.content }))
 
-  const formattedMessages = [
-    { role: 'system', content: systemPrompt },
-    ...recentMessages,
-    { role: 'user', content: prompt }
-  ]
+  for (const m of recentMessages) {
+    if (!m.content || !m.content.trim()) continue
+    const role = m.role === 'assistant' || m.role === 'model' ? 'model' : 'user'
+    contents.push({
+      role,
+      parts: [{ text: m.content }]
+    })
+  }
 
-  async function queryOpenRouter(modelToUse) {
+  // Đảm bảo tin nhắn cuối cùng là câu hỏi mới nhất của người dùng
+  contents.push({
+    role: 'user',
+    parts: [{ text: prompt }]
+  })
+
+  // Đảm bảo các turn liên tiếp không bị lặp cùng role (quy tắc của Gemini API)
+  const consolidated = []
+  for (let i = 0; i < contents.length; i++) {
+    const cur = contents[i]
+    if (consolidated.length > 0 && consolidated[consolidated.length - 1].role === cur.role) {
+      consolidated[consolidated.length - 1].parts[0].text += '\n\n' + cur.parts[0].text
+    } else {
+      consolidated.push({ role: cur.role, parts: [{ text: cur.parts[0].text }] })
+    }
+  }
+
+  // Gemini yêu cầu contents bắt đầu bằng user
+  if (consolidated.length > 0 && consolidated[consolidated.length - 1].role !== 'user') {
+    consolidated.push({ role: 'user', parts: [{ text: prompt }] })
+  }
+
+  return consolidated
+}
+
+// Xử lý gửi tin nhắn phân tích qua Google Generative Language API (Google AI Studio)
+export async function sendChatMessage({ messages, prompt, mode }) {
+  const apiKey = getGeminiApiKey()
+  const { systemPrompt, targetSymbol, intent } = await gatherStockAndMarketContext(prompt)
+
+  const currentMode = mode || getChatMode() || 'fast'
+  const modelToUse = currentMode === 'turbo' ? getTurboModel() : getFastModel()
+  const fallbackModel = DEFAULT_FAST_MODEL
+
+  const contents = formatGeminiContents(messages, prompt)
+
+  async function queryGemini(modelName) {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 45000)
 
     try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://fingreen.vn',
-          'X-Title': 'FinGreen',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: modelToUse,
-          messages: formattedMessages,
-          temperature: currentMode === 'turbo' ? 0.6 : 0.3,
-          max_tokens: 2500,
+          system_instruction: {
+            parts: [{ text: systemPrompt }]
+          },
+          contents,
+          generationConfig: {
+            temperature: currentMode === 'turbo' ? 0.6 : 0.3,
+            maxOutputTokens: 2500,
+          }
         }),
         signal: controller.signal
       })
@@ -498,10 +492,10 @@ export async function sendChatMessage({ messages, prompt, mode }) {
 
       if (response.ok) {
         const data = await response.json()
-        const rawContent = data?.choices?.[0]?.message?.content
+        const rawContent = data?.candidates?.[0]?.content?.parts?.[0]?.text
         if (rawContent && rawContent.trim()) {
           const cleaned = cleanAIOutput(rawContent)
-          if (cleaned.length > 50) return cleaned
+          if (cleaned.length > 30) return cleaned
         }
       }
       return null
@@ -511,9 +505,9 @@ export async function sendChatMessage({ messages, prompt, mode }) {
     }
   }
 
-  let result = await queryOpenRouter(primaryModel)
-  if (!result && primaryModel !== fallbackModel) {
-    result = await queryOpenRouter(fallbackModel)
+  let result = await queryGemini(modelToUse)
+  if (!result && modelToUse !== fallbackModel) {
+    result = await queryGemini(fallbackModel)
   }
 
   if (result) return result
@@ -521,46 +515,37 @@ export async function sendChatMessage({ messages, prompt, mode }) {
   return await generateSmartFallbackResponse(targetSymbol, intent)
 }
 
-// Xử lý gửi tin nhắn phân tích thời gian thực dạng Streaming (SSE)
+// Xử lý gửi tin nhắn phân tích thời gian thực dạng Streaming qua Google AI Studio (SSE)
 export async function streamChatMessage({ messages, prompt, mode, onChunk, onComplete, onError }) {
-  const apiKey = getOpenRouterKey()
+  const apiKey = getGeminiApiKey()
   const { systemPrompt, targetSymbol, intent } = await gatherStockAndMarketContext(prompt)
 
   const currentMode = mode || getChatMode() || 'fast'
-  const rawPrimary = currentMode === 'turbo' ? getTurboModel() : getFastModel()
-  const primaryModel = resolveModelWithWebSearch(rawPrimary, intent)
-  const fallbackModel = resolveModelWithWebSearch(DEFAULT_TURBO_MODEL, intent)
+  const modelToUse = currentMode === 'turbo' ? getTurboModel() : getFastModel()
+  const fallbackModel = DEFAULT_FAST_MODEL
 
-  const recentMessages = (messages || [])
-    .filter(m => m.id !== 'welcome')
-    .slice(-8)
-    .map(m => ({ role: m.role, content: m.content }))
+  const contents = formatGeminiContents(messages, prompt)
 
-  const formattedMessages = [
-    { role: 'system', content: systemPrompt },
-    ...recentMessages,
-    { role: 'user', content: prompt }
-  ]
-
-  async function attemptStream(modelToUse) {
+  async function attemptStream(modelName) {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 60000)
 
     try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?key=${apiKey}&alt=sse`
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://fingreen.vn',
-          'X-Title': 'FinGreen',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: modelToUse,
-          messages: formattedMessages,
-          temperature: currentMode === 'turbo' ? 0.6 : 0.3,
-          max_tokens: 2500,
-          stream: true
+          system_instruction: {
+            parts: [{ text: systemPrompt }]
+          },
+          contents,
+          generationConfig: {
+            temperature: currentMode === 'turbo' ? 0.6 : 0.3,
+            maxOutputTokens: 2500,
+          }
         }),
         signal: controller.signal
       })
@@ -595,9 +580,9 @@ export async function streamChatMessage({ messages, prompt, mode, onChunk, onCom
             }
             try {
               const parsed = JSON.parse(dataStr)
-              const delta = parsed?.choices?.[0]?.delta?.content
-              if (delta) {
-                accumulated += delta
+              const chunkText = parsed?.candidates?.[0]?.content?.parts?.[0]?.text
+              if (chunkText) {
+                accumulated += chunkText
                 if (onChunk) onChunk(accumulated)
               }
             } catch (e) {}
@@ -617,8 +602,8 @@ export async function streamChatMessage({ messages, prompt, mode, onChunk, onCom
     }
   }
 
-  let ok = await attemptStream(primaryModel)
-  if (!ok && primaryModel !== fallbackModel) {
+  let ok = await attemptStream(modelToUse)
+  if (!ok && modelToUse !== fallbackModel) {
     ok = await attemptStream(fallbackModel)
   }
 
