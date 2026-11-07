@@ -342,6 +342,17 @@ const STOCK_DATA_TOOL = {
   }
 }
 
+// Hàm chọn model thông minh: Nếu là câu hỏi tin tức/sự kiện/lý do thì tự động thêm :online để tra cứu web
+export function resolveModelWithWebSearch(baseModel, intent) {
+  if (!baseModel) return DEFAULT_TURBO_MODEL
+  if (intent?.isNewsOrGeneral) {
+    if (baseModel.endsWith(':online')) return baseModel
+    // Thêm hậu tố :online để OpenRouter tự động search Google/Exa và trích nguồn
+    return `${baseModel}:online`
+  }
+  return baseModel
+}
+
 // Xử lý AI Agent thông minh: AI tự quyết định dùng Dữ liệu sàn/BCTC hay Web Search
 async function decideUserIntentWithAI(prompt, apiKey) {
   try {
