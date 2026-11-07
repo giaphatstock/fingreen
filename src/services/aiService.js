@@ -2,7 +2,8 @@
 import {
   callDNSEToolLive, formatStockAnalysisFromDNSE,
   extractStockSymbols, generateComprehensiveStockAnalysis,
-  getDNSEContextForPrompt, STOCKS_KNOWLEDGE_BASE
+  getDNSEContextForPrompt, STOCKS_KNOWLEDGE_BASE,
+  fetchRealtimeQuote
 } from './dnseService'
 
 // Tuyên bố miễn trừ trách nhiệm bắt buộc theo chuẩn mực pháp lý
@@ -91,7 +92,7 @@ export function saveOpenRouterKey(key) {
   }
 }
 
-// Hàm làm sạch output của AI & chuẩn hóa thuật ngữ pháp lý an toàn
+// Hàm làm sạch output của AI & chuẩn hóa thuật ngữ pháp lý an toàn (Chặn lặp disclaimer 2 lần)
 function cleanAIOutput(text) {
   if (!text) return ''
   let cleaned = text
@@ -119,13 +120,13 @@ function cleanAIOutput(text) {
     .replace(/tư vấn đầu tư/gi, 'dữ liệu thuật toán tham khảo')
     .trim()
 
-  // 5. Cắt bỏ các disclaimer cũ nếu có ở cuối
+  // 5. Cắt bỏ TRIỆT ĐỂ bất kỳ đoạn disclaimer cũ/mới nào đã sinh ra để không bao giờ bị lặp 2 lần
   cleaned = cleaned
-    .replace(/>\s*💡\s*\*?Dữ liệu (đồng bộ|phục vụ).*$/gim, '')
-    .replace(/>\s*⚠️\s*\*?Tuyên bố miễn trừ trách nhiệm:.*$/gim, '')
+    .replace(/(?:---\s*)?>?\s*💡\s*\*?Dữ liệu (đồng bộ|phục vụ)[\s\S]*$/gi, '')
+    .replace(/(?:---\s*)?>?\s*⚠️\s*\*?Tuyên bố miễn trừ trách nhiệm[\s\S]*$/gi, '')
     .trim()
 
-  // 6. GẮN TUYÊN BỐ MIỄN TRỪ TRÁCH NHIỆM BẮT BUỘC Ở CUỐI TIN NHẮN
+  // 6. GẮN DUY NHẤT 1 TUYÊN BỐ MIỄN TRỪ TRÁCH NHIỆM BẮT BUỘC Ở CUỐI TIN NHẮN
   return `${cleaned}\n\n---\n> ${MANDATORY_DISCLAIMER}`
 }
 
@@ -133,30 +134,31 @@ function cleanAIOutput(text) {
 function buildSystemPrompt(stockContext, marketContext) {
   return `Bạn là FinGreen AI - Trợ lý phân tích dữ liệu thuật toán và kỹ thuật chứng khoán của nền tảng FinGreen ("Kiến tạo giá trị thực").
 
-QUY ĐỊNH PHÁP LÝ & THUẬT NGỮ BẮT BUỘC:
-1. TUYỆT ĐỐI TRÁNH CÁC TỪ NGỮ TƯ VẤN ĐẦU TƯ:
+QUY ĐỊNH BẮT BUỘC VỀ THỊ GIÁ THỰC TẾ & PHÁP LÝ:
+1. TUYỆT ĐỐI TUÂN THỦ THỊ GIÁ THỰC TẾ TRÊN SÀN:
+   - Khi người dùng hỏi về thị giá hoặc phân tích một mã cổ phiếu, BẮT BUỘC sử dụng đúng số liệu "Thị giá khớp lệnh" được cung cấp trong phần dữ liệu thực tế bên dưới.
+   - TUYỆT ĐỐI KHÔNG tự bịa đặt, suy đoán hay đưa ra mức giá sai lệch với thị giá thực tế được cung cấp. Nếu người dùng hỏi "giá [mã] hiện tại", hãy trả lời trực diện con số thị giá mới nhất, biến động và biên độ phiên.
+2. TUYỆT ĐỐI TRÁNH CÁC TỪ NGỮ TƯ VẤN ĐẦU TƯ:
    - KHÔNG DÙNG: "Khuyến nghị", "Khuyến nghị mua", "Khuyến nghị bán", "Lệnh mua", "Lệnh bán", "Mục tiêu", "Giá mục tiêu", "Tư vấn đầu tư".
    - BẮT BUỘC DÙNG THUẬT NGỮ KỸ THUẬT & DÒNG TIỀN:
      • "Vùng quan sát kỹ thuật" (thay cho vùng giá khuyến nghị)
      • "Vùng hỗ trợ/kháng cự toán học" (thay cho giá mục tiêu / cắt lỗ)
      • "Dữ liệu dòng tiền kích hoạt" (thay cho lệnh mua)
      • "Tín hiệu dòng tiền" hoặc "Góc nhìn thuật toán FinGreen"
-   - Ví dụ chuẩn mực: "Dữ liệu dòng tiền kích hoạt tín hiệu theo dõi tại vùng quan sát kỹ thuật 26.0 – 28.5 quanh ngưỡng hỗ trợ toán học."
-
-2. NGÔN NGỮ & ĐỊNH DẠNG:
+3. NGÔN NGỮ & CẤU TRÚC:
    - 100% Tiếng Việt chuẩn mực, văn phong kỹ thuật, số liệu khách quan. Tuyệt đối không chêm chữ Hán, chữ Trung Quốc hay từ ngữ ngoại lai lạ.
-   - Trả lời đúng trọng tâm câu hỏi của người dùng (nếu hỏi BCTC tập trung phân tích Doanh thu, Lợi nhuận sau thuế, Biên lãi gộp, Đòn bẩy nợ vay D/E, EPS, ROE, dự án tăng trưởng).
+   - Nếu người dùng hỏi BCTC: Phân tích Doanh thu, Lợi nhuận sau thuế, Biên lãi gộp, Đòn bẩy nợ vay D/E, EPS, ROE, dự án tăng trưởng.
    - Trình bày bài phân tích cổ phiếu theo cấu trúc khoa học:
      ### 📊 Phân Tích Kỹ Thuật & Cổ Phiếu [MÃ]
-     **1. Thông Tin Doanh Nghiệp & Vị Thế Ngành**
-     **2. Sức Khỏe Tài Chính & Chỉ Số Định Giá (P/E, P/B, ROE, EPS)**
-     **3. Triển Vọng Hoạt Động & Động Lực Dài Hạn**
+     **1. Thị Giá Thực Tế & Tín Hiệu Giao Dịch**
+     **2. Thông Tin Doanh Nghiệp & Vị Thế Ngành**
+     **3. Sức Khỏe Tài Chính & Chỉ Số Định Giá (P/E, P/B, ROE, EPS)**
      **4. Góc Nhìn Thuật Toán & Tín Hiệu Dòng Tiền FinGreen**
    - TUYỆT ĐỐI KHÔNG DÙNG placeholder rỗng [X], [Số liệu], [Tên].
    - TUYỆT ĐỐI BẢO MẬT: Không nhắc đến "DNSE" hay "MCP".
 
 ${stockContext ? `---
-CƠ SỞ DỮ LIỆU THỰC TẾ XÁC THỰC DÀNH CHO CÂU HỎI NÀY:
+CƠ SỞ DỮ LIỆU THỰC TẾ XÁC THỰC TỪ SÀN CHỨNG KHOÁN:
 ${stockContext}
 ---` : ''}
 
@@ -167,44 +169,35 @@ ${marketContext}
 `
 }
 
-// Xử lý gửi tin nhắn phân tích qua OpenRouter API
-export async function sendChatMessage({ messages, prompt, mode }) {
-  const apiKey = getOpenRouterKey()
+// Thu thập ngữ cảnh thị giá thời gian thực và thông tin doanh nghiệp
+async function gatherStockAndMarketContext(prompt) {
   const symbols = extractStockSymbols(prompt)
-
-  // Xác định model dựa trên chế độ chat (Flash vs Turbo)
-  const currentMode = mode || getChatMode() || 'fast'
-  const primaryModel = currentMode === 'turbo' ? getTurboModel() : getFastModel()
-  const fallbackModel = DEFAULT_TURBO_MODEL
-
-  // 1. Thu thập dữ liệu bối cảnh cho các mã cổ phiếu được nhắc tới
   let stockContext = ''
-  let targetSymbol = null
+  let targetSymbol = symbols.length > 0 ? symbols[0] : null
 
   if (symbols.length > 0) {
-    targetSymbol = symbols[0]
     for (const sym of symbols) {
-      let liveData = null
-      try {
-        liveData = await callDNSEToolLive('company_get_profile', { symbol: sym })
-      } catch (e) {}
+      // 1. Lấy dữ liệu thị giá thời gian thực từ sàn chứng khoán
+      const quote = await fetchRealtimeQuote(sym)
+      if (quote) {
+        stockContext += `\nDỮ LIỆU THỊ GIÁ THỜI GIAN THỰC TỪ SÀN CHỨNG KHOÁN (Phiên ${quote.date}):
+- Mã cổ phiếu: ${sym}
+- Thị giá khớp lệnh mới nhất: ${quote.priceFormatted}
+- Biến động trong phiên: ${quote.changeFormatted}
+- Vùng dao động trong phiên: Thấp nhất ${quote.lowFormatted} - Cao nhất ${quote.highFormatted}
+- Khối lượng giao dịch: ${quote.volume} cổ phiếu\n`
+      }
 
-      if (liveData?.data?.company_info) {
-        const info = liveData.data.company_info
-        stockContext += `\nMã cổ phiếu ${sym} (Dữ liệu xác thực sàn ${info.exchange || 'HOSE/HNX/UPCOM'}):
-- Tên công ty: ${info.fullName || info.name}
-- Ngành: ${info.sectorName || info.industryName || 'Chung'}
-- Giới thiệu: ${info.introduction || ''}\n`
-      } else if (STOCKS_KNOWLEDGE_BASE[sym]) {
+      // 2. Thông tin cơ bản doanh nghiệp
+      if (STOCKS_KNOWLEDGE_BASE[sym]) {
         const s = STOCKS_KNOWLEDGE_BASE[sym]
-        stockContext += `\nMã cổ phiếu ${sym} (Dữ liệu thực tế FinGreen - Sàn ${s.exchange}):
-- Doanh nghiệp: ${s.name}
+        stockContext += `\nThông tin doanh nghiệp mã ${sym} (${s.name} - Sàn ${s.exchange}):
 - Nhóm ngành: ${s.sector}
 - Vốn hóa thị trường: ${s.capital}
 - Chỉ số tài chính cốt lõi: P/E: ${s.pe} | P/B: ${s.pb} | ROE: ${s.roe} | EPS: ${s.eps}
 - Lãnh đạo chủ chốt: ${s.leader}
 - Cơ cấu cổ đông: ${s.holder}
-- Cốt lõi kinh doanh & BCTC: ${s.summary}
+- Cốt lõi kinh doanh: ${s.summary}
 - Tín hiệu dòng tiền & Vùng quan sát kỹ thuật: ${s.signal || s.recommendation}\n`
       } else {
         stockContext += `\nLưu ý mã cổ phiếu ${sym}: Đây là doanh nghiệp niêm yết trên thị trường chứng khoán Việt Nam (HOSE/HNX/UPCOM). Hãy phân tích kỹ thuật và tài chính về ${sym}, không nhầm sang mã khác, không dùng [X].\n`
@@ -212,11 +205,20 @@ export async function sendChatMessage({ messages, prompt, mode }) {
     }
   }
 
-  // 2. Thu thập bối cảnh thị trường
   const marketContext = getDNSEContextForPrompt(prompt)
-
-  // 3. Chuẩn bị prompt hoàn chỉnh
   const systemPrompt = buildSystemPrompt(stockContext, marketContext)
+
+  return { stockContext, marketContext, systemPrompt, targetSymbol }
+}
+
+// Xử lý gửi tin nhắn phân tích qua OpenRouter API
+export async function sendChatMessage({ messages, prompt, mode }) {
+  const apiKey = getOpenRouterKey()
+  const { systemPrompt, targetSymbol } = await gatherStockAndMarketContext(prompt)
+
+  const currentMode = mode || getChatMode() || 'fast'
+  const primaryModel = currentMode === 'turbo' ? getTurboModel() : getFastModel()
+  const fallbackModel = DEFAULT_TURBO_MODEL
 
   const recentMessages = (messages || [])
     .filter(m => m.id !== 'welcome')
@@ -229,7 +231,6 @@ export async function sendChatMessage({ messages, prompt, mode }) {
     { role: 'user', content: prompt }
   ]
 
-  // Hàm gọi OpenRouter
   async function queryOpenRouter(modelToUse) {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 45000)
@@ -268,17 +269,13 @@ export async function sendChatMessage({ messages, prompt, mode }) {
     }
   }
 
-  // 4. Thử với model ưu tiên theo chế độ (Flash / Turbo)
   let result = await queryOpenRouter(primaryModel)
-
-  // Nếu model chính gặp lỗi (rate limit, 429, 404...), tự động thử với fallbackModel
   if (!result && primaryModel !== fallbackModel) {
     result = await queryOpenRouter(fallbackModel)
   }
 
   if (result) return result
 
-  // 5. Nếu OpenRouter hoàn toàn mất kết nối: Fallback sang engine phân tích nội bộ FinGreen
   if (targetSymbol) {
     return generateComprehensiveStockAnalysis(targetSymbol)
   }
@@ -288,48 +285,11 @@ export async function sendChatMessage({ messages, prompt, mode }) {
 // Xử lý gửi tin nhắn phân tích thời gian thực dạng Streaming (SSE)
 export async function streamChatMessage({ messages, prompt, mode, onChunk, onComplete, onError }) {
   const apiKey = getOpenRouterKey()
-  const symbols = extractStockSymbols(prompt)
+  const { systemPrompt, targetSymbol } = await gatherStockAndMarketContext(prompt)
 
   const currentMode = mode || getChatMode() || 'fast'
   const primaryModel = currentMode === 'turbo' ? getTurboModel() : getFastModel()
   const fallbackModel = DEFAULT_TURBO_MODEL
-
-  let stockContext = ''
-  let targetSymbol = null
-
-  if (symbols.length > 0) {
-    targetSymbol = symbols[0]
-    for (const sym of symbols) {
-      let liveData = null
-      try {
-        liveData = await callDNSEToolLive('company_get_profile', { symbol: sym })
-      } catch (e) {}
-
-      if (liveData?.data?.company_info) {
-        const info = liveData.data.company_info
-        stockContext += `\nMã cổ phiếu ${sym} (Dữ liệu xác thực sàn ${info.exchange || 'HOSE/HNX/UPCOM'}):
-- Tên công ty: ${info.fullName || info.name}
-- Ngành: ${info.sectorName || info.industryName || 'Chung'}
-- Giới thiệu: ${info.introduction || ''}\n`
-      } else if (STOCKS_KNOWLEDGE_BASE[sym]) {
-        const s = STOCKS_KNOWLEDGE_BASE[sym]
-        stockContext += `\nMã cổ phiếu ${sym} (Dữ liệu thực tế FinGreen - Sàn ${s.exchange}):
-- Doanh nghiệp: ${s.name}
-- Nhóm ngành: ${s.sector}
-- Vốn hóa thị trường: ${s.capital}
-- Chỉ số tài chính cốt lõi: P/E: ${s.pe} | P/B: ${s.pb} | ROE: ${s.roe} | EPS: ${s.eps}
-- Lãnh đạo chủ chốt: ${s.leader}
-- Cơ cấu cổ đông: ${s.holder}
-- Cốt lõi kinh doanh & BCTC: ${s.summary}
-- Tín hiệu dòng tiền & Vùng quan sát kỹ thuật: ${s.signal || s.recommendation}\n`
-      } else {
-        stockContext += `\nLưu ý mã cổ phiếu ${sym}: Đây là doanh nghiệp niêm yết trên thị trường chứng khoán Việt Nam (HOSE/HNX/UPCOM). Hãy phân tích kỹ thuật và tài chính về ${sym}, không nhầm sang mã khác, không dùng [X].\n`
-      }
-    }
-  }
-
-  const marketContext = getDNSEContextForPrompt(prompt)
-  const systemPrompt = buildSystemPrompt(stockContext, marketContext)
 
   const recentMessages = (messages || [])
     .filter(m => m.id !== 'welcome')

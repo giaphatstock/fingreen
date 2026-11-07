@@ -140,6 +140,46 @@ export function extractStockSymbols(text) {
   return Array.from(new Set(results))
 }
 
+// Lấy dữ liệu thị giá và nến giao dịch thời gian thực từ sàn chứng khoán
+export async function fetchRealtimeQuote(symbol) {
+  if (!symbol) return null
+  try {
+    const sym = symbol.toUpperCase().trim()
+    const now = Math.floor(Date.now() / 1000)
+    const from = now - 30 * 86400
+    const url = `https://dchart-api.vndirect.com.vn/dchart/history?resolution=D&symbol=${sym}&from=${from}&to=${now}`
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+    if (!res.ok) return null
+    const data = await res.json()
+    if (!data?.c || data.c.length === 0) return null
+
+    const lastIdx = data.c.length - 1
+    const prevIdx = Math.max(0, lastIdx - 1)
+    const close = data.c[lastIdx]
+    const prevClose = data.c[prevIdx]
+    const high = data.h[lastIdx]
+    const low = data.l[lastIdx]
+    const volume = data.v[lastIdx]
+    const date = new Date(data.t[lastIdx] * 1000).toLocaleDateString('vi-VN')
+
+    const change = close - prevClose
+    const changePercent = prevClose ? ((change / prevClose) * 100).toFixed(2) : '0.00'
+
+    return {
+      symbol: sym,
+      priceFormatted: `${(close * 1000).toLocaleString('vi-VN')} VNĐ`,
+      priceRaw: close,
+      changeFormatted: `${change >= 0 ? '+' : ''}${(change * 1000).toLocaleString('vi-VN')} VNĐ (${changePercent}%)`,
+      highFormatted: `${(high * 1000).toLocaleString('vi-VN')} VNĐ`,
+      lowFormatted: `${(low * 1000).toLocaleString('vi-VN')} VNĐ`,
+      volume: volume ? volume.toLocaleString('vi-VN') : 'N/A',
+      date
+    }
+  } catch (e) {
+    return null
+  }
+}
+
 // Định dạng dữ liệu thô từ máy chủ DNSE thành bài phân tích FinGreen
 export function formatStockAnalysisFromDNSE(symbol, dnseData) {
   if (!dnseData?.data?.company_info) return null
@@ -184,15 +224,15 @@ export const STOCKS_KNOWLEDGE_BASE = {
     name: 'CTCP Masan High-Tech Materials',
     exchange: 'UPCOM',
     sector: 'Khai thác khoáng sản & Kim loại công nghiệp',
-    capital: '67.624 tỷ VNĐ',
-    pe: 28.5,
+    capital: '67.845 tỷ VNĐ',
+    pe: 32.5,
     pb: 1.4,
     roe: '5.2%',
     eps: '450 VNĐ',
     leader: 'Danny Le (Chủ tịch HĐQT) • Craig Richard BradShaw (Tổng Giám Đốc)',
     holder: 'Công ty TNHH Tầm Nhìn Masan (Tập đoàn Masan nắm giữ 92.89%)',
     summary: 'Nhà sản xuất Vonfram và kim loại chiến lược (Bismut, Florit) lớn nhất thế giới ngoài Trung Quốc qua mỏ Núi Pháo (Thái Nguyên). Sở hữu nền tảng công nghệ tinh luyện H.C. Starck Tungsten Powders tại Đức.',
-    recommendation: 'THEO DÕI TÍCH LŨY THEO CHU KỲ PHỤC HỒI HÀNG HÓA KIM LOẠI'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI NỀN GIÁ THEO CHU KỲ PHỤC HỒI HÀNG HÓA KIM LOẠI'
   },
   STB: {
     name: 'Ngân hàng TMCP Sài Gòn Thương Tín (Sacombank)',
