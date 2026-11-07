@@ -1,7 +1,7 @@
 import React from 'react'
 
-// Component render Markdown tài chính mượt mà, hỗ trợ in đậm, tiêu đề, blockquote, danh sách, mã code
-export default function MarkdownRenderer({ content, className = '' }) {
+// Component render Markdown tài chính mượt mà, hỗ trợ in đậm, tiêu đề, blockquote, danh sách, mã code và hiệu ứng streaming cursor
+export default function MarkdownRenderer({ content, isStreaming = false, className = '' }) {
   if (!content) return null
 
   // Tách nội dung theo dòng
@@ -118,7 +118,17 @@ export default function MarkdownRenderer({ content, className = '' }) {
   flushList(lines.length)
   flushBlockquote(lines.length)
 
-  return <div className={`markdown-content leading-relaxed ${className}`}>{elements}</div>
+  return (
+    <div className={`markdown-content leading-relaxed ${className}`}>
+      {elements}
+      {isStreaming && (
+        <span
+          className="inline-block w-2 h-4 ml-1.5 align-middle rounded-sm bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 animate-pulse shadow-[0_0_10px_rgba(99,102,241,0.85)]"
+          title="Đang tạo phản hồi..."
+        />
+      )}
+    </div>
+  )
 }
 
 // Xử lý các định dạng nội dòng: in đậm (**), in nghiêng (*), code (`)

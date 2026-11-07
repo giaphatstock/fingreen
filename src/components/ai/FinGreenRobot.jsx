@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import {
-  Bot, X, Send, Maximize2, Loader2, ArrowRight, Lock
+  Bot, X, Send, Maximize2, Loader2, ArrowRight, Lock, Sparkles
 } from 'lucide-react'
-import { sendChatMessage, getChatMode, saveChatMode } from '../../services/aiService'
+import { streamChatMessage, getChatMode, saveChatMode } from '../../services/aiService'
 import MarkdownRenderer from '../common/MarkdownRenderer'
 import ModelSelectorPill from './ModelSelectorPill'
 import toast from 'react-hot-toast'
@@ -41,6 +41,8 @@ export default function FinGreenRobot() {
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isThinking, setIsThinking] = useState(false)
+  const [streamingMessageId, setStreamingMessageId] = useState(null)
   const [chatMode, setChatMode] = useState(() => getChatMode())
 
   const chatEndRef = useRef(null)
@@ -148,7 +150,7 @@ export default function FinGreenRobot() {
     setIsOpen(prev => !prev)
   }
 
-  // Gửi tin nhắn
+  // Gửi tin nhắn dạng Streaming thời gian thực mượt mà
   const handleSend = async (textToSend) => {
     const text = (textToSend || input).trim()
     if (!text || loading) return
@@ -162,25 +164,46 @@ export default function FinGreenRobot() {
     }
     setMessages(prev => [...prev, userMsg])
     setLoading(true)
+    setIsThinking(true)
+
+    // Tạo sẵn message của bot với nội dung rỗng để stream vào
+    const botMsgId = (Date.now() + 1).toString()
+    const botMsg = {
+      id: botMsgId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date()
+    }
+    setMessages(prev => [...prev, botMsg])
+    setStreamingMessageId(botMsgId)
 
     try {
-      const reply = await sendChatMessage({
+      await streamChatMessage({
         messages,
         prompt: text,
-        mode: chatMode
+        mode: chatMode,
+        onChunk: (accumulated) => {
+          setIsThinking(false)
+          setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, content: accumulated } : m))
+        },
+        onComplete: (cleaned) => {
+          setIsThinking(false)
+          setStreamingMessageId(null)
+          setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, content: cleaned } : m))
+          setLoading(false)
+        },
+        onError: (err) => {
+          setIsThinking(false)
+          setStreamingMessageId(null)
+          setLoading(false)
+          toast.error('Có lỗi khi tạo phản hồi: ' + (err?.message || 'Lỗi mạng'))
+        }
       })
-
-      const botMsg = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: reply,
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, botMsg])
     } catch (err) {
-      toast.error('Có lỗi khi trò chuyện với AI: ' + err.message)
-    } finally {
+      setIsThinking(false)
+      setStreamingMessageId(null)
       setLoading(false)
+      toast.error('Có lỗi khi trò chuyện với AI: ' + err.message)
     }
   }
 
@@ -241,21 +264,31 @@ export default function FinGreenRobot() {
         </div>
       </div>
 
-      {/* 2. CỬA SỔ CHAT NHỎ (CHAT MINI WINDOW - HOÀN TOÀN KHÔNG CÓ NÚT SETTING) */}
+      {/* 2. CỬA SỔ CHAT NHỎ (CHAT MINI WINDOW) */}
       {isOpen && (
         <div
           style={chatWindowStyle}
-          className="z-[9998] flex flex-col rounded-3xl bg-[var(--bg-card)] border border-[var(--border-color)] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 backdrop-blur-2xl"
+          className={`z-[9998] flex flex-col rounded-3xl bg-[var(--bg-card)] border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 backdrop-blur-2xl transition-all duration-300 ${
+            streamingMessageId
+              ? 'border-indigo-500/50 shadow-[0_0_35px_rgba(99,102,241,0.25)] ring-1 ring-indigo-500/40'
+              : 'border-[var(--border-color)]'
+          }`}
         >
-          {/* Header Cửa sổ Chat */}
-          <div className="px-4 py-3 bg-gradient-to-r from-primary-600 via-primary-700 to-indigo-800 text-white flex items-center justify-between border-b border-white/10 shadow-sm">
+          {/* Header Cửa sổ Chat - Gradient Gemini Xanh dương - Tím */}
+          <div className="px-4 py-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700 text-white flex items-center justify-between border-b border-white/10 shadow-sm">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center border border-white/20">
-                <Bot className="w-5 h-5 text-cyan-300" />
+              <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center border border-white/20 shadow-inner">
+                <Bot className="w-5 h-5 text-cyan-200" />
               </div>
               <div>
                 <h3 className="text-xs sm:text-sm font-bold flex items-center gap-1.5">
                   FinGreen AI
+                  {streamingMessageId && (
+                    <span className="flex h-2 w-2 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-300 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
+                    </span>
+                  )}
                 </h3>
                 <p className="text-[10px] text-white/80 flex items-center gap-1 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
@@ -319,40 +352,68 @@ export default function FinGreenRobot() {
             </div>
           ) : (
             <>
-              {/* Nội dung tin nhắn chat - DÙNG MarkdownRenderer ĐỂ IN ĐẬM VÀ ĐỊNH DẠNG CHUẨN */}
+              {/* Nội dung tin nhắn chat - Streaming Realtime với Gemini glow & cursor */}
               <div className="flex-1 p-3.5 sm:p-4 overflow-y-auto space-y-3.5 min-h-[260px] max-h-[400px]">
-                {messages.map((m) => (
-                  <div
-                    key={m.id}
-                    className={`flex gap-2.5 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {m.role === 'assistant' && (
-                      <div className="w-7 h-7 rounded-xl bg-primary-500/20 text-primary-400 flex items-center justify-center flex-shrink-0 text-xs font-bold border border-primary-500/30">
-                        AI
-                      </div>
-                    )}
-                    <div
-                      className={`rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed max-w-[85%] ${
-                        m.role === 'user'
-                          ? 'bg-primary-500 text-white rounded-br-none shadow-md shadow-primary-500/20 whitespace-pre-wrap'
-                          : 'bg-[var(--bg-subtle)] text-[var(--text-main)] border border-[var(--border-color)] rounded-bl-none shadow-sm'
-                      }`}
-                    >
-                      {m.role === 'assistant' ? (
-                        <MarkdownRenderer content={m.content} />
-                      ) : (
-                        m.content
-                      )}
-                    </div>
-                  </div>
-                ))}
+                {messages.map((m) => {
+                  const isThisStreaming = m.id === streamingMessageId
+                  // Ẩn bubble trống của bot khi còn đang thinking
+                  if (m.role === 'assistant' && !m.content && isThinking) return null
 
-                {loading && (
-                  <div className="flex gap-2.5 items-center text-xs text-[var(--text-muted)] animate-pulse">
-                    <div className="w-7 h-7 rounded-xl bg-primary-500/20 text-primary-400 flex items-center justify-center text-xs border border-primary-500/30">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  return (
+                    <div
+                      key={m.id}
+                      className={`flex gap-2.5 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      {m.role === 'assistant' && (
+                        <div
+                          className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 text-xs font-bold border transition-all ${
+                            isThisStreaming
+                              ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white border-purple-400/40 shadow-md shadow-blue-500/30 animate-pulse'
+                              : 'bg-primary-500/20 text-primary-400 border-primary-500/30'
+                          }`}
+                        >
+                          {isThisStreaming ? (
+                            <Sparkles className="w-3.5 h-3.5 text-cyan-200 animate-spin" />
+                          ) : (
+                            <Bot className="w-4 h-4 text-cyan-300" />
+                          )}
+                        </div>
+                      )}
+                      <div
+                        className={`rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed max-w-[85%] transition-all duration-300 ${
+                          m.role === 'user'
+                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-none shadow-md shadow-blue-500/20 whitespace-pre-wrap'
+                            : isThisStreaming
+                            ? 'bg-[var(--bg-subtle)] text-[var(--text-main)] border border-indigo-500/40 rounded-bl-none shadow-[0_0_20px_rgba(99,102,241,0.22)] ring-1 ring-indigo-500/30'
+                            : 'bg-[var(--bg-subtle)] text-[var(--text-main)] border border-[var(--border-color)] rounded-bl-none shadow-sm'
+                        }`}
+                      >
+                        {m.role === 'assistant' ? (
+                          <MarkdownRenderer content={m.content} isStreaming={isThisStreaming} />
+                        ) : (
+                          m.content
+                        )}
+                      </div>
                     </div>
-                    <span>FinGreen AI đang phân tích dữ liệu...</span>
+                  )
+                })}
+
+                {/* Loading / Skeleton dạng sóng Gemini Shimmer Wave */}
+                {isThinking && (
+                  <div className="flex gap-2.5 items-center animate-fade-in">
+                    <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 text-white flex items-center justify-center text-xs shadow-md shadow-blue-500/25 flex-shrink-0 animate-pulse">
+                      <Sparkles className="w-3.5 h-3.5 text-cyan-200" />
+                    </div>
+                    <div className="py-2 px-3 rounded-2xl bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10 border border-indigo-500/25 shadow-[0_0_15px_rgba(99,102,241,0.15)] flex items-center gap-2">
+                      <span className="text-xs font-semibold bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
+                        FinGreen AI đang suy nghĩ...
+                      </span>
+                      <div className="flex items-center gap-1 ml-1">
+                        <span className="w-1.5 h-3 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-1.5 h-4.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-1.5 h-3.5 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
                   </div>
                 )}
                 <div ref={chatEndRef} />

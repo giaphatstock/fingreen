@@ -4,7 +4,7 @@ import {
   Bot, Send, Sparkles, TrendingUp, Building2, Shield,
   Trash2, Loader2, ChevronRight, CheckCircle2
 } from 'lucide-react'
-import { sendChatMessage, getChatMode, saveChatMode } from '../services/aiService'
+import { streamChatMessage, getChatMode, saveChatMode } from '../services/aiService'
 import { DNSE_PROMPT_LIBRARY } from '../services/dnseService'
 import MarkdownRenderer from '../components/common/MarkdownRenderer'
 import ModelSelectorPill from '../components/ai/ModelSelectorPill'
@@ -43,6 +43,8 @@ export default function AIAssistantPage() {
 
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isThinking, setIsThinking] = useState(false)
+  const [streamingMessageId, setStreamingMessageId] = useState(null)
   const [chatMode, setChatMode] = useState(() => getChatMode())
 
   const chatEndRef = useRef(null)
@@ -66,25 +68,46 @@ export default function AIAssistantPage() {
     }
     setMessages(prev => [...prev, userMsg])
     setLoading(true)
+    setIsThinking(true)
+
+    // Tạo tin nhắn rỗng cho bot để stream vào
+    const botMsgId = (Date.now() + 1).toString()
+    const botMsg = {
+      id: botMsgId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date().toISOString()
+    }
+    setMessages(prev => [...prev, botMsg])
+    setStreamingMessageId(botMsgId)
 
     try {
-      const reply = await sendChatMessage({
+      await streamChatMessage({
         messages,
         prompt: promptToSend,
-        mode: chatMode
+        mode: chatMode,
+        onChunk: (accumulated) => {
+          setIsThinking(false)
+          setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, content: accumulated } : m))
+        },
+        onComplete: (cleaned) => {
+          setIsThinking(false)
+          setStreamingMessageId(null)
+          setMessages(prev => prev.map(m => m.id === botMsgId ? { ...m, content: cleaned } : m))
+          setLoading(false)
+        },
+        onError: (err) => {
+          setIsThinking(false)
+          setStreamingMessageId(null)
+          setLoading(false)
+          toast.error('Lỗi khi nhận phản hồi từ AI: ' + (err?.message || 'Lỗi mạng'))
+        }
       })
-
-      const botMsg = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: reply,
-        timestamp: new Date().toISOString()
-      }
-      setMessages(prev => [...prev, botMsg])
     } catch (err) {
-      toast.error('Lỗi khi gửi câu hỏi: ' + err.message)
-    } finally {
+      setIsThinking(false)
+      setStreamingMessageId(null)
       setLoading(false)
+      toast.error('Lỗi khi gửi câu hỏi: ' + err.message)
     }
   }
 
@@ -190,40 +213,69 @@ export default function AIAssistantPage() {
             </div>
           </div>
 
-          {/* Vùng Tin Nhắn - DÙNG MarkdownRenderer ĐỂ IN ĐẬM VÀ ĐỊNH DẠNG CHUẨN */}
+          {/* Vùng Tin Nhắn - Streaming Realtime với Gemini glow & cursor */}
           <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4">
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                {m.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary-500 to-indigo-600 text-white flex items-center justify-center flex-shrink-0 text-xs font-bold shadow-md shadow-primary-500/20">
-                    <Bot className="w-4 h-4 text-cyan-300" />
-                  </div>
-                )}
-                <div
-                  className={`rounded-2xl px-4 py-3 text-xs sm:text-sm leading-relaxed max-w-[88%] ${
-                    m.role === 'user'
-                      ? 'bg-primary-500 text-white rounded-br-none shadow-md shadow-primary-500/20 whitespace-pre-wrap'
-                      : 'bg-[var(--bg-subtle)] text-[var(--text-main)] border border-[var(--border-color)] rounded-bl-none shadow-sm'
-                  }`}
-                >
-                  {m.role === 'assistant' ? (
-                    <MarkdownRenderer content={m.content} />
-                  ) : (
-                    m.content
-                  )}
-                </div>
-              </div>
-            ))}
+            {messages.map((m) => {
+              const isThisStreaming = m.id === streamingMessageId
+              // Ẩn bubble trống của bot khi còn đang thinking
+              if (m.role === 'assistant' && !m.content && isThinking) return null
 
-            {loading && (
-              <div className="flex gap-3 items-center text-xs text-[var(--text-muted)] animate-pulse">
-                <div className="w-8 h-8 rounded-xl bg-primary-500/20 text-primary-400 flex items-center justify-center border border-primary-500/30">
-                  <Loader2 className="w-4 h-4 animate-spin" />
+              return (
+                <div
+                  key={m.id}
+                  className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  {m.role === 'assistant' && (
+                    <div
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-xs font-bold border transition-all ${
+                        isThisStreaming
+                          ? 'bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 text-white border-purple-400/40 shadow-lg shadow-blue-500/30 animate-pulse'
+                          : 'bg-gradient-to-br from-primary-500 to-indigo-600 text-white border-primary-500/20 shadow-md shadow-primary-500/20'
+                      }`}
+                    >
+                      {isThisStreaming ? (
+                        <Sparkles className="w-4 h-4 text-cyan-200 animate-spin" />
+                      ) : (
+                        <Bot className="w-4 h-4 text-cyan-300" />
+                      )}
+                    </div>
+                  )}
+                  <div
+                    className={`rounded-2xl px-4 py-3 text-xs sm:text-sm leading-relaxed max-w-[88%] transition-all duration-300 ${
+                      m.role === 'user'
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-none shadow-md shadow-blue-500/20 whitespace-pre-wrap'
+                        : isThisStreaming
+                        ? 'bg-[var(--bg-subtle)] text-[var(--text-main)] border border-indigo-500/40 rounded-bl-none shadow-[0_0_25px_rgba(99,102,241,0.22)] ring-1 ring-indigo-500/30'
+                        : 'bg-[var(--bg-subtle)] text-[var(--text-main)] border border-[var(--border-color)] rounded-bl-none shadow-sm'
+                    }`}
+                  >
+                    {m.role === 'assistant' ? (
+                      <MarkdownRenderer content={m.content} isStreaming={isThisStreaming} />
+                    ) : (
+                      m.content
+                    )}
+                  </div>
                 </div>
-                <span>FinGreen AI đang phân tích dữ liệu và phản hồi...</span>
+              )
+            })}
+
+            {/* Loading / Skeleton dạng sóng Gemini Shimmer Wave */}
+            {isThinking && (
+              <div className="flex gap-3 items-center animate-fade-in">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 text-white flex items-center justify-center border border-indigo-400/30 shadow-md shadow-blue-500/25 animate-pulse">
+                  <Sparkles className="w-4 h-4 text-cyan-200" />
+                </div>
+                <div className="py-2.5 px-4 rounded-2xl bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10 border border-indigo-500/25 shadow-[0_0_20px_rgba(99,102,241,0.18)] flex items-center gap-3">
+                  <span className="text-xs sm:text-sm font-semibold bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
+                    FinGreen AI đang suy nghĩ...
+                  </span>
+                  <div className="flex items-center gap-1 ml-1">
+                    <span className="w-1.5 h-3.5 rounded-full bg-blue-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-4 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <span className="w-1.5 h-2.5 rounded-full bg-pink-400 animate-bounce" style={{ animationDelay: '450ms' }} />
+                  </div>
+                </div>
               </div>
             )}
             <div ref={chatEndRef} />

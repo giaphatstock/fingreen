@@ -285,6 +285,164 @@ export async function sendChatMessage({ messages, prompt, mode }) {
   return generateMarketOverviewReport()
 }
 
+// Xử lý gửi tin nhắn phân tích thời gian thực dạng Streaming (SSE)
+export async function streamChatMessage({ messages, prompt, mode, onChunk, onComplete, onError }) {
+  const apiKey = getOpenRouterKey()
+  const symbols = extractStockSymbols(prompt)
+
+  const currentMode = mode || getChatMode() || 'fast'
+  const primaryModel = currentMode === 'turbo' ? getTurboModel() : getFastModel()
+  const fallbackModel = DEFAULT_TURBO_MODEL
+
+  let stockContext = ''
+  let targetSymbol = null
+
+  if (symbols.length > 0) {
+    targetSymbol = symbols[0]
+    for (const sym of symbols) {
+      let liveData = null
+      try {
+        liveData = await callDNSEToolLive('company_get_profile', { symbol: sym })
+      } catch (e) {}
+
+      if (liveData?.data?.company_info) {
+        const info = liveData.data.company_info
+        stockContext += `\nMã cổ phiếu ${sym} (Dữ liệu xác thực sàn ${info.exchange || 'HOSE/HNX/UPCOM'}):
+- Tên công ty: ${info.fullName || info.name}
+- Ngành: ${info.sectorName || info.industryName || 'Chung'}
+- Giới thiệu: ${info.introduction || ''}\n`
+      } else if (STOCKS_KNOWLEDGE_BASE[sym]) {
+        const s = STOCKS_KNOWLEDGE_BASE[sym]
+        stockContext += `\nMã cổ phiếu ${sym} (Dữ liệu thực tế FinGreen - Sàn ${s.exchange}):
+- Doanh nghiệp: ${s.name}
+- Nhóm ngành: ${s.sector}
+- Vốn hóa thị trường: ${s.capital}
+- Chỉ số tài chính cốt lõi: P/E: ${s.pe} | P/B: ${s.pb} | ROE: ${s.roe} | EPS: ${s.eps}
+- Lãnh đạo chủ chốt: ${s.leader}
+- Cơ cấu cổ đông: ${s.holder}
+- Cốt lõi kinh doanh & BCTC: ${s.summary}
+- Tín hiệu dòng tiền & Vùng quan sát kỹ thuật: ${s.signal || s.recommendation}\n`
+      } else {
+        stockContext += `\nLưu ý mã cổ phiếu ${sym}: Đây là doanh nghiệp niêm yết trên thị trường chứng khoán Việt Nam (HOSE/HNX/UPCOM). Hãy phân tích kỹ thuật và tài chính về ${sym}, không nhầm sang mã khác, không dùng [X].\n`
+      }
+    }
+  }
+
+  const marketContext = getDNSEContextForPrompt(prompt)
+  const systemPrompt = buildSystemPrompt(stockContext, marketContext)
+
+  const recentMessages = (messages || [])
+    .filter(m => m.id !== 'welcome')
+    .slice(-8)
+    .map(m => ({ role: m.role, content: m.content }))
+
+  const formattedMessages = [
+    { role: 'system', content: systemPrompt },
+    ...recentMessages,
+    { role: 'user', content: prompt }
+  ]
+
+  async function attemptStream(modelToUse) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 60000)
+
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'HTTP-Referer': 'https://fingreen.vn',
+          'X-Title': 'FinGreen',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelToUse,
+          messages: formattedMessages,
+          temperature: currentMode === 'turbo' ? 0.7 : 0.4,
+          stream: true
+        }),
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok || !response.body) {
+        return false
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder('utf-8')
+      let accumulated = ''
+      let buffer = ''
+
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed || trimmed.startsWith(':')) continue
+
+          if (trimmed.startsWith('data: ')) {
+            const dataStr = trimmed.slice(6).trim()
+            if (dataStr === '[DONE]') {
+              break
+            }
+            try {
+              const parsed = JSON.parse(dataStr)
+              const delta = parsed?.choices?.[0]?.delta?.content
+              if (delta) {
+                accumulated += delta
+                if (onChunk) onChunk(accumulated)
+              }
+            } catch (e) {}
+          }
+        }
+      }
+
+      if (accumulated.trim().length > 20) {
+        const cleaned = cleanAIOutput(accumulated)
+        if (onComplete) onComplete(cleaned)
+        return true
+      }
+      return false
+    } catch (e) {
+      clearTimeout(timeoutId)
+      return false
+    }
+  }
+
+  let ok = await attemptStream(primaryModel)
+  if (!ok && primaryModel !== fallbackModel) {
+    ok = await attemptStream(fallbackModel)
+  }
+
+  if (!ok) {
+    const fallbackText = targetSymbol
+      ? generateComprehensiveStockAnalysis(targetSymbol)
+      : generateMarketOverviewReport()
+
+    await simulateStreaming(fallbackText, onChunk, onComplete)
+  }
+}
+
+async function simulateStreaming(fullText, onChunk, onComplete) {
+  const words = fullText.split(' ')
+  let current = ''
+  for (let i = 0; i < words.length; i++) {
+    current += (i === 0 ? '' : ' ') + words[i]
+    if (onChunk && i % 2 === 0) onChunk(current)
+    await new Promise(r => setTimeout(r, 18))
+  }
+  const cleaned = cleanAIOutput(fullText)
+  if (onChunk) onChunk(cleaned)
+  if (onComplete) onComplete(cleaned)
+}
+
 // Báo cáo thị trường FinGreen fallback
 export function generateMarketOverviewReport() {
   return `### 📈 Tổng Quan Thị Trường & Dữ Liệu Dòng Tiền FinGreen
