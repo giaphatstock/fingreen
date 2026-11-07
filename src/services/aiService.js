@@ -11,14 +11,15 @@ import {
 export const MANDATORY_DISCLAIMER = '⚠️ **Tuyên bố miễn trừ trách nhiệm:** Thông tin, số liệu và tín hiệu chỉ mang tính chất tham khảo, không phải lời khuyên đầu tư. Chúng tôi không đảm bảo tính toàn vẹn, chính xác của dữ liệu và không chịu trách nhiệm dưới mọi hình thức đối với sai sót, chậm trễ, tổn thất giao dịch hoặc việc người dùng tự ý trích dẫn, phát tán thông tin cho bên thứ ba. Nhà đầu tư tự chịu trách nhiệm cho mọi quyết định của mình.'
 
 // Mô hình mặc định thông minh & ổn định trên Google AI Studio
-export const DEFAULT_FAST_MODEL = 'gemini-3.6-flash'
+// gemini-2.5-flash-lite & gemini-3.5-flash-lite có hạn mức RPM/RPD cao nhất, tiêu tốn ít quota nhất
+export const DEFAULT_FAST_MODEL = 'gemini-2.5-flash-lite'
 export const DEFAULT_TURBO_MODEL = 'gemini-3.6-flash'
 
 // Danh sách tất cả mô hình Google Gemini hỗ trợ cho Admin Panel
 export const ALL_GEMINI_MODELS = [
-  { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (Khuyên Dùng - Tốc Độ Nhanh & Ổn Định Nhất)', provider: 'Google' },
-  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite (Nhẹ, Phản Hồi Rất Nhanh)', provider: 'Google' },
-  { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash Lite (Tốc Độ Cao, Ổn Định)', provider: 'Google' },
+  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite (Usage Rộng Rãi Nhất - Nhẹ & Phản Hồi Tức Thì)', provider: 'Google' },
+  { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash Lite (Tối Ưu Usage - Tốc Độ Cao & Ổn Định)', provider: 'Google' },
+  { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (Toàn Diện & Phân Tích Sâu Nhất)', provider: 'Google' },
   { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash (Thế Hệ 3.5 Đầy Đủ)', provider: 'Google' },
   { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Thế Hệ Mới)', provider: 'Google' },
   { id: 'gemini-3.7-flash', name: 'Gemini 3.7 Flash', provider: 'Google' },
@@ -27,8 +28,6 @@ export const ALL_GEMINI_MODELS = [
   { id: 'gemini-flash-latest', name: 'Gemini Flash Latest', provider: 'Google' },
   { id: 'gemini-flash-lite-latest', name: 'Gemini Flash Lite Latest', provider: 'Google' },
   { id: 'gemini-pro-latest', name: 'Gemini Pro Latest', provider: 'Google' },
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Legacy / Cũ)', provider: 'Google' },
-  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Legacy / Cũ)', provider: 'Google' },
 ]
 
 export const SUGGESTED_FAST_MODELS = ALL_GEMINI_MODELS
