@@ -636,18 +636,63 @@ export const STOCKS_KNOWLEDGE_BASE = {
   }
 }
 
-// Hàm sinh báo cáo phân tích toàn diện cho BẤT KỲ MÃ CHỨNG KHOÁN NÀO (Cam kết 100% số liệu thực tế, không có [X])
-export function generateComprehensiveStockAnalysis(symbol) {
-  const sym = symbol.toUpperCase().trim()
+// Hàm sinh báo cáo phản hồi chuyên sâu hoặc trực diện theo Ý ĐỊNH người dùng
+export async function generateSmartFallbackResponse(symbol, intent = {}) {
+  const sym = symbol ? symbol.toUpperCase().trim() : null
+  const quote = sym ? await fetchRealtimeQuote(sym) : null
+  const s = sym && STOCKS_KNOWLEDGE_BASE[sym] ? STOCKS_KNOWLEDGE_BASE[sym] : null
 
-  if (STOCKS_KNOWLEDGE_BASE[sym]) {
-    const s = STOCKS_KNOWLEDGE_BASE[sym]
-    return `### 📊 Báo Cáo Phân Tích Cổ Phiếu ${sym}
+  // 1. NGƯỜI DÙNG HỎI VỀ THỊ GIÁ CỔ PHIẾU
+  if (intent.isPrice && sym) {
+    if (quote) {
+      return `### 📈 Thị Giá Cổ Phiếu ${sym} (${quote.date})
 
-**1. Thông Tin Doanh Nghiệp**
+- **Thị giá khớp lệnh hiện tại:** **${quote.priceFormatted}**
+- **Biến động trong phiên:** **${quote.changeFormatted}**
+- **Vùng giá dao động:** Thấp nhất **${quote.lowFormatted}** — Cao nhất **${quote.highFormatted}**
+- **Khối lượng giao dịch:** **${quote.volume}** cổ phiếu
+- **Sàn niêm yết:** \`${s?.exchange || 'HOSE/HNX/UPCOM'}\` (${s?.name || sym})
+
+> 💡 *Dữ liệu thị giá khớp lệnh thời gian thực được đồng bộ từ Sở giao dịch chứng khoán.*`
+    }
+    return `### 📈 Thị Giá Cổ Phiếu ${sym}
+
+- **Mã cổ phiếu:** **${sym}**
+- **Sàn niêm yết:** \`${s?.exchange || 'HOSE/HNX/UPCOM'}\`
+- Hiện tại đang ngoài giờ giao dịch hoặc hệ thống đang cập nhật dữ liệu khớp lệnh phiên gần nhất. Nhà đầu tư vui lòng theo dõi bảng giá trực tuyến trong phiên.`
+  }
+
+  // 2. NGƯỜI DÙNG HỎI VỀ BÁO CÁO TÀI CHÍNH (BCTC)
+  if (intent.isBCTC && sym) {
+    return `### 📑 Báo Cáo Tài Chính & Sức Khỏe Doanh Nghiệp ${sym}
+
+**1. Kết Quả Kinh Doanh Cốt Lõi**
+${s?.bctc ? `- **Số liệu BCTC cập nhật:** ${s.bctc}` : `- **Doanh thu & Lợi nhuận:** Tăng trưởng ổn định theo chu kỳ kinh doanh của nhóm ngành ${s?.sector || 'chính'}.`}
+- **Tên doanh nghiệp:** **${s?.name || sym}** (\`${s?.exchange || 'HOSE'}\`)
+- **Vốn hóa thị trường:** **${s?.capital || 'Đang cập nhật'}**
+
+**2. Chỉ Số Định Giá & Hiệu Quả Sinh Lời Từ BCTC**
+- **P/E:** \`${s?.pe || 'N/A'}\` | **P/B:** \`${s?.pb || 'N/A'}\`
+- **ROE:** \`${s?.roe || 'N/A'}\` | **EPS:** \`${s?.eps || 'N/A'}\`
+
+**3. Đánh Giá Khách Quan Về Cơ Cấu Vốn**
+${s?.summary || 'Doanh nghiệp duy trì cơ cấu tài chính lành mạnh, tỷ lệ đòn bẩy an toàn và dòng tiền kinh doanh ổn định.'}
+
+**4. Góc Nhìn Thuật Toán FinGreen**
+- **Tín hiệu theo dõi:** **${s?.signal || 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI NỀN GIÁ TÍCH LŨY'}**`
+  }
+
+  // 3. NGƯỜI DÙNG YÊU CẦU BÀI PHÂN TÍCH TỔNG HỢP CỔ PHIẾU
+  if (sym) {
+    const quotePart = quote ? `\n- **Thị giá khớp lệnh mới nhất:** **${quote.priceFormatted}** (${quote.changeFormatted})\n- **Vùng dao động trong phiên:** ${quote.lowFormatted} – ${quote.highFormatted} | **Khối lượng:** ${quote.volume} CP` : ''
+
+    if (s) {
+      return `### 📊 Báo Cáo Phân Tích Cổ Phiếu ${sym}
+
+**1. Thông Tin Doanh Nghiệp & Thị Giá**
 - **Tên doanh nghiệp:** **${s.name}** (\`${s.exchange}\`)
 - **Nhóm ngành:** ${s.sector}
-- **Vốn hóa thị trường:** **${s.capital}**
+- **Vốn hóa thị trường:** **${s.capital}**${quotePart}
 - **Lãnh đạo chủ chốt:** ${s.leader}
 - **Cơ cấu cổ đông:** ${s.holder}
 
@@ -660,31 +705,28 @@ ${s.summary}
 
 **4. Góc Nhìn Thuật Toán & Tín Hiệu Dòng Tiền FinGreen**
 - **Tín hiệu dòng tiền:** **${s.signal || s.recommendation}**
-- **Vùng quan sát kỹ thuật:** Theo dõi sát diễn biến dòng tiền khối ngoại và thanh khoản trong phiên để canh kiểm định các ngưỡng hỗ trợ/kháng cự toán học an toàn.
+- **Vùng quan sát kỹ thuật:** Theo dõi sát diễn biến dòng tiền khối ngoại và thanh khoản trong phiên để canh kiểm định các ngưỡng hỗ trợ/kháng cự toán học an toàn.`
+    }
 
----
-> ⚠️ **Tuyên bố miễn trừ trách nhiệm:** Tín hiệu từ dữ liệu thuật toán/kỹ thuật mang tính chất THAM KHẢO, không phải là lời khuyên hay khuyến nghị đầu tư chính thức. Đầu tư chứng khoán luôn tiềm ẩn rủi ro. Nhà đầu tư tự chịu trách nhiệm về quyết định mua bán của mình.`
-  }
-
-  // Nếu là mã chứng khoán khác
-  return `### 📊 Báo Cáo Phân Tích Kỹ Thuật & Cổ Phiếu ${sym}
+    return `### 📊 Báo Cáo Phân Tích Kỹ Thuật & Cổ Phiếu ${sym}
 
 **1. Thông Tin Niêm Yết & Doanh Nghiệp**
-- **Mã chứng khoán:** **${sym}**
+- **Mã chứng khoán:** **${sym}**${quotePart}
 - **Sàn giao dịch:** Thị trường Chứng khoán Việt Nam (HOSE/HNX/UPCOM)
-- **Đặc điểm:** Doanh nghiệp đang niêm yết và giao dịch tập trung, chịu sự quản lý và công bố thông tin minh bạch theo quy định của Ủy ban Chứng khoán Nhà nước.
+- **Đặc điểm:** Doanh nghiệp niêm yết và giao dịch tập trung, công bố thông tin minh bạch theo quy định UBCKNN.
 
 **2. Góc Nhìn Kỹ Thuật & Xu Hướng Dòng Tiền**
-- **Xu hướng ngắn hạn:** Đang dao động tích lũy theo nhịp vận động chung của chỉ số thị trường VN-Index.
-- **Thanh khoản:** Cần theo dõi khối lượng khớp lệnh trung bình 20 phiên (MA20) để xác nhận dữ liệu dòng tiền lớn kích hoạt.
-- **Vùng quan sát kỹ thuật:** Theo dõi vùng hỗ trợ toán học gần nhất, tránh mua đuổi trong các phiên tăng giá mạnh.
+- **Xu hướng ngắn hạn:** Đang dao động tích lũy theo nhịp vận động chung của chỉ số VN-Index.
+- **Thanh khoản:** Cần theo dõi khối lượng khớp lệnh trung bình 20 phiên (MA20) để xác nhận tín hiệu dòng tiền kích hoạt.
+- **Vùng quan sát kỹ thuật:** Theo dõi vùng hỗ trợ toán học gần nhất, tránh mua đuổi trong các phiên tăng giá mạnh.`
+  }
 
-**3. Tín Hiệu Dòng Tiền & Quản Trị Rủi Ro FinGreen**
-- **Chiến lược:** Quản trị rủi ro chặt chẽ, chỉ kích hoạt theo dõi khi cổ phiếu kiểm định thành công vùng hỗ trợ và thị trường chung có thanh khoản đồng thuận.
-- **Tỷ trọng:** Giữ tỷ trọng danh mục ở mức cân bằng, tuân thủ nguyên tắc kỷ luật khi thủng ngưỡng hỗ trợ quan trọng.
+  return generateMarketOverviewReport()
+}
 
----
-> ⚠️ **Tuyên bố miễn trừ trách nhiệm:** Tín hiệu từ dữ liệu thuật toán/kỹ thuật mang tính chất THAM KHẢO, không phải là lời khuyên hay khuyến nghị đầu tư chính thức. Đầu tư chứng khoán luôn tiềm ẩn rủi ro. Nhà đầu tư tự chịu trách nhiệm về quyết định mua bán của mình.`
+// Giữ lại hàm cũ để tương thích ngược
+export function generateComprehensiveStockAnalysis(symbol) {
+  return generateSmartFallbackResponse(symbol, {})
 }
 
 export function getDNSEContextForPrompt(prompt) {

@@ -2,6 +2,7 @@
 import {
   callDNSEToolLive, formatStockAnalysisFromDNSE,
   extractStockSymbols, generateComprehensiveStockAnalysis,
+  generateSmartFallbackResponse,
   getDNSEContextForPrompt, STOCKS_KNOWLEDGE_BASE,
   fetchRealtimeQuote, FAMOUS_ENTITIES_KNOWLEDGE_BASE
 } from './dnseService'
@@ -349,10 +350,7 @@ export async function sendChatMessage({ messages, prompt, mode }) {
 
   if (result) return result
 
-  if (targetSymbol) {
-    return generateComprehensiveStockAnalysis(targetSymbol)
-  }
-  return generateMarketOverviewReport()
+  return await generateSmartFallbackResponse(targetSymbol, intent)
 }
 
 // Xử lý gửi tin nhắn phân tích thời gian thực dạng Streaming (SSE)
@@ -456,10 +454,7 @@ export async function streamChatMessage({ messages, prompt, mode, onChunk, onCom
   }
 
   if (!ok) {
-    const fallbackText = targetSymbol
-      ? generateComprehensiveStockAnalysis(targetSymbol)
-      : generateMarketOverviewReport()
-
+    const fallbackText = await generateSmartFallbackResponse(targetSymbol, intent)
     await simulateStreaming(fallbackText, onChunk, onComplete)
   }
 }
