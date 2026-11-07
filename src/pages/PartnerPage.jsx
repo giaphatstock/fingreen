@@ -124,14 +124,23 @@ export default function PartnerPage() {
           </div>
         </div>
       ) : isPartner ? (
-        <div className="card border-green-500/30 bg-green-500/10 text-center py-10">
-          <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Bạn Đã Là Đối Tác Của FinGreen!</h2>
-          <p className="text-sm text-[var(--text-muted)] mb-4">
-            Tài khoản của bạn đã được kích hoạt quyền tác giả ({profile?.role === 'admin_fingreen' ? 'Admin' : profile?.role === 'doi_tac' ? 'Đối Tác IB' : 'CCTV'}).
+        <div className="card text-center py-12 px-6 shadow-xl border border-[var(--border-color)] relative overflow-hidden">
+          {/* Subtle glow background */}
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-primary-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="w-16 h-16 bg-emerald-500/15 border border-emerald-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4 text-emerald-500 shadow-md">
+            <CheckCircle className="w-9 h-9" />
+          </div>
+          <h2 className="text-2xl font-black text-[var(--text-main)] mb-2">
+            Bạn Đã Là Đối Tác Của FinGreen!
+          </h2>
+          <p className="text-sm text-[var(--text-muted)] max-w-md mx-auto mb-6 leading-relaxed">
+            Tài khoản của bạn đã được kích hoạt quyền tác giả (<span className="font-bold text-primary-400">{profile?.role === 'admin_fingreen' ? 'Admin FinGreen' : profile?.role === 'doi_tac' ? 'Đối Tác IB' : 'Cộng Tác Viên'}</span>). Bạn có thể bắt đầu đăng bài phân tích chứng khoán ngay bây giờ.
           </p>
-          <Link to="/dang-bai" className="btn-primary inline-flex items-center gap-2 text-sm">
-            Đăng Bài Phân Tích Mới <ArrowRight className="w-4 h-4" />
+          <Link to="/dang-bai" className="btn-primary inline-flex items-center gap-2 text-sm py-3 px-6 shadow-lg shadow-primary-500/25">
+            <span>Đăng Bài Phân Tích Mới</span>
+            <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       ) : submitted ? (

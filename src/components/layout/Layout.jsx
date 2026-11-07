@@ -1,11 +1,15 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { useTheme } from '../../contexts/ThemeContext'
 import Navbar from './Navbar'
 import { TrendingUp, ShieldCheck, Award, Heart } from 'lucide-react'
 
 export default function Layout({ children }) {
   const { profile } = useAuth()
+  const { theme } = useTheme()
+  const isLight = theme === 'light'
+  const logoSrc = isLight ? '/logo-horizontal-light.png' : '/logo-horizontal-dark.png'
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg-main)] text-[var(--text-main)] transition-colors">
@@ -30,9 +34,9 @@ export default function Layout({ children }) {
             <div className="md:col-span-2 space-y-4">
               <Link to="/" className="inline-block py-1">
                 <img
-                  src={profile ? '/logo-horizontal-dark.png' : '/logo-horizontal-dark.png'}
-                  alt="FinGreen"
-                  className="h-9 w-auto object-contain hover:scale-105 transition-transform"
+                  src={logoSrc}
+                  alt="FinGreen - Kiến tạo giá trị thực"
+                  className="h-11 sm:h-12 w-auto object-contain hover:scale-105 transition-transform drop-shadow-sm"
                 />
               </Link>
               <p className="text-sm text-[var(--text-muted)] max-w-md leading-relaxed">

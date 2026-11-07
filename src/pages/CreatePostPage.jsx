@@ -15,45 +15,45 @@ const TEMPLATES = [
     id: 'standard',
     icon: <FileText className="w-6 h-6" />,
     label: 'Tin Tức Thị Trường',
-    description: 'Phù hợp để chia sẻ tin tức, cập nhật thị trường chứng khoán',
-    color: 'from-gray-700 to-gray-800',
-    accent: 'border-gray-600',
+    description: 'Phù hợp để chia sẻ tin tức, sự kiện và tổng hợp phiên giao dịch chứng khoán',
+    iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/25',
+    hoverBorder: 'hover:border-blue-500/50 hover:shadow-blue-500/10',
     sample: { title: 'VN-Index Hồi Phục Mạnh, Nhóm Ngân Hàng Dẫn Dắt Thị Trường' }
   },
   {
     id: 'analysis',
     icon: <BarChart2 className="w-6 h-6" />,
     label: 'Phân Tích Kỹ Thuật',
-    description: 'Phân tích biểu đồ, chỉ báo kỹ thuật và xu hướng giá',
-    color: 'from-primary-900/60 to-primary-800/40',
-    accent: 'border-primary-500/50',
+    description: 'Phân tích biểu đồ, chỉ báo dòng tiền, xu hướng giá và các ngưỡng kháng cự - hỗ trợ',
+    iconColor: 'text-primary-400 bg-primary-500/10 border-primary-500/25',
+    hoverBorder: 'hover:border-primary-500/50 hover:shadow-primary-500/10',
     sample: { title: 'Phân Tích Kỹ Thuật VCB: Breakout Vùng Kháng Cự 85.000đ' }
   },
   {
     id: 'signal',
     icon: <Zap className="w-6 h-6" />,
     label: 'Tín Hiệu Giao Dịch',
-    description: 'Khuyến nghị mua/bán, điểm vào lệnh và stop-loss',
-    color: 'from-red-900/40 to-red-800/20',
-    accent: 'border-red-500/40',
+    description: 'Khuyến nghị điểm mua/bán chi tiết, tỷ lệ chốt lời (Take Profit) và cắt lỗ (Stop Loss)',
+    iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/25',
+    hoverBorder: 'hover:border-rose-500/50 hover:shadow-rose-500/10',
     sample: { title: 'KHUYẾN NGHỊ: Mua HPG tại vùng 23.500 - 24.000đ' }
   },
   {
     id: 'report',
     icon: <BookOpen className="w-6 h-6" />,
     label: 'Báo Cáo Doanh Nghiệp',
-    description: 'Phân tích cơ bản, kết quả kinh doanh, dự báo tăng trưởng',
-    color: 'from-green-900/40 to-green-800/20',
-    accent: 'border-green-500/40',
+    description: 'Định giá cổ phiếu, phân tích cơ bản, kết quả kinh doanh quý và dự báo tăng trưởng',
+    iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/25',
+    hoverBorder: 'hover:border-emerald-500/50 hover:shadow-emerald-500/10',
     sample: { title: 'Báo Cáo Q3/2024: FPT - Tăng Trưởng Mạnh Mảng IT Services' }
   },
   {
     id: 'news',
     icon: <Radio className="w-6 h-6" />,
     label: 'Tin Nhanh',
-    description: 'Cập nhật nhanh sự kiện nổi bật, thông tin doanh nghiệp',
-    color: 'from-yellow-900/40 to-yellow-800/20',
-    accent: 'border-yellow-500/40',
+    description: 'Cập nhật nóng hổi sự kiện doanh nghiệp, đại hội cổ đông, chia cổ tức',
+    iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/25',
+    hoverBorder: 'hover:border-amber-500/50 hover:shadow-amber-500/10',
     sample: { title: '[NHANH] ĐHCĐ TCB thông qua kế hoạch chia cổ tức 25%' }
   },
 ]
@@ -235,13 +235,24 @@ export default function CreatePostPage() {
               <button
                 key={tpl.id}
                 onClick={() => selectTemplate(tpl)}
-                className={`card text-left hover:scale-[1.02] active:scale-[0.99] transition-all duration-200 group bg-gradient-to-br ${tpl.color} border ${tpl.accent} hover:shadow-primary-500/10 p-5`}
+                className={`card text-left hover:scale-[1.02] active:scale-[0.99] transition-all duration-200 group border border-[var(--border-color)] ${tpl.hoverBorder} p-6 shadow-md flex flex-col justify-between`}
               >
-                <div className={`w-12 h-12 rounded-xl bg-black/30 border border-white/10 flex items-center justify-center text-primary-300 mb-4 group-hover:scale-110 transition-transform`}>
-                  {tpl.icon}
+                <div>
+                  <div className={`w-12 h-12 rounded-2xl border flex items-center justify-center mb-4 group-hover:scale-110 transition-transform ${tpl.iconColor}`}>
+                    {tpl.icon}
+                  </div>
+                  <h3 className="font-extrabold text-[var(--text-main)] text-base mb-1.5 leading-snug">
+                    {tpl.label}
+                  </h3>
+                  <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+                    {tpl.description}
+                  </p>
                 </div>
-                <h3 className="font-bold text-white mb-1">{tpl.label}</h3>
-                <p className="text-xs text-gray-300 leading-relaxed">{tpl.description}</p>
+
+                <div className="mt-5 pt-3 border-t border-[var(--border-color)]/60 flex items-center justify-between text-[11px] font-bold text-primary-400 group-hover:translate-x-1 transition-transform">
+                  <span>Dùng mẫu này</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </div>
               </button>
             ))}
           </div>

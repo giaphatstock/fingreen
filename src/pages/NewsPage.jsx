@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { Search, TrendingUp, Hash, Eye, Heart, Clock, Sparkles, Filter, ChevronRight } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 
 const TEMPLATE_ICONS = {
   standard: '📰',
@@ -33,6 +34,9 @@ export default function NewsPage() {
   const initialTag = searchParams.get('tag') || ''
   
   const { user, profile } = useAuth()
+  const { theme } = useTheme()
+  const logoPlaceholderSrc = theme === 'light' ? '/logo-horizontal-light.png' : '/logo-horizontal-dark.png'
+
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -220,7 +224,7 @@ export default function NewsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {posts.map(post => (
-            <PostCard key={post.id} post={post} formatDate={formatDate} />
+            <PostCard key={post.id} post={post} formatDate={formatDate} defaultLogo={logoPlaceholderSrc} />
           ))}
         </div>
       )}

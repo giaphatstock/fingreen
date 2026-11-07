@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Loader2, ArrowLeft, Shield } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Loader2, ArrowLeft, Shield, Palette } from 'lucide-react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
+import { useTheme } from '../../contexts/ThemeContext'
 import toast from 'react-hot-toast'
 
 const COOLDOWN_SECONDS = 5
 
 export default function AuthPage() {
+  const { theme, switchTheme, THEMES } = useTheme()
+  const isLight = theme === 'light'
+  const logoVerticalSrc = isLight ? '/logo-vertical-light.png' : '/logo-vertical-dark.png'
+
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const initialMode = searchParams.get('mode') === 'register' ? 'register' : 'login'
@@ -124,24 +129,40 @@ export default function AuthPage() {
       </div>
 
       <div className="w-full max-w-md relative animate-fade-in my-8">
-        {/* Quay lại trang chủ */}
-        <div className="mb-4">
+        {/* Quay lại trang chủ & Nút đổi theme */}
+        <div className="mb-4 flex items-center justify-between">
           <Link
             to="/"
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors group"
           >
             <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
-            <span>Quay lại trang chủ (Xem bài viết miễn phí)</span>
+            <span>Quay lại trang chủ (Xem bài viết)</span>
           </Link>
+
+          {/* Quick theme toggler */}
+          <div className="flex items-center gap-1 bg-[var(--bg-subtle)] p-1 rounded-xl border border-[var(--border-color)]">
+            {THEMES.map(t => (
+              <button
+                key={t.id}
+                onClick={() => switchTheme(t.id)}
+                title={t.name}
+                className={`p-1.5 rounded-lg text-xs transition-all ${
+                  theme === t.id ? 'bg-primary-500 text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                }`}
+              >
+                <span>{t.icon}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* LOGO DỌC FINGREEN (Ảnh 2 - Tách nền trong suốt 100%) */}
+        {/* LOGO DỌC FINGREEN (Tự động đổi màu chữ FIN đen trên nền sáng, trắng trên nền tối) */}
         <div className="text-center mb-6">
           <Link to="/" className="inline-block hover:scale-105 transition-transform duration-300">
             <img 
-              src="/logo-vertical-dark.png" 
-              alt="FinGreen" 
-              className="w-28 sm:w-32 h-auto object-contain mx-auto"
+              src={logoVerticalSrc} 
+              alt="FinGreen - Kiến tạo giá trị thực" 
+              className="w-36 sm:w-44 h-auto object-contain mx-auto drop-shadow-sm"
             />
           </Link>
           <p className="text-xs text-[var(--text-muted)] mt-2 font-medium">

@@ -82,12 +82,12 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16 gap-3">
-          {/* LOGO FINGREEN TÁCH NỀN HOÀN TOÀN (Không có hộp trắng bao quanh) */}
-          <Link to="/" className="flex items-center gap-2 flex-shrink-0 group py-1">
+          {/* LOGO FINGREEN TO RÕ, SẮC NÉT (Không còn bị nhỏ) */}
+          <Link to="/" className="flex items-center gap-2 flex-shrink-0 group py-0.5">
             <img
               src={logoSrc}
               alt="FinGreen - Kiến tạo giá trị thực"
-              className="h-8 sm:h-9 w-auto object-contain transition-transform group-hover:scale-105"
+              className="h-11 sm:h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-105 drop-shadow-sm"
             />
           </Link>
 
