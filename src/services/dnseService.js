@@ -124,7 +124,8 @@ export function extractStockSymbols(text) {
     'PHI', 'PHIEU', 'CO', 'MA', 'GIA', 'BAN', 'MUA', 'XEM', 'CHO', 'TOI', 'VOI', 'NAO', 'LAM',
     'SAO', 'THE', 'CAC', 'QUY', 'NAM', 'HOT', 'TOP', 'BCTC', 'VND', 'USD', 'EPS', 'ROE', 'ROA',
     'HOSE', 'HNX', 'UPCOM', 'UPC', 'RSI', 'MACD', 'BUY', 'SELL', 'HOLD', 'WTF', 'AI', 'VPS',
-    'VSD', 'SSC', 'UBCK', 'BOD', 'NAV', 'OTC', 'API', 'MCP', 'DNSE', 'EUR', 'FED', 'SBV', 'NOT'
+    'VSD', 'SSC', 'UBCK', 'BOD', 'NAV', 'OTC', 'API', 'MCP', 'DNSE', 'EUR', 'FED', 'SBV', 'NOT',
+    'TIN', 'BAI', 'BAO', 'WEB', 'VAN', 'HOI', 'DAN', 'LUC', 'BAT', 'KHI', 'DOC', 'NGO', 'DON'
   ])
 
   const results = []

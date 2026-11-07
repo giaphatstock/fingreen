@@ -212,11 +212,11 @@ ${marketContext}
 }
 
 // Thu thập ngữ cảnh thị giá thời gian thực, thông tin BCTC và phân loại ý định
-async function gatherStockAndMarketContext(prompt) {
+async function gatherStockAndMarketContext(prompt, apiKey) {
   const isBCTC = /bctc|báo cáo tài chính|kết quả kinh doanh|doanh thu|lợi nhuận|nợ xấu|biên lãi|casa|nim|roe|roa/i.test(prompt)
   const isPrice = /giá|thị giá|bao nhiêu|giá hiện tại/i.test(prompt)
   const isFactual = /ai là|người sáng lập|ông chủ|lãnh đạo|lịch sử|thành lập|chủ tịch|tổng giám đốc|ceo/i.test(prompt)
-  const isNewsOrGeneral = /vì sao|tại sao|nguyên nhân|tin tức|sự kiện|bán cổ phần|mua cổ phần|thoái vốn|sáp nhập|mua lại|m&a|thương vụ|dự án|tin mới|báo chí|cafef|vietstock|vneconomy|thế giới|quốc tế|hàng hóa|vonfram|dầu thô|vàng|fed|lãi suất/i.test(prompt) || (isFactual && !/vps/i.test(prompt))
+  const isNewsOrGeneral = /shark|bình|vụ án|bắt|khởi tố|tin tức|sự kiện|vì sao|tại sao|nguyên nhân|bán cổ phần|mua cổ phần|thoái vốn|sáp nhập|mua lại|m&a|thương vụ|dự án|tin mới|báo chí|cafef|vietstock|vneconomy|thế giới|quốc tế|hàng hóa|vonfram|dầu thô|vàng|fed|lãi suất/i.test(prompt) || (isFactual && !/vps/i.test(prompt))
 
   const intent = { isBCTC, isPrice, isFactual, isNewsOrGeneral }
 
@@ -234,8 +234,11 @@ async function gatherStockAndMarketContext(prompt) {
 - Điểm nổi bật: ${vps.highlight}\n`
   }
 
-  // 2. Trích xuất mã cổ phiếu nếu có
-  const symbols = extractStockSymbols(prompt)
+  // 2. Nếu câu hỏi rõ ràng là tin tức / nhân vật ngoài lề (như Shark Bình, bắt bớ, tin tức...), TUYỆT ĐỐI KHÔNG bóc tách mã cổ phiếu
+  const isExcludedFromStockLookup = /shark|bình|vụ án|bắt|khởi tố|tin tức về|bài báo/i.test(prompt)
+
+  // 3. Trích xuất mã cổ phiếu nếu có và không bị loại trừ
+  const symbols = isExcludedFromStockLookup ? [] : extractStockSymbols(prompt)
   if (symbols.length > 0) {
     targetSymbol = symbols[0]
     for (const sym of symbols) {
@@ -273,15 +276,67 @@ ${s.bctc ? `- Số liệu BCTC chi tiết: ${s.bctc}\n` : ''}- Lãnh đạo ch�
   return { stockContext, marketContext, systemPrompt, targetSymbol, intent }
 }
 
-// Hàm chọn model thông minh: Nếu là câu hỏi tin tức/sự kiện/lý do thì tự động thêm :online để tra cứu web
-function resolveModelWithWebSearch(baseModel, intent) {
-  if (!baseModel) return DEFAULT_TURBO_MODEL
-  if (intent?.isNewsOrGeneral) {
-    if (baseModel.endsWith(':online')) return baseModel
-    // Thêm hậu tố :online để OpenRouter tự động search Google/Exa và trích nguồn
-    return `${baseModel}:online`
+// Định nghĩa công cụ Function Calling để AI tự quyết định khi nào cần tra cứu chứng khoán
+const STOCK_DATA_TOOL = {
+  type: 'function',
+  function: {
+    name: 'get_stock_market_data',
+    description: 'Tra cứu dữ liệu kỹ thuật, thị giá khớp lệnh thời gian thực và BCTC của một MÃ CỔ PHIẾU niêm yết khi người dùng THỰC SỰ hỏi về cổ phiếu đó (ví dụ VCB, HPG, FPT, SSI, MSR). TUYỆT ĐỐI KHÔNG gọi hàm này nếu từ đó chỉ là từ tiếng Việt thông thường (như tin tức, shark bình, tin đồn, bài báo...) hoặc câu hỏi tin tức/sự kiện.',
+    parameters: {
+      type: 'object',
+      properties: {
+        symbol: {
+          type: 'string',
+          description: 'Mã cổ phiếu chính xác (ví dụ HPG, VCB, MSR, FPT)'
+        },
+        queryType: {
+          type: 'string',
+          enum: ['price', 'bctc', 'full_analysis'],
+          description: 'Loại dữ liệu cần lấy: price (thị giá), bctc (báo cáo tài chính), full_analysis (phân tích tổng hợp)'
+        }
+      },
+      required: ['symbol']
+    }
   }
-  return baseModel
+}
+
+// Xử lý AI Agent thông minh: AI tự quyết định dùng Dữ liệu sàn/BCTC hay Web Search
+async function decideUserIntentWithAI(prompt, apiKey) {
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://fingreen.vn',
+        'X-Title': 'FinGreen',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        tools: [STOCK_DATA_TOOL],
+        tool_choice: 'auto',
+        max_tokens: 150
+      })
+    })
+
+    if (!res.ok) return null
+    const data = await res.json()
+    const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0]
+    if (toolCall && toolCall.function?.name === 'get_stock_market_data') {
+      try {
+        const args = JSON.parse(toolCall.function.arguments)
+        return {
+          useStockData: true,
+          symbol: args.symbol?.toUpperCase()?.trim(),
+          queryType: args.queryType || 'full_analysis'
+        }
+      } catch (e) {}
+    }
+    return { useStockData: false }
+  } catch (e) {
+    return null
+  }
 }
 
 // Xử lý gửi tin nhắn phân tích qua OpenRouter API
