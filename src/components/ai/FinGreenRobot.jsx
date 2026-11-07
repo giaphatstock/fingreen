@@ -13,7 +13,7 @@ import { DNSE_PROMPT_LIBRARY } from '../../services/dnseService'
 import toast from 'react-hot-toast'
 
 export default function FinGreenRobot() {
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
   const navigate = useNavigate()
 
   // Trạng thái mở/đóng cửa sổ chat mini
@@ -283,14 +283,16 @@ export default function FinGreenRobot() {
             </div>
 
             <div className="flex items-center gap-1 text-white/80">
-              {/* Nút Cài đặt API */}
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                title="Cài đặt OpenRouter API Key & Model"
-                className="p-1.5 rounded-lg hover:bg-white/15 hover:text-white transition-colors"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
+              {/* Nút Cài đặt API (Chỉ Admin mới có quyền cấu hình) */}
+              {isAdmin && (
+                <button
+                  onClick={() => setShowSettings(!showSettings)}
+                  title="Cài đặt OpenRouter API Key & Model (Admin)"
+                  className="p-1.5 rounded-lg hover:bg-white/15 hover:text-white transition-colors text-amber-300"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              )}
 
               {/* Nút Toàn Màn hình */}
               <button
@@ -319,8 +321,8 @@ export default function FinGreenRobot() {
             </div>
           </div>
 
-          {/* Modal cài đặt nhanh OpenRouter */}
-          {showSettings && (
+          {/* Modal cài đặt nhanh OpenRouter (Chỉ Admin) */}
+          {isAdmin && showSettings && (
             <div className="p-4 bg-[var(--bg-subtle)] border-b border-[var(--border-color)] text-xs space-y-3 animate-fade-in">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-[var(--text-main)] flex items-center gap-1">

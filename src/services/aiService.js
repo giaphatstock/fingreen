@@ -1,37 +1,41 @@
 // Dịch vụ AI tích hợp OpenRouter API và DNSE MCP Data
 import { getDNSEContextForPrompt, DNSE_STOCKS_DATABASE } from './dnseService'
 
-const DEFAULT_MODEL = 'google/gemini-2.0-flash-exp:free'
+// Model mặc định do Admin cấu hình (Ưu tiên gpt-4o, có auto fallback nếu tài khoản chưa nạp credits)
+export const DEFAULT_MODEL = 'openai/gpt-4o'
+const FALLBACK_FREE_MODEL = 'nvidia/nemotron-3.5-lightning:free'
 
 export const AVAILABLE_MODELS = [
-  { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash (Free & Fast)', provider: 'Google' },
+  { id: 'openai/gpt-4o', name: 'OpenAI GPT-4o (Khuyên dùng)', provider: 'OpenAI' },
+  { id: 'openai/gpt-4o-mini', name: 'OpenAI GPT-4o Mini (Tiết kiệm)', provider: 'OpenAI' },
+  { id: 'nvidia/nemotron-3.5-lightning:free', name: 'Nvidia Nemotron 3.5 (Free)', provider: 'Nvidia' },
   { id: 'deepseek/deepseek-chat', name: 'DeepSeek Chat V3', provider: 'DeepSeek' },
   { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B Instruct', provider: 'Meta' },
-  { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', provider: 'OpenAI' },
-  { id: 'anthropic/claude-3.5-haiku', name: 'Claude 3.5 Haiku', provider: 'Anthropic' },
 ]
 
+// Lấy API Key từ hệ thống do Admin cấu hình (Admin Storage hoặc .env)
 export function getOpenRouterKey() {
-  return localStorage.getItem('fingreen_openrouter_api_key') || import.meta.env.VITE_OPENROUTER_API_KEY || ''
+  return localStorage.getItem('fingreen_admin_openrouter_key') || import.meta.env.VITE_OPENROUTER_API_KEY || ''
 }
 
+// Chỉ Admin mới được lưu key
 export function saveOpenRouterKey(key) {
   if (key) {
-    localStorage.setItem('fingreen_openrouter_api_key', key.trim())
+    localStorage.setItem('fingreen_admin_openrouter_key', key.trim())
   } else {
-    localStorage.removeItem('fingreen_openrouter_api_key')
+    localStorage.removeItem('fingreen_admin_openrouter_key')
   }
 }
 
 export function getSelectedModel() {
-  return localStorage.getItem('fingreen_ai_model') || DEFAULT_MODEL
+  return localStorage.getItem('fingreen_admin_ai_model') || DEFAULT_MODEL
 }
 
 export function saveSelectedModel(modelId) {
-  localStorage.setItem('fingreen_ai_model', modelId)
+  localStorage.setItem('fingreen_admin_ai_model', modelId)
 }
 
-// Xây dựng System Prompt chuẩn chuyên gia FinGreen AI kết nối DNSE MCP
+// Xây dựng System Prompt chuẩn chuyên gia FinGreen AI kết nối DNSE MCP Studio
 function buildSystemPrompt(dnseContext) {
   return `Bạn là FinGreen AI - Trợ lý phân tích chứng khoán và đầu tư tài chính thông minh của nền tảng FinGreen ("Kiến tạo giá trị thực").
 Bạn được tích hợp trực tiếp với hệ sinh thái dữ liệu thị trường tài chính DNSE MCP Studio.
@@ -50,14 +54,43 @@ ${dnseContext ? `[DỮ LIỆU THỜI GIAN THỰC TỪ DNSE MCP STUDIO CHO YÊU C
 `
 }
 
-// Gửi tin nhắn đến OpenRouter API
+// Gọi OpenRouter API chuẩn theo format yêu cầu của bạn
+async function callOpenRouterEndpoint({ apiKey, model, messages }) {
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'HTTP-Referer': 'https://fingreen.vn',
+      'X-Title': 'FinGreen',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: messages,
+    }),
+  })
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}))
+    const status = response.status
+    const errorMsg = errorBody?.error?.message || `Lỗi HTTP ${status}`
+    const errorObj = new Error(errorMsg)
+    errorObj.status = status
+    throw errorObj
+  }
+
+  const data = await response.json()
+  return data?.choices?.[0]?.message?.content || 'Không có phản hồi từ AI.'
+}
+
+// Gửi tin nhắn chính thức
 export async function sendChatMessage({ messages, prompt, model }) {
   const apiKey = getOpenRouterKey()
   const activeModel = model || getSelectedModel()
   const dnseContext = getDNSEContextForPrompt(prompt)
   const systemPrompt = buildSystemPrompt(dnseContext)
 
-  // Nếu không có API Key, trả về phản hồi thông minh dựa trên dữ liệu DNSE (Smart Fallback)
+  // Nếu hệ thống chưa cấu hình key, dùng bộ phân tích DNSE
   if (!apiKey) {
     return generateSmartDnseFallback(prompt, dnseContext)
   }
@@ -69,42 +102,39 @@ export async function sendChatMessage({ messages, prompt, model }) {
   ]
 
   try {
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://fingreen.vn',
-        'X-Title': 'FinGreen AI - Chuyên Gia Chứng Khoán DNSE'
-      },
-      body: JSON.stringify({
-        model: activeModel,
-        messages: formattedMessages,
-        temperature: 0.7,
-        max_tokens: 1500,
-      })
+    // 1. Thử gọi với model được cấu hình
+    return await callOpenRouterEndpoint({
+      apiKey,
+      model: activeModel,
+      messages: formattedMessages
     })
+  } catch (err) {
+    console.warn(`Lỗi khi gọi model ${activeModel}:`, err)
 
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}))
-      throw new Error(errData?.error?.message || `Lỗi OpenRouter: ${res.status} ${res.statusText}`)
+    // Nếu lỗi 402 (Payment Required) do tài khoản OpenRouter chưa nạp credits cho GPT-4o
+    if (err.status === 402 && activeModel !== FALLBACK_FREE_MODEL) {
+      console.log(`Chuyển sang fallback model miễn phí (${FALLBACK_FREE_MODEL})...`)
+      try {
+        const fallbackReply = await callOpenRouterEndpoint({
+          apiKey,
+          model: FALLBACK_FREE_MODEL,
+          messages: formattedMessages
+        })
+        return fallbackReply
+      } catch (fallbackErr) {
+        console.warn('Fallback model cũng gặp lỗi:', fallbackErr)
+      }
     }
 
-    const data = await res.json()
-    const replyText = data?.choices?.[0]?.message?.content || 'Không nhận được phản hồi từ AI.'
-    return replyText
-  } catch (error) {
-    console.error('Lỗi khi gọi OpenRouter:', error)
-    // Nếu lỗi kết nối hoặc hết hạn token, dùng chế độ phân tích DNSE cục bộ
-    return `⚠️ **Không thể kết nối OpenRouter:** ${error.message}\n\n---\n\n` + generateSmartDnseFallback(prompt, dnseContext)
+    // Nếu cả 2 đều không thành công, trả về dữ liệu DNSE MCP Studio
+    return generateSmartDnseFallback(prompt, dnseContext)
   }
 }
 
-// Chế độ thông minh sử dụng trực tiếp dữ liệu DNSE MCP khi chưa có OpenRouter Key
+// Dữ liệu fallback trực tiếp từ DNSE MCP Studio
 function generateSmartDnseFallback(prompt, dnseContext) {
   const upper = prompt.toUpperCase()
   
-  // Kiểm tra nếu hỏi về mã cổ phiếu cụ thể
   for (const sym of Object.keys(DNSE_STOCKS_DATABASE)) {
     if (upper.includes(sym)) {
       const stock = DNSE_STOCKS_DATABASE[sym]
@@ -128,13 +158,10 @@ ${stock.summary}
 - **Chiến lược:** Theo dõi sát diễn biến dòng tiền của khối ngoại và thanh khoản trong phiên để canh điểm giải ngân phù hợp.
 
 ---
-> 💡 *Dữ liệu đồng bộ trực tiếp từ hệ sinh thái DNSE MCP Studio. Dữ liệu phục vụ nghiên cứu và tham khảo, không phải lời mời chào mua bán chứng khoán.*
-
-*(Để trò chuyện linh hoạt đa chủ đề hơn với mô hình ngôn ngữ lớn, bạn có thể nhập OpenRouter API Key ở nút Cài Đặt phía trên!)*`
+> 💡 *Dữ liệu đồng bộ trực tiếp từ hệ sinh thái DNSE MCP Studio. Dữ liệu phục vụ nghiên cứu và tham khảo, không phải tư vấn đầu tư.*`
     }
   }
 
-  // Nếu hỏi về thị trường chung hoặc VN-Index
   if (/thị trường|vn-index|vnindex|dòng tiền|thanh khoản|ngành/i.test(prompt)) {
     return `### 📈 Tổng Quan Thị Trường & Dòng Tiền (DNSE MCP Market Overview)
 
@@ -155,15 +182,15 @@ ${stock.summary}
 > 💡 *Dữ liệu phục vụ nghiên cứu và tham khảo từ DNSE MCP Studio.*`
   }
 
-  // Trả về câu trả lời trợ giúp tổng quát
   return `### 🤖 Chào mừng bạn đến với FinGreen AI!
 
-Tôi là trợ lý phân tích tài chính chứng khoán FinGreen, được kết nối với hệ thống dữ liệu **DNSE MCP Studio** và mô hình **OpenRouter**.
+Tôi là trợ lý phân tích tài chính chứng khoán FinGreen, được kết nối với hệ thống dữ liệu **DNSE MCP Studio** và **OpenRouter**.
 
 **Bạn có thể hỏi tôi bất kỳ điều gì về:**
 - 📈 **Phân tích cổ phiếu:** Ví dụ *"Phân tích mã HPG"*, *"Định giá cổ phiếu FPT"*, *"BCTC quý gần nhất của VCB"*
 - 📊 **Thị trường chung:** Ví dụ *"VN-Index dẫn dắt bởi ngành nào?"*, *"Dòng tiền ngành 5 phiên gần nhất"*
 - 💡 **Chiến thuật đầu tư:** Ví dụ *"Tạo chiến thuật bắt đáy theo RSI"*
 
-*(Lưu ý: Bạn có thể cài đặt OpenRouter API Key trong phần Cài Đặt để mở khóa toàn bộ sức mạnh trò chuyện không giới hạn).*`
+---
+> 💡 *Dữ liệu phục vụ nghiên cứu và tham khảo từ DNSE MCP Studio.*`
 }

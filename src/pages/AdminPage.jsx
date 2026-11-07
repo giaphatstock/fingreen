@@ -5,8 +5,14 @@ import toast from 'react-hot-toast'
 import {
   Users, FileText, Shield, TrendingUp, CheckCircle, XCircle,
   Ban, Lock, Eye, Search, ChevronDown, AlertTriangle, Loader2,
-  ClipboardList, UserCheck, UserX, Trash2, RefreshCw, Activity
+  ClipboardList, UserCheck, UserX, Trash2, RefreshCw, Activity,
+  Bot, Key, Sparkles, Check, Globe
 } from 'lucide-react'
+import {
+  getOpenRouterKey, saveOpenRouterKey, getSelectedModel,
+  saveSelectedModel, AVAILABLE_MODELS
+} from '../services/aiService'
+import { DNSE_MCP_TOOLS } from '../services/dnseService'
 
 const ROLE_OPTIONS = [
   { value: 'guest', label: 'Thành Viên' },
@@ -50,6 +56,67 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false)
   const [searchUser, setSearchUser] = useState('')
   const [stats, setStats] = useState({ users: 0, posts: 0, pending: 0, applications: 0 })
+
+  // Cấu hình FinGreen AI & OpenRouter (Chỉ Admin)
+  const [aiApiKey, setAiApiKey] = useState(getOpenRouterKey())
+  const [aiModel, setAiModel] = useState(getSelectedModel())
+  const [testingAi, setTestingAi] = useState(false)
+  const [testResult, setTestResult] = useState(null)
+
+  const handleSaveAiConfig = (e) => {
+    e?.preventDefault()
+    saveOpenRouterKey(aiApiKey)
+    saveSelectedModel(aiModel)
+    toast.success('Đã lưu cấu hình FinGreen AI thành công!')
+  }
+
+  const handleTestAi = async () => {
+    if (!aiApiKey.trim()) {
+      toast.error('Vui lòng nhập OpenRouter API Key trước khi test')
+      return
+    }
+    setTestingAi(true)
+    setTestResult(null)
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${aiApiKey.trim()}`,
+          'HTTP-Referer': 'https://fingreen.vn',
+          'X-Title': 'FinGreen',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: aiModel,
+          messages: [
+            {
+              role: 'user',
+              content: 'Chào bạn! Hãy trả lời ngắn gọn 1 câu: FinGreen AI đã kết nối thành công chưa?'
+            }
+          ]
+        })
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data?.error?.message || `Lỗi HTTP ${res.status}`)
+      }
+
+      setTestResult({
+        success: true,
+        reply: data?.choices?.[0]?.message?.content || 'Kết nối thành công!'
+      })
+      toast.success('Kết nối OpenRouter API thành công!')
+    } catch (err) {
+      setTestResult({
+        success: false,
+        error: err.message
+      })
+      toast.error('Kiểm tra thất bại: ' + err.message)
+    } finally {
+      setTestingAi(false)
+    }
+  }
 
   if (!isAdmin) {
     return (
@@ -176,6 +243,7 @@ export default function AdminPage() {
     { id: 'users', label: 'Quản Lý Thành Viên', icon: Users },
     { id: 'posts', label: 'Duyệt Bài Viết', icon: FileText, badge: stats.pending },
     { id: 'applications', label: 'Đơn Hợp Tác', icon: ClipboardList, badge: stats.applications },
+    { id: 'ai_config', label: 'Cấu Hình FinGreen AI', icon: Bot },
   ]
 
   return (
@@ -455,6 +523,175 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* TAB 5: CẤU HÌNH FINGREEN AI & OPENROUTER (CHỈ ADMIN) */}
+      {activeTab === 'ai_config' && (
+        <div className="animate-fade-in space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            {/* Form Cấu Hình */}
+            <div className="lg:col-span-7 card space-y-6">
+              <div className="flex items-center gap-3 pb-3 border-b border-[var(--border-color)]">
+                <div className="w-10 h-10 rounded-xl bg-primary-500/15 text-primary-400 flex items-center justify-center border border-primary-500/30">
+                  <Key className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[var(--text-main)]">
+                    Cấu Hình OpenRouter API & Model AI
+                  </h3>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Thiết lập API key và mô hình AI dùng chung cho toàn bộ hệ thống FinGreen.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <Shield className="w-4 h-4" /> Lưu ý phân quyền bảo mật:
+                </p>
+                <p className="text-[11px] leading-relaxed text-amber-200/90">
+                  Người dùng thông thường (thành viên, đối tác, cộng tác viên) <strong>KHÔNG</strong> có quyền xem hoặc chỉnh sửa OpenRouter API Key hay chọn Model. Tất cả các yêu cầu chat đều tự động sử dụng cấu hình do Admin thiết lập tại đây.
+                </p>
+              </div>
+
+              <form onSubmit={handleSaveAiConfig} className="space-y-4">
+                <div>
+                  <label className="label">OpenRouter API Key (sk-or-v1-...)</label>
+                  <div className="relative">
+                    <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+                    <input
+                      type="password"
+                      value={aiApiKey}
+                      onChange={(e) => setAiApiKey(e.target.value)}
+                      placeholder="sk-or-v1-..."
+                      className="input-field pl-10 text-xs sm:text-sm font-mono"
+                    />
+                  </div>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
+                    Lấy API key tại trang quản lý: <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className="text-primary-400 underline font-semibold">openrouter.ai/keys</a>
+                  </p>
+                </div>
+
+                <div>
+                  <label className="label">Mô Hình AI Mặc Định (Model)</label>
+                  <select
+                    value={aiModel}
+                    onChange={(e) => setAiModel(e.target.value)}
+                    className="input-field text-xs sm:text-sm"
+                  >
+                    {AVAILABLE_MODELS.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} ({m.provider})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
+                    Khuyên dùng <strong>OpenAI GPT-4o</strong> hoặc <strong>GPT-4o Mini</strong>. Nếu tài khoản chưa nạp credits, hệ thống tự động fallback sang mô hình miễn phí hoặc dữ liệu DNSE MCP.
+                  </p>
+                </div>
+
+                <div className="pt-2 flex flex-wrap items-center gap-3">
+                  <button
+                    type="submit"
+                    className="btn-primary py-2.5 px-6 text-xs sm:text-sm font-bold flex items-center gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Lưu Cấu Hình AI</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleTestAi}
+                    disabled={testingAi}
+                    className="btn-secondary py-2.5 px-4 text-xs sm:text-sm font-bold flex items-center gap-2"
+                  >
+                    {testingAi ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Đang kiểm tra...</>
+                    ) : (
+                      <><Sparkles className="w-4 h-4 text-primary-400" /> Kiểm Tra Kết Nối API</>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Kết quả kiểm tra API */}
+              {testResult && (
+                <div className={`p-4 rounded-2xl text-xs space-y-2 border ${
+                  testResult.success
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                    : 'bg-red-500/10 border-red-500/30 text-red-300'
+                }`}>
+                  <div className="font-bold flex items-center gap-1.5 text-sm">
+                    {testResult.success ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                    <span>{testResult.success ? 'Kết nối thành công!' : 'Kiểm tra thất bại'}</span>
+                  </div>
+                  {testResult.reply && (
+                    <div className="p-3 rounded-xl bg-black/20 text-white font-mono text-[11px] whitespace-pre-wrap">
+                      AI Phản hồi: {testResult.reply}
+                    </div>
+                  )}
+                  {testResult.error && (
+                    <div className="text-[11px] leading-relaxed">
+                      Chi tiết lỗi: <code>{testResult.error}</code>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Thông tin kết nối MCP DNSE */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="card space-y-4">
+                <div className="flex items-center gap-3 pb-3 border-b border-[var(--border-color)]">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                    <Globe className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-[var(--text-main)]">
+                      DNSE MCP Studio
+                    </h3>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      Trạng thái kết nối dịch vụ chứng khoán
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-color)]">
+                    <span className="text-[var(--text-muted)]">Endpoint MCP:</span>
+                    <code className="text-primary-400 font-bold font-mono">https://mcp.dnse.com.vn/mcp</code>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-color)]">
+                    <span className="text-[var(--text-muted)]">Trạng thái:</span>
+                    <span className="badge-green font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Sẵn Sàng
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-color)]">
+                    <span className="text-[var(--text-muted)]">Số Tools tích hợp:</span>
+                    <span className="font-bold text-[var(--text-main)]">{DNSE_MCP_TOOLS.length} công cụ</span>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
+                    Các công cụ DNSE chính:
+                  </h4>
+                  <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                    {DNSE_MCP_TOOLS.map((t, i) => (
+                      <div key={i} className="p-2 rounded-lg bg-[var(--bg-subtle)] text-[11px] flex items-center justify-between border border-[var(--border-color)]">
+                        <code className="text-emerald-400 font-mono font-semibold">{t.name}</code>
+                        <span className="text-[10px] text-[var(--text-muted)] truncate max-w-[150px]">{t.description}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* TAB 4: APPLICATIONS */}
       {activeTab === 'applications' && (
         <div className="animate-fade-in space-y-4">
@@ -523,6 +760,175 @@ export default function AdminPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* TAB 5: CẤU HÌNH FINGREEN AI & OPENROUTER (CHỈ ADMIN) */}
+      {activeTab === 'ai_config' && (
+        <div className="animate-fade-in space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            {/* Form Cấu Hình */}
+            <div className="lg:col-span-7 card space-y-6">
+              <div className="flex items-center gap-3 pb-3 border-b border-[var(--border-color)]">
+                <div className="w-10 h-10 rounded-xl bg-primary-500/15 text-primary-400 flex items-center justify-center border border-primary-500/30">
+                  <Key className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[var(--text-main)]">
+                    Cấu Hình OpenRouter API & Model AI
+                  </h3>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Thiết lập API key và mô hình AI dùng chung cho toàn bộ hệ thống FinGreen.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <Shield className="w-4 h-4" /> Lưu ý phân quyền bảo mật:
+                </p>
+                <p className="text-[11px] leading-relaxed text-amber-200/90">
+                  Người dùng thông thường (thành viên, đối tác, cộng tác viên) <strong>KHÔNG</strong> có quyền xem hoặc chỉnh sửa OpenRouter API Key hay chọn Model. Tất cả các yêu cầu chat đều tự động sử dụng cấu hình do Admin thiết lập tại đây.
+                </p>
+              </div>
+
+              <form onSubmit={handleSaveAiConfig} className="space-y-4">
+                <div>
+                  <label className="label">OpenRouter API Key (sk-or-v1-...)</label>
+                  <div className="relative">
+                    <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+                    <input
+                      type="password"
+                      value={aiApiKey}
+                      onChange={(e) => setAiApiKey(e.target.value)}
+                      placeholder="sk-or-v1-..."
+                      className="input-field pl-10 text-xs sm:text-sm font-mono"
+                    />
+                  </div>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
+                    Lấy API key tại trang quản lý: <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className="text-primary-400 underline font-semibold">openrouter.ai/keys</a>
+                  </p>
+                </div>
+
+                <div>
+                  <label className="label">Mô Hình AI Mặc Định (Model)</label>
+                  <select
+                    value={aiModel}
+                    onChange={(e) => setAiModel(e.target.value)}
+                    className="input-field text-xs sm:text-sm"
+                  >
+                    {AVAILABLE_MODELS.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.name} ({m.provider})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-[var(--text-muted)] mt-1.5">
+                    Khuyên dùng <strong>OpenAI GPT-4o</strong> hoặc <strong>GPT-4o Mini</strong>. Nếu tài khoản chưa nạp credits, hệ thống tự động fallback sang mô hình miễn phí hoặc dữ liệu DNSE MCP.
+                  </p>
+                </div>
+
+                <div className="pt-2 flex flex-wrap items-center gap-3">
+                  <button
+                    type="submit"
+                    className="btn-primary py-2.5 px-6 text-xs sm:text-sm font-bold flex items-center gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    <span>Lưu Cấu Hình AI</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleTestAi}
+                    disabled={testingAi}
+                    className="btn-secondary py-2.5 px-4 text-xs sm:text-sm font-bold flex items-center gap-2"
+                  >
+                    {testingAi ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Đang kiểm tra...</>
+                    ) : (
+                      <><Sparkles className="w-4 h-4 text-primary-400" /> Kiểm Tra Kết Nối API</>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {/* Kết quả kiểm tra API */}
+              {testResult && (
+                <div className={`p-4 rounded-2xl text-xs space-y-2 border ${
+                  testResult.success
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                    : 'bg-red-500/10 border-red-500/30 text-red-300'
+                }`}>
+                  <div className="font-bold flex items-center gap-1.5 text-sm">
+                    {testResult.success ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                    <span>{testResult.success ? 'Kết nối thành công!' : 'Kiểm tra thất bại'}</span>
+                  </div>
+                  {testResult.reply && (
+                    <div className="p-3 rounded-xl bg-black/20 text-white font-mono text-[11px] whitespace-pre-wrap">
+                      AI Phản hồi: {testResult.reply}
+                    </div>
+                  )}
+                  {testResult.error && (
+                    <div className="text-[11px] leading-relaxed">
+                      Chi tiết lỗi: <code>{testResult.error}</code>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Thông tin kết nối MCP DNSE */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="card space-y-4">
+                <div className="flex items-center gap-3 pb-3 border-b border-[var(--border-color)]">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                    <Globe className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-[var(--text-main)]">
+                      DNSE MCP Studio
+                    </h3>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      Trạng thái kết nối dịch vụ chứng khoán
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5 text-xs">
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-color)]">
+                    <span className="text-[var(--text-muted)]">Endpoint MCP:</span>
+                    <code className="text-primary-400 font-bold font-mono">https://mcp.dnse.com.vn/mcp</code>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-color)]">
+                    <span className="text-[var(--text-muted)]">Trạng thái:</span>
+                    <span className="badge-green font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Sẵn Sàng
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-color)]">
+                    <span className="text-[var(--text-muted)]">Số Tools tích hợp:</span>
+                    <span className="font-bold text-[var(--text-main)]">{DNSE_MCP_TOOLS.length} công cụ</span>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <h4 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">
+                    Các công cụ DNSE chính:
+                  </h4>
+                  <div className="space-y-1.5 max-h-56 overflow-y-auto">
+                    {DNSE_MCP_TOOLS.map((t, i) => (
+                      <div key={i} className="p-2 rounded-lg bg-[var(--bg-subtle)] text-[11px] flex items-center justify-between border border-[var(--border-color)]">
+                        <code className="text-emerald-400 font-mono font-semibold">{t.name}</code>
+                        <span className="text-[10px] text-[var(--text-muted)] truncate max-w-[150px]">{t.description}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
       )}
     </div>

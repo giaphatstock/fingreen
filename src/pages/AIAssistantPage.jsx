@@ -13,7 +13,7 @@ import { DNSE_PROMPT_LIBRARY, DNSE_MCP_TOOLS } from '../services/dnseService'
 import toast from 'react-hot-toast'
 
 export default function AIAssistantPage() {
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
   
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem('fingreen_ai_history')
@@ -175,16 +175,18 @@ Chọn prompt ở thanh bên trái hoặc nhập trực tiếp câu hỏi của 
             >
               MCP Tools ({DNSE_MCP_TOOLS.length})
             </button>
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
-                activeTab === 'settings'
-                  ? 'bg-primary-500 text-white shadow-sm'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
-              }`}
-            >
-              Cài Đặt API
-            </button>
+            {isAdmin && (
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+                  activeTab === 'settings'
+                    ? 'bg-primary-500 text-white shadow-sm'
+                    : 'text-amber-400 hover:text-amber-300'
+                }`}
+              >
+                Cấu Hình (Admin)
+              </button>
+            )}
           </div>
 
           {/* TAB 1: THƯ VIỆN PROMPTS DNSE */}
@@ -249,8 +251,8 @@ Chọn prompt ở thanh bên trái hoặc nhập trực tiếp câu hỏi của 
             </div>
           )}
 
-          {/* TAB 3: CÀI ĐẶT OPENROUTER & MODEL */}
-          {activeTab === 'settings' && (
+          {/* TAB 3: CÀI ĐẶT OPENROUTER & MODEL (CHỈ ADMIN) */}
+          {isAdmin && activeTab === 'settings' && (
             <div className="card space-y-4">
               <div className="flex items-center gap-2 pb-2 border-b border-[var(--border-color)]">
                 <Settings className="w-4 h-4 text-primary-400" />
