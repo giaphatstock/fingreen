@@ -28,10 +28,12 @@ export default function Layout({ children }) {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             {/* Col 1: Logo & Slogan */}
             <div className="md:col-span-2 space-y-4">
-              <Link to="/" className="inline-block">
-                <div className="h-12 px-2 py-1 bg-white rounded-xl inline-flex items-center shadow-md">
-                  <img src="/logo.png" alt="FinGreen" className="h-10 w-auto object-contain" />
-                </div>
+              <Link to="/" className="inline-block py-1">
+                <img
+                  src={profile ? '/logo-horizontal-dark.png' : '/logo-horizontal-dark.png'}
+                  alt="FinGreen"
+                  className="h-9 w-auto object-contain hover:scale-105 transition-transform"
+                />
               </Link>
               <p className="text-sm text-[var(--text-muted)] max-w-md leading-relaxed">
                 Nền tảng phân tích tài chính chứng khoán chuyên sâu, cung cấp dữ liệu thị trường, nhận định khách quan và kết nối các chuyên gia, đối tác IB uy tín hàng đầu.

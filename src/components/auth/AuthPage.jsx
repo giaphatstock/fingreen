@@ -135,16 +135,16 @@ export default function AuthPage() {
           </Link>
         </div>
 
-        {/* LOGO DỌC FINGREEN (Ảnh 2) */}
+        {/* LOGO DỌC FINGREEN (Ảnh 2 - Tách nền trong suốt 100%) */}
         <div className="text-center mb-6">
-          <div className="inline-block p-3 bg-white rounded-2xl shadow-xl hover:scale-105 transition-transform duration-300">
+          <Link to="/" className="inline-block hover:scale-105 transition-transform duration-300">
             <img 
-              src="/logo-vertical.png" 
+              src="/logo-vertical-dark.png" 
               alt="FinGreen" 
-              className="w-24 sm:w-28 h-auto object-contain mx-auto"
+              className="w-28 sm:w-32 h-auto object-contain mx-auto"
             />
-          </div>
-          <p className="text-xs text-[var(--text-muted)] mt-3 font-medium">
+          </Link>
+          <p className="text-xs text-[var(--text-muted)] mt-2 font-medium">
             Nền tảng phân tích chứng khoán & dữ liệu đầu tư chuyên sâu
           </p>
         </div>
