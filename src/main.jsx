@@ -37,9 +37,9 @@ function AppRoutes() {
         <div className="text-center">
           <div className="relative inline-block mb-4">
             <img 
-              src="/logo.png" 
+              src="/favicon.png" 
               alt="FinGreen" 
-              className="w-20 h-auto rounded-2xl shadow-2xl animate-pulse" 
+              className="w-16 h-16 rounded-2xl shadow-xl animate-pulse" 
             />
           </div>
           <p className="text-primary-400 font-semibold animate-pulse text-sm">FinGreen đang tải...</p>
@@ -49,40 +49,43 @@ function AppRoutes() {
   }
 
   return (
-    <Layout>
-      <Routes>
-        {/* Khách vãng lai và thành viên đều vào được */}
-        <Route path="/" element={<NewsPage />} />
-        <Route path="/bai-viet/:id" element={<PostDetailPage />} />
-        <Route path="/hop-tac" element={<PartnerPage />} />
-        
-        {/* Đăng nhập / Đăng ký */}
-        <Route path="/dang-nhap" element={
-          <PublicAuthRoute>
-            <AuthPage />
-          </PublicAuthRoute>
-        } />
+    <Routes>
+      {/* Trang Đăng Nhập / Đăng Ký riêng biệt full màn hình, đồng bộ màu 100% */}
+      <Route path="/dang-nhap" element={
+        <PublicAuthRoute>
+          <AuthPage />
+        </PublicAuthRoute>
+      } />
 
-        {/* Các trang yêu cầu đăng nhập */}
-        <Route path="/dang-bai" element={
-          <ProtectedRoute>
-            <CreatePostPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/admin" element={
-          <ProtectedRoute>
-            <AdminPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/ho-so" element={
-          <ProtectedRoute>
-            <ProfilePage />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Layout>
+      {/* Các trang chính có Navbar và Footer */}
+      <Route path="/*" element={
+        <Layout>
+          <Routes>
+            <Route path="/" element={<NewsPage />} />
+            <Route path="/bai-viet/:id" element={<PostDetailPage />} />
+            <Route path="/hop-tac" element={<PartnerPage />} />
+            
+            <Route path="/dang-bai" element={
+              <ProtectedRoute>
+                <CreatePostPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={
+              <ProtectedRoute>
+                <AdminPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/ho-so" element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Layout>
+      } />
+    </Routes>
   )
 }
 
