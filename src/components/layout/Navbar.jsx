@@ -2,14 +2,16 @@ import React, { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme } from '../../contexts/ThemeContext'
+import toast from 'react-hot-toast'
 import {
   FileText, Handshake, Shield, LogOut, Menu, X, ChevronDown,
-  User, Newspaper, Palette, LogIn, ExternalLink, Sparkles
+  User, Newspaper, Palette, LogIn, ExternalLink, Sparkles, Bot
 } from 'lucide-react'
 
 const NAV_ITEMS = [
   { path: '/', icon: Newspaper, label: 'Tin Tức & Phân Tích' },
   { path: '/hop-tac', icon: Handshake, label: 'Hợp Tác FinGreen' },
+  { path: '/ai', icon: Bot, label: 'FinGreen AI', requireAuth: true, badge: 'DNSE' },
 ]
 
 const PARTNER_NAV = [
@@ -95,10 +97,18 @@ export default function Navbar() {
           <div className="hidden lg:flex items-center gap-1">
             {allNav.map(item => {
               const active = isActive(item.path)
+              const handleClick = (e) => {
+                if (item.requireAuth && !user) {
+                  e.preventDefault()
+                  toast('Vui lòng đăng nhập để sử dụng FinGreen AI', { icon: '🔒' })
+                  navigate(`/dang-nhap?redirect=${encodeURIComponent(item.path)}`)
+                }
+              }
               return (
                 <Link
                   key={item.path}
                   to={item.path}
+                  onClick={handleClick}
                   className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-150 ${
                     active
                       ? 'bg-primary-500/15 text-primary-400 border border-primary-500/30 shadow-sm'
@@ -107,6 +117,11 @@ export default function Navbar() {
                 >
                   <item.icon className={`w-4 h-4 ${active ? 'text-primary-400' : 'text-[var(--text-muted)]'}`} />
                   <span>{item.label}</span>
+                  {item.badge && (
+                    <span className="px-1.5 py-0.2 text-[9px] font-extrabold rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      {item.badge}
+                    </span>
+                  )}
                 </Link>
               )
             })}
@@ -333,21 +348,38 @@ export default function Navbar() {
         {/* Mobile menu dropdown */}
         {menuOpen && (
           <div className="lg:hidden py-3 border-t border-[var(--border-color)] animate-fade-in space-y-1">
-            {allNav.map(item => (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setMenuOpen(false)}
-                className={`flex items-center gap-3 px-4 py-2.5 text-xs font-semibold rounded-xl transition-all ${
-                  isActive(item.path)
-                    ? 'bg-primary-500/15 text-primary-400'
-                    : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)]'
-                }`}
-              >
-                <item.icon className="w-4 h-4" />
-                <span>{item.label}</span>
-              </Link>
-            ))}
+            {allNav.map(item => {
+              const handleMobileClick = (e) => {
+                setMenuOpen(false)
+                if (item.requireAuth && !user) {
+                  e.preventDefault()
+                  toast('Vui lòng đăng nhập để sử dụng FinGreen AI', { icon: '🔒' })
+                  navigate(`/dang-nhap?redirect=${encodeURIComponent(item.path)}`)
+                }
+              }
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={handleMobileClick}
+                  className={`flex items-center justify-between px-4 py-2.5 text-xs font-semibold rounded-xl transition-all ${
+                    isActive(item.path)
+                      ? 'bg-primary-500/15 text-primary-400'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.badge && (
+                    <span className="px-1.5 py-0.2 text-[9px] font-extrabold rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              )
+            })}
 
             <div className="pt-2 border-t border-[var(--border-color)] flex gap-2 px-1">
               <a

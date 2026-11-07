@@ -12,6 +12,7 @@ import AdminPage from './pages/AdminPage'
 import PartnerPage from './pages/PartnerPage'
 import PostDetailPage from './pages/PostDetailPage'
 import ProfilePage from './pages/ProfilePage'
+import AIAssistantPage from './pages/AIAssistantPage'
 import './index.css'
 
 function ProtectedRoute({ children }) {
@@ -78,6 +79,11 @@ function AppRoutes() {
             <Route path="/ho-so" element={
               <ProtectedRoute>
                 <ProfilePage />
+              </ProtectedRoute>
+            } />
+            <Route path="/ai" element={
+              <ProtectedRoute>
+                <AIAssistantPage />
               </ProtectedRoute>
             } />
             

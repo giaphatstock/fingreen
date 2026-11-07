@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme } from '../../contexts/ThemeContext'
 import Navbar from './Navbar'
+import FinGreenRobot from '../ai/FinGreenRobot'
 import { TrendingUp, ShieldCheck, Award, Heart } from 'lucide-react'
 
 export default function Layout({ children }) {
@@ -113,6 +114,9 @@ export default function Layout({ children }) {
           </div>
         </div>
       </footer>
+
+      {/* Con robot tròn di chuyển & Chatbot FinGreen AI */}
+      <FinGreenRobot />
     </div>
   )
 }
