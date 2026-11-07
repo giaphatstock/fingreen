@@ -179,19 +179,22 @@ function buildSystemPrompt(stockContext, marketContext, intent) {
 
   if (intent.isBCTC) {
     taskInstruction = `
-NGƯỜI DÙNG ĐANG YÊU CẦU: Phân tích Báo Cáo Tài Chính (BCTC).
-BẮT BUỘC TRẢ LỜI ĐÚNG TRỌNG TÂM BCTC THEO CẤU TRÚC:
+NGƯỜI DÙNG ĐANG YÊU CẦU: Phân tích Báo Cáo Tài Chính (BCTC) [MÃ].
+- KẾT HỢP DỮ LIỆU CÓ SẴN VỚI TỰ ĐỘNG TRA CỨU WEB / BÁO CHÍ (CafeF, Vietstock, FireAnt...) để lấy đầy đủ các con số doanh thu, lợi nhuận, nợ vay, tổng tài sản mới nhất.
+- TUYỆT ĐỐI KHÔNG TRẢ LỜI "Chưa có số liệu cụ thể" nếu có thể tra cứu từ web!
+BẮT BUỘC TRÌNH BÀY ĐẦY ĐỦ CÁC CON SỐ THEO CẤU TRÚC:
 ### 📑 Báo Cáo Tài Chính & Sức Khỏe Doanh Nghiệp [MÃ]
 **1. Kết Quả Kinh Doanh Cốt Lõi (Doanh thu & Lợi nhuận)**
-- Doanh thu / Thu nhập hoạt động (NII nếu là ngân hàng)
-- Lợi nhuận trước thuế & Lợi nhuận sau thuế
-- Biên lợi nhuận (NIM đối với ngân hàng, Biên lãi gộp đối với sản xuất/bán lẻ)
-**2. Chất Lượng Tài Sản & Đòn Bẩy (NPL, LLR, CASA hoặc Nợ vay D/E)**
-- Nợ vay / Đòn bẩy tài chính D/E (đối với ngân hàng: Nợ xấu NPL, Bao phủ nợ xấu LLR, Tỷ lệ CASA)
-- Cơ cấu tài sản và mức độ an toàn nguồn vốn
+- Doanh thu thuần / Thu nhập hoạt động (NII nếu là ngân hàng)
+- Lợi nhuận trước thuế & Lợi nhuận sau thuế (LNST)
+- Biên lợi nhuận (NIM đối với ngân hàng, Biên lãi gộp đối với sản xuất/khai khoáng/bán lẻ)
+**2. Chất Lượng Tài Sản & Đòn Bẩy (Nợ vay D/E, Tổng tài sản hoặc NPL, CASA)**
+- Nợ vay / Đòn bẩy tài chính D/E hoặc chi phí lãi vay (đối với ngân hàng: Nợ xấu NPL, Bao phủ nợ xấu LLR, Tỷ lệ CASA)
+- Tổng tài sản và mức độ an toàn cơ cấu vốn
 **3. Chỉ Số Hiệu Quả Sinh Lời & Định Giá Từ BCTC**
 - ROE, ROA, EPS, P/E, P/B
 **4. Đánh Giá Khách Quan & Triển Vọng Tài Chính**
+- Nhận định sức khỏe tài chính và động lực tăng trưởng dài hạn.
 Tuyệt đối không nhầm sang bài phân tích kỹ thuật chung.`
   } else if (intent.isValuation) {
     taskInstruction = `
@@ -360,12 +363,13 @@ const STOCK_DATA_TOOL = {
   }
 }
 
-// Hàm chọn model thông minh: Nếu là câu hỏi tin tức/sự kiện/lý do thì tự động thêm :online để tra cứu web
+// Hàm chọn model thông minh: Tự động kích hoạt Web Search (:online) khi cần tra cứu tin tức hoặc BCTC trực tiếp từ web
 export function resolveModelWithWebSearch(baseModel, intent) {
   if (!baseModel) return DEFAULT_TURBO_MODEL
-  if (intent?.isNewsOrGeneral) {
+  // Kích hoạt tìm kiếm web khi: câu hỏi tin tức/sự kiện/tại sao HOẶC hỏi BCTC/định giá mà cần dữ liệu mới nhất từ báo chí
+  if (intent?.isNewsOrGeneral || intent?.isBCTC || intent?.isValuation) {
     if (baseModel.endsWith(':online')) return baseModel
-    // Thêm hậu tố :online để OpenRouter tự động search Google/Exa và trích nguồn
+    // Thêm hậu tố :online để OpenRouter tự động search Google/CafeF/Vietstock và trích nguồn
     return `${baseModel}:online`
   }
   return baseModel

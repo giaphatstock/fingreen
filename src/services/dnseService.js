@@ -266,6 +266,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Danny Le (Chủ tịch HĐQT) • Craig Richard BradShaw (Tổng Giám Đốc)',
     holder: 'Công ty TNHH Tầm Nhìn Masan (Tập đoàn Masan nắm giữ 92.89%)',
     summary: 'Nhà sản xuất Vonfram và kim loại chiến lược (Bismut, Florit) lớn nhất thế giới ngoài Trung Quốc qua mỏ Núi Pháo (Thái Nguyên). Sở hữu nền tảng công nghệ tinh luyện H.C. Starck Tungsten Powders tại Đức.',
+    bctc: 'Doanh thu thuần: ~25.687 tỷ VNĐ (tăng 409% nhờ giá Vonfram tăng đột biến) | Lợi nhuận trước thuế (LNTT): ~4.599 tỷ VNĐ | Lợi nhuận sau thuế (LNST): ~4.350 tỷ VNĐ | Biên lãi gộp: ~18.8% | Tổng tài sản: ~40.968 tỷ VNĐ | Nợ vay/Vốn chủ sở hữu (D/E): ~1.05 lần (được tối ưu hóa sau các kỳ trả nợ)',
     signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI NỀN GIÁ THEO CHU KỲ PHỤC HỒI HÀNG HÓA KIM LOẠI'
   },
   STB: {
