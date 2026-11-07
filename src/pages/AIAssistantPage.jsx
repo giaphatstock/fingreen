@@ -10,9 +10,9 @@ import MarkdownRenderer from '../components/common/MarkdownRenderer'
 import ModelSelectorPill from '../components/ai/ModelSelectorPill'
 import toast from 'react-hot-toast'
 
-const INITIAL_MESSAGE = `Xin chào! Tôi là **FinGreen AI**, trợ lý phân tích chứng khoán thông minh.
+const INITIAL_MESSAGE = `Xin chào! Tôi là **FinGreen AI**, trợ lý dữ liệu và thuật toán chứng khoán thông minh.
 
-Tôi có thể giúp bạn phân tích mã cổ phiếu, báo cáo tài chính, dòng tiền ngành hay kiểm thử chiến thuật đầu tư!
+Tôi có thể giúp bạn phân tích mã cổ phiếu, báo cáo tài chính, dữ liệu dòng tiền ngành hay kiểm thử chiến thuật đầu tư!
 
 **Bạn có thể thử các yêu cầu mẫu:**
 - 📈 *Phân tích toàn diện mã cổ phiếu HPG*
@@ -20,7 +20,8 @@ Tôi có thể giúp bạn phân tích mã cổ phiếu, báo cáo tài chính, 
 - 📊 *VN-Index dẫn dắt bởi ngành nào? Thanh khoản hôm nay ra sao?*
 - 💡 *Tạo cho tôi một chiến thuật đầu tư cổ phiếu phù hợp với thị trường hiện tại*
 
-Chọn mẫu câu hỏi ở thanh bên trái hoặc nhập trực tiếp câu hỏi của bạn vào khung bên dưới!`
+---
+> ⚠️ **Tuyên bố miễn trừ trách nhiệm:** Tín hiệu từ dữ liệu thuật toán/kỹ thuật mang tính chất THAM KHẢO, không phải là lời khuyên hay khuyến nghị đầu tư chính thức. Đầu tư chứng khoán luôn tiềm ẩn rủi ro. Nhà đầu tư tự chịu trách nhiệm về quyết định mua bán của mình.`
 
 export default function AIAssistantPage() {
   const { user } = useAuth()

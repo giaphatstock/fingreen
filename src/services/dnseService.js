@@ -169,13 +169,13 @@ export function formatStockAnalysisFromDNSE(symbol, dnseData) {
 **2. Tổng Quan Hoạt Động & Lợi Thế Cạnh Tranh**
 ${info.introduction ? info.introduction.replace(/\r\n/g, ' ') : `${info.name} là doanh nghiệp hàng đầu trong nhóm ngành ${info.sectorName || 'kinh doanh cốt lõi'}, sở hữu chuỗi giá trị và thị phần vững chắc.`}
 
-**3. Đánh Giá Xu Hướng & Tiềm Năng Đầu Tư**
+**3. Đánh Giá Xu Hướng & Tín Hiệu Kỹ Thuật**
 - **Hệ số Beta:** \`${info.beta ? info.beta.toFixed(2) : '1.00'}\` (Độ nhạy so với chỉ số chung VN-Index)
 - **Tình trạng giao dịch:** Giao dịch bình thường trên sàn ${info.exchange} ${info.isMargin ? '• Được cấp margin' : '• Không hỗ trợ margin'}
-- **Chiến lược:** Phù hợp theo dõi dòng tiền lớn tham gia, canh mua ở các nhịp điều chỉnh kỹ thuật quanh vùng hỗ trợ.
+- **Vùng quan sát kỹ thuật:** Phù hợp theo dõi dữ liệu dòng tiền lớn kích hoạt, kiểm định các vùng hỗ trợ/kháng cự toán học.
 
 ---
-> 💡 *Dữ liệu đồng bộ trực tiếp từ hệ thống phân tích FinGreen. Dữ liệu phục vụ nghiên cứu và tham khảo, không phải tư vấn đầu tư.*`
+> ⚠️ **Tuyên bố miễn trừ trách nhiệm:** Tín hiệu từ dữ liệu thuật toán/kỹ thuật mang tính chất THAM KHẢO, không phải là lời khuyên hay khuyến nghị đầu tư chính thức. Đầu tư chứng khoán luôn tiềm ẩn rủi ro. Nhà đầu tư tự chịu trách nhiệm về quyết định mua bán của mình.`
 }
 
 // CƠ SỞ DỮ LIỆU ĐẦY ĐỦ CÁC CỔ PHIẾU VIỆT NAM (Cam kết số liệu thực tế 100%, không bao giờ có [X])
@@ -582,16 +582,16 @@ export function generateComprehensiveStockAnalysis(symbol) {
 **3. Đánh Giá Xu Hướng & Cốt Lõi Kinh Doanh**
 ${s.summary}
 
-**4. Góc Nhìn Đầu Tư FinGreen**
-- **Khuyến nghị:** **${s.recommendation}**
-- **Chiến lược:** Theo dõi sát diễn biến dòng tiền khối ngoại và thanh khoản trong phiên để canh điểm giải ngân phù hợp quanh vùng hỗ trợ an toàn.
+**4. Góc Nhìn Thuật Toán & Tín Hiệu Dòng Tiền FinGreen**
+- **Tín hiệu dòng tiền:** **${s.signal || s.recommendation}**
+- **Vùng quan sát kỹ thuật:** Theo dõi sát diễn biến dòng tiền khối ngoại và thanh khoản trong phiên để canh kiểm định các ngưỡng hỗ trợ/kháng cự toán học an toàn.
 
 ---
-> 💡 *Dữ liệu đồng bộ trực tiếp từ hệ thống phân tích FinGreen. Dữ liệu phục vụ nghiên cứu và tham khảo, không phải tư vấn đầu tư.*`
+> ⚠️ **Tuyên bố miễn trừ trách nhiệm:** Tín hiệu từ dữ liệu thuật toán/kỹ thuật mang tính chất THAM KHẢO, không phải là lời khuyên hay khuyến nghị đầu tư chính thức. Đầu tư chứng khoán luôn tiềm ẩn rủi ro. Nhà đầu tư tự chịu trách nhiệm về quyết định mua bán của mình.`
   }
 
   // Nếu là mã chứng khoán khác
-  return `### 📊 Báo Cáo Phân Tích Cổ Phiếu ${sym}
+  return `### 📊 Báo Cáo Phân Tích Kỹ Thuật & Cổ Phiếu ${sym}
 
 **1. Thông Tin Niêm Yết & Doanh Nghiệp**
 - **Mã chứng khoán:** **${sym}**
@@ -600,15 +600,15 @@ ${s.summary}
 
 **2. Góc Nhìn Kỹ Thuật & Xu Hướng Dòng Tiền**
 - **Xu hướng ngắn hạn:** Đang dao động tích lũy theo nhịp vận động chung của chỉ số thị trường VN-Index.
-- **Thanh khoản:** Cần theo dõi khối lượng khớp lệnh trung bình 20 phiên (MA20) để xác nhận tín hiệu dòng tiền lớn gia nhập.
-- **Vùng quan sát:** Khuyến nghị nhà đầu tư theo dõi vùng hỗ trợ gần nhất, tránh mua đuổi trong các phiên tăng giá mạnh.
+- **Thanh khoản:** Cần theo dõi khối lượng khớp lệnh trung bình 20 phiên (MA20) để xác nhận dữ liệu dòng tiền lớn kích hoạt.
+- **Vùng quan sát kỹ thuật:** Theo dõi vùng hỗ trợ toán học gần nhất, tránh mua đuổi trong các phiên tăng giá mạnh.
 
-**3. Khuyến Nghị Giao Dịch FinGreen**
-- **Chiến lược:** Quản trị rủi ro chặt chẽ, chỉ mở vị thế mua khi cổ phiếu kiểm định thành công vùng hỗ trợ và thị trường chung có thanh khoản đồng thuận.
-- **Tỷ trọng:** Giữ tỷ trọng danh mục ở mức cân bằng, tuân thủ nguyên tắc cắt lỗ khi thủng ngưỡng hỗ trợ quan trọng.
+**3. Tín Hiệu Dòng Tiền & Quản Trị Rủi Ro FinGreen**
+- **Chiến lược:** Quản trị rủi ro chặt chẽ, chỉ kích hoạt theo dõi khi cổ phiếu kiểm định thành công vùng hỗ trợ và thị trường chung có thanh khoản đồng thuận.
+- **Tỷ trọng:** Giữ tỷ trọng danh mục ở mức cân bằng, tuân thủ nguyên tắc kỷ luật khi thủng ngưỡng hỗ trợ quan trọng.
 
 ---
-> 💡 *Dữ liệu đồng bộ từ hệ thống phân tích FinGreen. Dữ liệu phục vụ nghiên cứu và tham khảo, không phải tư vấn đầu tư.*`
+> ⚠️ **Tuyên bố miễn trừ trách nhiệm:** Tín hiệu từ dữ liệu thuật toán/kỹ thuật mang tính chất THAM KHẢO, không phải là lời khuyên hay khuyến nghị đầu tư chính thức. Đầu tư chứng khoán luôn tiềm ẩn rủi ro. Nhà đầu tư tự chịu trách nhiệm về quyết định mua bán của mình.`
 }
 
 export function getDNSEContextForPrompt(prompt) {
