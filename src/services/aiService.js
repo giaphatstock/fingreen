@@ -5,7 +5,7 @@ import {
   generateSmartFallbackResponse, generateMarketOverviewReport,
   getDNSEContextForPrompt, STOCKS_KNOWLEDGE_BASE,
   fetchRealtimeQuote, FAMOUS_ENTITIES_KNOWLEDGE_BASE
-} from './dnseService'
+} from './dnseService.js'
 
 // Tuyên bố miễn trừ trách nhiệm bắt buộc theo chuẩn mực pháp lý
 export const MANDATORY_DISCLAIMER = '⚠️ **Tuyên bố miễn trừ trách nhiệm:** Thông tin, số liệu và tín hiệu chỉ mang tính chất tham khảo, không phải lời khuyên đầu tư. Chúng tôi không đảm bảo tính toàn vẹn, chính xác của dữ liệu và không chịu trách nhiệm dưới mọi hình thức đối với sai sót, chậm trễ, tổn thất giao dịch hoặc việc người dùng tự ý trích dẫn, phát tán thông tin cho bên thứ ba. Nhà đầu tư tự chịu trách nhiệm cho mọi quyết định của mình.'
@@ -34,7 +34,12 @@ export const AVAILABLE_MODELS = [
 
 // Quản lý cấu hình Model Nhanh (Flash)
 export function getFastModel() {
-  return localStorage.getItem('fingreen_admin_fast_model') || DEFAULT_FAST_MODEL
+  const saved = localStorage.getItem('fingreen_admin_fast_model')
+  // Nếu giá trị lưu cũ là của OpenRouter (chứa gpt hoặc /) thì tự động chuyển sang Gemini
+  if (!saved || saved.includes('/') || saved.includes('gpt') || saved.includes('nvidia')) {
+    return DEFAULT_FAST_MODEL
+  }
+  return saved
 }
 
 export function saveFastModel(model) {
@@ -45,7 +50,12 @@ export function saveFastModel(model) {
 
 // Quản lý cấu hình Model Turbo
 export function getTurboModel() {
-  return localStorage.getItem('fingreen_admin_turbo_model') || DEFAULT_TURBO_MODEL
+  const saved = localStorage.getItem('fingreen_admin_turbo_model')
+  // Nếu giá trị lưu cũ là của OpenRouter (chứa gpt hoặc /) thì tự động chuyển sang Gemini
+  if (!saved || saved.includes('/') || saved.includes('gpt') || saved.includes('nvidia')) {
+    return DEFAULT_TURBO_MODEL
+  }
+  return saved
 }
 
 export function saveTurboModel(model) {
@@ -80,10 +90,19 @@ const DEFAULT_GEMINI_KEY = typeof atob !== 'undefined'
   : ''
 
 export function getGeminiApiKey() {
-  return localStorage.getItem('fingreen_admin_gemini_key') ||
-    localStorage.getItem('fingreen_admin_openrouter_key') ||
-    import.meta.env.VITE_GEMINI_API_KEY ||
-    DEFAULT_GEMINI_KEY
+  const adminGeminiKey = localStorage.getItem('fingreen_admin_gemini_key')
+  if (adminGeminiKey && adminGeminiKey.trim()) return adminGeminiKey.trim()
+
+  const envKey = import.meta.env.VITE_GEMINI_API_KEY
+  if (envKey && envKey.trim()) return envKey.trim()
+
+  // Kiểm tra key cũ trong localStorage nếu nó là key Google (bắt đầu bằng AQ. hoặc AIzaSy)
+  const legacyKey = localStorage.getItem('fingreen_admin_openrouter_key')
+  if (legacyKey && (legacyKey.startsWith('AQ.') || legacyKey.startsWith('AIzaSy'))) {
+    return legacyKey.trim()
+  }
+
+  return DEFAULT_GEMINI_KEY
 }
 
 export function saveGeminiApiKey(key) {
