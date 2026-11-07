@@ -46,11 +46,15 @@ export default function FinGreenRobot() {
   const [chatMode, setChatMode] = useState(() => getChatMode())
 
   const chatEndRef = useRef(null)
+  const chatContainerRef = useRef(null)
 
-  // Tự cuộn xuống tin nhắn mới nhất
+  // Tự cuộn CHỈ trong khung tin nhắn của Robot, KHÔNG làm cuộn trang bên ngoài
   useEffect(() => {
-    if (isOpen) {
-      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (isOpen && chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      })
     }
   }, [messages, isOpen])
 
@@ -353,7 +357,7 @@ export default function FinGreenRobot() {
           ) : (
             <>
               {/* Nội dung tin nhắn chat - Streaming Realtime với Gemini glow & cursor */}
-              <div className="flex-1 p-3.5 sm:p-4 overflow-y-auto space-y-3.5 min-h-[260px] max-h-[400px]">
+              <div ref={chatContainerRef} className="flex-1 p-3.5 sm:p-4 overflow-y-auto space-y-3.5 min-h-[260px] max-h-[400px]">
                 {messages.map((m) => {
                   const isThisStreaming = m.id === streamingMessageId
                   // Ẩn bubble trống của bot khi còn đang thinking

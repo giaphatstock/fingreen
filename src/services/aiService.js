@@ -12,21 +12,19 @@ export const MANDATORY_DISCLAIMER = '⚠️ **Tuyên bố miễn trừ trách nh
 
 // Mô hình mặc định thông minh & ổn định
 export const DEFAULT_FAST_MODEL = 'openai/gpt-4o-mini'
-export const DEFAULT_TURBO_MODEL = 'openai/gpt-4o-mini'
+export const DEFAULT_TURBO_MODEL = 'nvidia/nemotron-3.5-lightning:free'
 
 // Danh sách gợi ý mô hình cho Admin
 export const SUGGESTED_FAST_MODELS = [
   { id: 'openai/gpt-4o-mini', name: 'OpenAI GPT-4o Mini (Khuyên Dùng - Tốc Độ & Web Tốt)', provider: 'OpenAI' },
-  { id: 'deepseek/deepseek-chat', name: 'DeepSeek V3 (Phân Tích Cực Chuẩn)', provider: 'DeepSeek' },
-  { id: 'google/gemma-4-26b-a4b-it:free', name: 'Google Gemma 4 26B (Free)', provider: 'Google' },
+  { id: 'google/gemini-2.0-flash-exp:free', name: 'Google Gemini 2.0 Flash (Free)', provider: 'Google' },
   { id: 'nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA Nemotron 3.5 Lightning (Free)', provider: 'Nvidia' },
 ]
 
 export const SUGGESTED_TURBO_MODELS = [
-  { id: 'openai/gpt-4o-mini', name: 'OpenAI GPT-4o Mini (Khuyên Dùng - Tốc Độ & Web Tốt)', provider: 'OpenAI' },
-  { id: 'deepseek/deepseek-chat', name: 'DeepSeek V3 (Suy Luận Đột Phá)', provider: 'DeepSeek' },
-  { id: 'openai/gpt-4o', name: 'OpenAI GPT-4o (Đỉnh Cao Toàn Diện)', provider: 'OpenAI' },
   { id: 'nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA Nemotron 3.5 Lightning (Free)', provider: 'Nvidia' },
+  { id: 'openai/gpt-4o-mini', name: 'OpenAI GPT-4o Mini (Khuyên Dùng - Tốc Độ & Web Tốt)', provider: 'OpenAI' },
+  { id: 'google/gemini-2.0-flash-exp:free', name: 'Google Gemini 2.0 Flash (Free)', provider: 'Google' },
 ]
 
 export const AVAILABLE_MODELS = [
@@ -311,6 +309,8 @@ ${marketContext}
 
 // Thu thập ngữ cảnh thị giá thời gian thực, thông tin BCTC và phân loại ý định
 async function gatherStockAndMarketContext(prompt, apiKey) {
+  const isGreeting = /^(chào|xin chào|hello|hi|hey|alo|chào bạn|chào ad|chào bot)\b/i.test(prompt.trim())
+  const isIdentity = /bạn là ai|bạn tên gì|tên bạn là gì|who are you|giới thiệu về bạn|bạn làm được gì/i.test(prompt)
   const isValuation = /định giá|dinh gia|pe|pb|dcf|rẻ hay đắt|đắt hay rẻ|fair value/i.test(prompt)
   const isBCTC = !isValuation && /bctc|báo cáo tài chính|kết quả kinh doanh|doanh thu|lợi nhuận|nợ xấu|biên lãi|casa|nim|roe|roa/i.test(prompt)
   // Chỉ coi là hỏi thị giá đơn thuần nếu KHÔNG PHẢI là câu hỏi định giá (vì từ 'định giá' có chứa 'giá')
@@ -318,7 +318,7 @@ async function gatherStockAndMarketContext(prompt, apiKey) {
   const isFactual = /ai là|người sáng lập|ông chủ|lãnh đạo|lịch sử|thành lập|chủ tịch|tổng giám đốc|ceo/i.test(prompt)
   const isNewsOrGeneral = /shark|bình|vụ án|bắt|khởi tố|tin tức|sự kiện|vì sao|tại sao|nguyên nhân|bán cổ phần|mua cổ phần|thoái vốn|sáp nhập|mua lại|m&a|thương vụ|dự án|tin mới|báo chí|cafef|vietstock|vneconomy|thế giới|quốc tế|hàng hóa|vonfram|dầu thô|vàng|fed|lãi suất/i.test(prompt) || (isFactual && !/vps/i.test(prompt))
 
-  const intent = { isValuation, isBCTC, isPrice, isFactual, isNewsOrGeneral }
+  const intent = { isGreeting, isIdentity, isValuation, isBCTC, isPrice, isFactual, isNewsOrGeneral, prompt }
 
   let stockContext = ''
   let targetSymbol = null

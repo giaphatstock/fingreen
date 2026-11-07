@@ -674,7 +674,7 @@ export default function AdminPage() {
                       type="text"
                       value={fastModel}
                       onChange={(e) => setFastModel(e.target.value)}
-                      placeholder="e.g. google/gemma-4-26b-a4b-it:free"
+                      placeholder="e.g. google/gemini-2.0-flash-exp:free"
                       className="input-field py-1 px-2.5 text-xs font-mono flex-1"
                     />
                   </div>

@@ -706,6 +706,47 @@ export async function generateSmartFallbackResponse(symbol, intent = {}) {
   const sym = symbol ? symbol.toUpperCase().trim() : null
   const quote = sym ? await fetchRealtimeQuote(sym) : null
   const s = sym && STOCKS_KNOWLEDGE_BASE[sym] ? STOCKS_KNOWLEDGE_BASE[sym] : null
+  const promptText = intent.prompt || ''
+
+  // 0. CHÀO HỎI & HỎI DANH TÍNH
+  if (intent.isGreeting || /^(chào|xin chào|hello|hi|hey|alo)\b/i.test(promptText.trim())) {
+    return `Xin chào bạn! Tôi là **FinGreen AI** — Trợ lý phân tích dữ liệu tài chính & thị trường chứng khoán thông minh của nền tảng FinGreen.
+
+Tôi có thể hỗ trợ bạn:
+- 📊 **Phân tích kỹ thuật & dòng tiền:** Nhập mã cổ phiếu (ví dụ: \`HPG\`, \`FPT\`, \`SSI\`, \`VCB\`...).
+- 📑 **Báo cáo tài chính (BCTC):** Tra cứu doanh thu, LNST, biên lãi, nợ vay (ví dụ: \`BCTC GMD\`, \`BCTC MSR\`).
+- 💎 **Định giá cổ phiếu:** Phân tích P/E, P/B, ROE, định giá tương đối (ví dụ: \`Định giá FPT\`).
+- 📈 **Xu hướng thị trường & Kiến thức đầu tư:** Hỏi về VN-Index, các chiến thuật giao dịch (Breakout, DCA, MA...).
+
+Hôm nay bạn muốn tôi hỗ trợ phân tích mã cổ phiếu hoặc chiến thuật nào?`
+  }
+
+  if (intent.isIdentity || /bạn tên gì|bạn là ai|tên bạn là gì/i.test(promptText)) {
+    return `Tôi là **FinGreen AI** — Trợ lý phân tích tài chính và chứng khoán thông minh được phát triển bởi nền tảng FinGreen.
+
+Sứ mệnh của tôi là cung cấp cho nhà đầu tư dữ liệu khách quan, các phân tích chuyên sâu về Báo cáo tài chính, góc nhìn thuật toán kỹ thuật và tín hiệu dòng tiền chuẩn xác theo triết lý "Kiến tạo giá trị thực".`
+  }
+
+  // 0.1 CÂU HỎI VỀ CHIẾN THUẬT GIAO DỊCH BREAKOUT
+  if (/breakout|bùng nổ khối lượng|vol lớn|volume/i.test(promptText) && !sym) {
+    return `### 💡 Đánh Giá Chiến Thuật Giao Dịch Breakout Kết Hợp Khối Lượng Bùng Nổ
+
+Chiến thuật **Breakout (phá vỡ nền giá) kết hợp khối lượng bùng nổ (Volume Spike)** là một trong những phương pháp kinh điển và hiệu quả nhất trong phân tích kỹ thuật:
+
+**1. Bản Chất Của Chiến Thuật**
+- **Giá vượt kháng cự:** Thể hiện lực cầu chủ động chấp nhận mua lên ở mức giá cao hơn, phá vỡ thế giằng co tích lũy trước đó.
+- **Khối lượng (Volume) tăng vọt (> 150% - 200% so với MA20):** Xác nhận dòng tiền lớn (Smart Money / Nhà đầu tư tổ chức) đã chính thức kích hoạt tham gia, giảm thiểu tối đa rủi ro "bẫy tăng giá" (Bull Trap / Fakeout).
+
+**2. Ưu Điểm Nổi Bật**
+- **Hiệu suất sinh lời cao:** Bắt trọn điểm xuất phát của một chu kỳ sóng tăng giá mới (Markup Phase), không bị đọng vốn trong các nhịp tích lũy kéo dài.
+- **Quy tắc cắt lỗ rõ ràng:** Ngưỡng hỗ trợ toán học chính là đỉnh cũ vừa bị phá vỡ. Nếu giá quay đầu xuyên thủng mức này, nhà đầu tư có thể dứt khoát hạ tỷ trọng quản trị rủi ro.
+
+**3. Rủi Ro Thường Gặp & Cách Khắc Phục**
+- ⚠️ **Hiện tượng False Breakout (Breakout giả):** Thường xảy ra khi thị trường chung (VN-Index) đang trong xu hướng giảm (Downtrend) hoặc kháng cự tâm lý lớn.
+- 💡 **Quy tắc giao dịch chuẩn:**
+  1. Chỉ giải ngân phiên Breakout khi VN-Index đồng thuận tích cực hoặc đi ngang tích lũy lành mạnh.
+  2. Chia tỷ trọng mua: Mua 40-50% tại phiên bùng nổ, chờ nhịp kiểm định (Throwback/Retest) quanh vùng hỗ trợ để gia tăng phần còn lại.`
+  }
 
   // 1. NGƯỜI DÙNG HỎI VỀ ĐỊNH GIÁ CỔ PHIẾU
   if (intent.isValuation && sym) {

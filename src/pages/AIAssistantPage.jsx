@@ -48,11 +48,16 @@ export default function AIAssistantPage() {
   const [chatMode, setChatMode] = useState(() => getChatMode())
 
   const chatEndRef = useRef(null)
+  const chatContainerRef = useRef(null)
 
-  // Lưu lịch sử chat
+  // Tự cuộn CHỈ trong khung chat, KHÔNG làm cuộn cả trang web bên ngoài
   useEffect(() => {
-    localStorage.setItem('fingreen_ai_history_v2', JSON.stringify(messages))
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      })
+    }
   }, [messages])
 
   const handleSend = async (customPrompt) => {
@@ -214,7 +219,7 @@ export default function AIAssistantPage() {
           </div>
 
           {/* Vùng Tin Nhắn - Streaming Realtime với Gemini glow & cursor */}
-          <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4">
+          <div ref={chatContainerRef} className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4">
             {messages.map((m) => {
               const isThisStreaming = m.id === streamingMessageId
               // Ẩn bubble trống của bot khi còn đang thinking
