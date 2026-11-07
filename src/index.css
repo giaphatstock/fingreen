@@ -2,13 +2,60 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-primary: #5154F0;
+  --color-primary-dark: #8587F4;
+  --color-primary-medium: #7D7FF4;
+  --color-primary-light: #A8AAF8;
+
+  /* Theme: Fintech Purple (Default) */
+  --bg-main: #0a0b16;
+  --bg-card: #121426;
+  --bg-card-hover: #181b32;
+  --bg-input: #1a1e38;
+  --bg-subtle: #14172e;
+  --border-color: #24294d;
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+  --nav-bg: rgba(10, 11, 22, 0.92);
+}
+
+html.theme-dark {
+  /* Theme: Pure Dark / AMOLED Black */
+  --bg-main: #000000;
+  --bg-card: #0d0e12;
+  --bg-card-hover: #14161c;
+  --bg-input: #151820;
+  --bg-subtle: #111318;
+  --border-color: #222530;
+  --text-main: #ffffff;
+  --text-muted: #9aa0a6;
+  --nav-bg: rgba(0, 0, 0, 0.94);
+}
+
+html.theme-light {
+  /* Theme: Light #F3ECFB */
+  --bg-main: #F3ECFB;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f9f5fd;
+  --bg-input: #f4edf9;
+  --bg-subtle: #ebdff7;
+  --border-color: #dfceef;
+  --text-main: #1d182b;
+  --text-muted: #6a627a;
+  --nav-bg: rgba(243, 236, 251, 0.94);
+}
+
 @layer base {
   * {
     box-sizing: border-box;
   }
   
   body {
-    @apply bg-gray-950 text-gray-100 font-sans antialiased;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
   ::-webkit-scrollbar {
@@ -16,10 +63,11 @@
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    @apply bg-gray-900;
+    background-color: var(--bg-main);
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-primary-500 rounded-full;
+    background-color: #5154F0;
+    border-radius: 9999px;
   }
 }
 
@@ -29,7 +77,10 @@
   }
   
   .btn-secondary {
-    @apply bg-gray-800 hover:bg-gray-700 text-gray-100 font-semibold px-6 py-2.5 rounded-xl transition-all duration-200 border border-gray-700 hover:border-gray-600;
+    background-color: var(--bg-subtle);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    @apply hover:border-primary-500/40 font-semibold px-6 py-2.5 rounded-xl transition-all duration-200;
   }
 
   .btn-outline {
@@ -41,19 +92,30 @@
   }
 
   .card {
-    @apply bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-xl;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    @apply rounded-2xl p-6 shadow-xl transition-all duration-200;
   }
 
   .card-hover {
-    @apply card hover:border-primary-500/40 hover:shadow-primary-500/10 transition-all duration-300 cursor-pointer;
+    @apply card hover:border-primary-500/40 hover:shadow-primary-500/10 cursor-pointer;
+  }
+
+  .card-hover:hover {
+    background-color: var(--bg-card-hover);
   }
 
   .input-field {
-    @apply w-full bg-gray-800 border border-gray-700 text-gray-100 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent placeholder-gray-500 transition-all duration-200;
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    @apply w-full rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200;
   }
 
   .label {
-    @apply block text-sm font-medium text-gray-300 mb-1.5;
+    color: var(--text-muted);
+    @apply block text-sm font-medium mb-1.5;
   }
 
   .badge {
@@ -61,7 +123,7 @@
   }
 
   .badge-purple {
-    @apply badge bg-primary-500/20 text-primary-300 border border-primary-500/30;
+    @apply badge bg-primary-500/20 text-primary-400 border border-primary-500/30;
   }
 
   .badge-green {
@@ -77,40 +139,40 @@
   }
 
   .badge-gray {
-    @apply badge bg-gray-700/50 text-gray-400 border border-gray-700;
+    background-color: var(--bg-subtle);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    @apply badge;
   }
 
   .gradient-text {
     @apply bg-gradient-to-r from-primary-400 to-primary-light bg-clip-text text-transparent;
   }
 
-  .glass {
-    @apply bg-white/5 backdrop-blur-md border border-white/10;
-  }
-
-  /* TipTap Editor */
+  /* TipTap Editor & Prose */
   .ProseMirror {
-    @apply outline-none min-h-[200px];
+    @apply outline-none min-h-[220px];
   }
 
-  .ProseMirror h1 { @apply text-2xl font-bold text-gray-100 mb-4 mt-6; }
-  .ProseMirror h2 { @apply text-xl font-bold text-gray-100 mb-3 mt-5; }
-  .ProseMirror h3 { @apply text-lg font-semibold text-gray-200 mb-2 mt-4; }
-  .ProseMirror p { @apply text-gray-300 mb-3 leading-relaxed; }
-  .ProseMirror strong { @apply text-gray-100 font-semibold; }
+  .ProseMirror h1 { @apply text-2xl font-bold mb-4 mt-6; color: var(--text-main); }
+  .ProseMirror h2 { @apply text-xl font-bold mb-3 mt-5; color: var(--text-main); }
+  .ProseMirror h3 { @apply text-lg font-semibold mb-2 mt-4; color: var(--text-main); }
+  .ProseMirror p { @apply mb-3 leading-relaxed; color: var(--text-main); }
+  .ProseMirror strong { @apply font-semibold; color: var(--text-main); }
   .ProseMirror em { @apply italic; }
-  .ProseMirror ul { @apply list-disc list-inside mb-3 text-gray-300 space-y-1; }
-  .ProseMirror ol { @apply list-decimal list-inside mb-3 text-gray-300 space-y-1; }
+  .ProseMirror ul { @apply list-disc list-inside mb-3 space-y-1; color: var(--text-main); }
+  .ProseMirror ol { @apply list-decimal list-inside mb-3 space-y-1; color: var(--text-main); }
   .ProseMirror a { @apply text-primary-400 underline hover:text-primary-300; }
-  .ProseMirror img { @apply rounded-xl max-w-full my-4 border border-gray-700; }
+  .ProseMirror img { @apply rounded-xl max-w-full my-4 border shadow-md; border-color: var(--border-color); }
   .ProseMirror mark { @apply bg-yellow-400/30 text-yellow-200 px-1 rounded; }
-  .ProseMirror blockquote { @apply border-l-4 border-primary-500 pl-4 italic text-gray-400 my-4; }
-  .ProseMirror pre { @apply bg-gray-800 rounded-lg p-4 my-4 overflow-x-auto; }
-  .ProseMirror code { @apply bg-gray-800 text-primary-300 px-1.5 py-0.5 rounded text-sm; }
+  .ProseMirror blockquote { @apply border-l-4 border-primary-500 pl-4 italic my-4; color: var(--text-muted); }
+  .ProseMirror pre { @apply rounded-lg p-4 my-4 overflow-x-auto; background-color: var(--bg-input); }
+  .ProseMirror code { @apply text-primary-300 px-1.5 py-0.5 rounded text-sm; background-color: var(--bg-input); }
 
   .is-editor-empty:first-child::before {
     content: attr(data-placeholder);
-    @apply text-gray-500 pointer-events-none float-left h-0;
+    color: var(--text-muted);
+    @apply pointer-events-none float-left h-0 opacity-60;
   }
 }
 
@@ -124,13 +186,7 @@
 
   .bg-mesh {
     background-image: 
-      radial-gradient(ellipse at 20% 50%, rgba(81, 84, 240, 0.08) 0%, transparent 60%),
-      radial-gradient(ellipse at 80% 20%, rgba(168, 170, 248, 0.05) 0%, transparent 60%);
-  }
-
-  .border-gradient {
-    background: linear-gradient(#1a1a2e, #1a1a2e) padding-box,
-                linear-gradient(135deg, #5154F0, #A8AAF8) border-box;
-    border: 1px solid transparent;
+      radial-gradient(ellipse at 20% 50%, rgba(81, 84, 240, 0.09) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(168, 170, 248, 0.06) 0%, transparent 60%);
   }
 }
