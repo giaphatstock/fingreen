@@ -4,8 +4,9 @@ import { useAuth } from '../../contexts/AuthContext'
 import {
   Bot, X, Send, Maximize2, Loader2, ArrowRight, Lock
 } from 'lucide-react'
-import { sendChatMessage } from '../../services/aiService'
+import { sendChatMessage, getChatMode, saveChatMode } from '../../services/aiService'
 import MarkdownRenderer from '../common/MarkdownRenderer'
+import ModelSelectorPill from './ModelSelectorPill'
 import toast from 'react-hot-toast'
 
 const WELCOME_MESSAGE = `Xin chào! Tôi là **FinGreen AI**, trợ lý phân tích chứng khoán thông minh.
@@ -37,6 +38,7 @@ export default function FinGreenRobot() {
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [chatMode, setChatMode] = useState(() => getChatMode())
 
   const chatEndRef = useRef(null)
 
@@ -161,7 +163,8 @@ export default function FinGreenRobot() {
     try {
       const reply = await sendChatMessage({
         messages,
-        prompt: text
+        prompt: text,
+        mode: chatMode
       })
 
       const botMsg = {
@@ -372,31 +375,48 @@ export default function FinGreenRobot() {
                 ))}
               </div>
 
-              {/* Input Chat Box */}
-              <div className="p-3 bg-[var(--bg-card)] border-t border-[var(--border-color)]">
+              {/* Input Chat Box & Model Selector Pill */}
+              <div className="p-2.5 bg-[var(--bg-card)] border-t border-[var(--border-color)]">
                 <form
                   onSubmit={(e) => {
                     e.preventDefault()
                     handleSend()
                   }}
-                  className="flex items-center gap-2"
+                  className="space-y-2"
                 >
-                  <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Hỏi về mã cổ phiếu, báo cáo tài chính, xu hướng..."
-                    className="input-field py-2 px-3 text-xs flex-1 rounded-xl"
-                    disabled={loading}
-                  />
-                  <button
-                    type="submit"
-                    disabled={loading || !input.trim()}
-                    className="btn-primary p-2.5 rounded-xl disabled:opacity-40 disabled:hover:scale-100 flex-shrink-0"
-                    title="Gửi câu hỏi"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder="Hỏi về mã cổ phiếu, báo cáo tài chính..."
+                      className="input-field py-2 px-3 text-xs flex-1 rounded-xl"
+                      disabled={loading}
+                    />
+                    <button
+                      type="submit"
+                      disabled={loading || !input.trim()}
+                      className="btn-primary p-2.5 rounded-xl disabled:opacity-40 disabled:hover:scale-100 flex-shrink-0"
+                      title="Gửi câu hỏi"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Thanh chọn chế độ Model Flash / Turbo */}
+                  <div className="flex items-center justify-between pt-0.5 px-0.5">
+                    <ModelSelectorPill
+                      currentMode={chatMode}
+                      onSelectMode={(m) => {
+                        setChatMode(m)
+                        saveChatMode(m)
+                      }}
+                      dropUp={true}
+                    />
+                    <span className="text-[10px] text-[var(--text-muted)] select-none">
+                      {chatMode === 'fast' ? '⚡ Thường nhanh hơn' : '🧠 Suy luận chuyên sâu'}
+                    </span>
+                  </div>
                 </form>
               </div>
             </>

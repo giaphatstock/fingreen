@@ -4,9 +4,10 @@ import {
   Bot, Send, Sparkles, TrendingUp, Building2, Shield,
   Trash2, Loader2, ChevronRight, CheckCircle2
 } from 'lucide-react'
-import { sendChatMessage } from '../services/aiService'
+import { sendChatMessage, getChatMode, saveChatMode } from '../services/aiService'
 import { DNSE_PROMPT_LIBRARY } from '../services/dnseService'
 import MarkdownRenderer from '../components/common/MarkdownRenderer'
+import ModelSelectorPill from '../components/ai/ModelSelectorPill'
 import toast from 'react-hot-toast'
 
 const INITIAL_MESSAGE = `Xin chào! Tôi là **FinGreen AI**, trợ lý phân tích chứng khoán thông minh.
@@ -41,6 +42,7 @@ export default function AIAssistantPage() {
 
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [chatMode, setChatMode] = useState(() => getChatMode())
 
   const chatEndRef = useRef(null)
 
@@ -67,7 +69,8 @@ export default function AIAssistantPage() {
     try {
       const reply = await sendChatMessage({
         messages,
-        prompt: promptToSend
+        prompt: promptToSend,
+        mode: chatMode
       })
 
       const botMsg = {
@@ -225,31 +228,50 @@ export default function AIAssistantPage() {
             <div ref={chatEndRef} />
           </div>
 
-          {/* Ô Nhập Tin Nhắn */}
+          {/* Ô Nhập Tin Nhắn & Chế Độ Model */}
           <div className="p-4 border-t border-[var(--border-color)] bg-[var(--bg-card)]">
             <form
               onSubmit={(e) => {
                 e.preventDefault()
                 handleSend()
               }}
-              className="flex items-center gap-2"
+              className="space-y-3"
             >
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Nhập mã cổ phiếu (HPG, FPT, VCB...) hoặc câu hỏi phân tích thị trường..."
-                className="input-field py-3 px-4 text-xs sm:text-sm flex-1 rounded-xl"
-                disabled={loading}
-              />
-              <button
-                type="submit"
-                disabled={loading || !input.trim()}
-                className="btn-primary py-3 px-5 text-xs sm:text-sm font-bold rounded-xl flex items-center gap-1.5 flex-shrink-0"
-              >
-                <span>Gửi</span>
-                <Send className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Nhập mã cổ phiếu (HPG, FPT, VCB...) hoặc câu hỏi phân tích thị trường..."
+                  className="input-field py-3 px-4 text-xs sm:text-sm flex-1 rounded-xl"
+                  disabled={loading}
+                />
+                <button
+                  type="submit"
+                  disabled={loading || !input.trim()}
+                  className="btn-primary py-3 px-5 text-xs sm:text-sm font-bold rounded-xl flex items-center gap-1.5 flex-shrink-0"
+                >
+                  <span>Gửi</span>
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Thanh chọn chế độ Model Flash / Turbo giống Gemini */}
+              <div className="flex items-center justify-between">
+                <ModelSelectorPill
+                  currentMode={chatMode}
+                  onSelectMode={(m) => {
+                    setChatMode(m)
+                    saveChatMode(m)
+                  }}
+                  dropUp={true}
+                />
+                <span className="text-xs text-[var(--text-muted)] select-none">
+                  {chatMode === 'fast'
+                    ? '⚡ Chế độ Flash: Thường nhanh hơn, phản hồi tức thì'
+                    : '🧠 Chế độ Turbo: Thường tốn nhiều thời gian để suy nghĩ'}
+                </span>
+              </div>
             </form>
           </div>
         </div>

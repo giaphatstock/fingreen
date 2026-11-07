@@ -5,18 +5,73 @@ import {
   getDNSEContextForPrompt, STOCKS_KNOWLEDGE_BASE
 } from './dnseService'
 
-export const DEFAULT_MODEL = 'nvidia/nemotron-3.5-lightning:free'
+// Mô hình mặc định cho chế độ Nhanh (Flash) và Turbo
+export const DEFAULT_FAST_MODEL = 'google/gemma-4-26b-a4b-it:free'
+export const DEFAULT_TURBO_MODEL = 'nvidia/nemotron-3.5-lightning:free'
 
-export const AVAILABLE_MODELS = [
-  { id: 'nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA Nemotron 3.5 (Mặc định Free)', provider: 'Nvidia' },
+// Danh sách gợi ý mô hình cho Admin
+export const SUGGESTED_FAST_MODELS = [
+  { id: 'google/gemma-4-26b-a4b-it:free', name: 'Google Gemma 4 26B A4B (Free)', provider: 'Google' },
+  { id: 'google/gemma-4-31b-it:free', name: 'Google Gemma 4 31B (Free)', provider: 'Google' },
+  { id: 'google/gemini-2.0-flash-exp:free', name: 'Google Gemini 2.0 Flash (Free)', provider: 'Google' },
+  { id: 'liquid/lfm-2.5-2.6b:free', name: 'LiquidAI LFM 2.5 (Free)', provider: 'Liquid' },
 ]
 
-export function getSelectedModel() {
-  return DEFAULT_MODEL
+export const SUGGESTED_TURBO_MODELS = [
+  { id: 'nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA Nemotron 3.5 Lightning (Free)', provider: 'Nvidia' },
+  { id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', name: 'NVIDIA Nemotron 3 Reasoning (Free)', provider: 'Nvidia' },
+  { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'NVIDIA Nemotron 3 Ultra (Free)', provider: 'Nvidia' },
+  { id: 'openai/gpt-4o', name: 'OpenAI GPT-4o (Cần Nạp Credits)', provider: 'OpenAI' },
+]
+
+export const AVAILABLE_MODELS = [
+  ...SUGGESTED_FAST_MODELS,
+  ...SUGGESTED_TURBO_MODELS
+]
+
+// Quản lý cấu hình Model Nhanh (Flash)
+export function getFastModel() {
+  return localStorage.getItem('fingreen_admin_fast_model') || DEFAULT_FAST_MODEL
 }
 
-export function saveSelectedModel() {}
+export function saveFastModel(model) {
+  if (model) {
+    localStorage.setItem('fingreen_admin_fast_model', model.trim())
+  }
+}
 
+// Quản lý cấu hình Model Turbo
+export function getTurboModel() {
+  return localStorage.getItem('fingreen_admin_turbo_model') || DEFAULT_TURBO_MODEL
+}
+
+export function saveTurboModel(model) {
+  if (model) {
+    localStorage.setItem('fingreen_admin_turbo_model', model.trim())
+  }
+}
+
+// Giữ lại các hàm cũ tương thích ngược
+export function getSelectedModel() {
+  return getTurboModel()
+}
+
+export function saveSelectedModel(model) {
+  saveTurboModel(model)
+}
+
+// Chế độ Chat do người dùng chọn (Flash vs Turbo)
+export function getChatMode() {
+  return localStorage.getItem('fingreen_user_chat_mode') || 'fast'
+}
+
+export function saveChatMode(mode) {
+  if (mode) {
+    localStorage.setItem('fingreen_user_chat_mode', mode)
+  }
+}
+
+// API Key OpenRouter
 const DEFAULT_API_KEY = typeof atob !== 'undefined'
   ? atob('c2stb3ItdjEtZTU2Y2E1NGM1MDA5MTg2MzdmOTJkODI4NDViYzA2ZGZjM2U4NDMyN2Y2NDExNGNiOGI2MzRmMmNjYmI3ZWVlMQ==')
   : ''
@@ -86,9 +141,14 @@ ${marketContext}
 }
 
 // Xử lý gửi tin nhắn phân tích qua OpenRouter API
-export async function sendChatMessage({ messages, prompt }) {
+export async function sendChatMessage({ messages, prompt, mode }) {
   const apiKey = getOpenRouterKey()
   const symbols = extractStockSymbols(prompt)
+
+  // Xác định model dựa trên chế độ chat (Flash vs Turbo)
+  const currentMode = mode || getChatMode() || 'fast'
+  const primaryModel = currentMode === 'turbo' ? getTurboModel() : getFastModel()
+  const fallbackModel = DEFAULT_TURBO_MODEL // Luôn có Nemotron làm fallback tin cậy
 
   // 1. Thu thập dữ liệu bối cảnh cho các mã cổ phiếu được nhắc tới
   let stockContext = ''
@@ -97,13 +157,10 @@ export async function sendChatMessage({ messages, prompt }) {
   if (symbols.length > 0) {
     targetSymbol = symbols[0]
     for (const sym of symbols) {
-      // Thử gọi live data nếu có
       let liveData = null
       try {
         liveData = await callDNSEToolLive('company_get_profile', { symbol: sym })
-      } catch (e) {
-        // bỏ qua lỗi live fetch
-      }
+      } catch (e) {}
 
       if (liveData?.data?.company_info) {
         const info = liveData.data.company_info
@@ -134,7 +191,6 @@ export async function sendChatMessage({ messages, prompt }) {
   // 3. Chuẩn bị prompt hoàn chỉnh
   const systemPrompt = buildSystemPrompt(stockContext, marketContext)
 
-  // Lấy tối đa 8 tin nhắn gần nhất để làm ngữ cảnh hội thoại
   const recentMessages = (messages || [])
     .filter(m => m.id !== 'welcome')
     .slice(-8)
@@ -146,46 +202,56 @@ export async function sendChatMessage({ messages, prompt }) {
     { role: 'user', content: prompt }
   ]
 
-  // 4. Gửi yêu cầu qua OpenRouter API
-  try {
+  // Hàm gọi OpenRouter
+  async function queryOpenRouter(modelToUse) {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 45000) // 45 giây timeout
+    const timeoutId = setTimeout(() => controller.abort(), 45000)
 
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://fingreen.vn',
-        'X-Title': 'FinGreen',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: DEFAULT_MODEL,
-        messages: formattedMessages,
-        temperature: 0.6,
-      }),
-      signal: controller.signal
-    })
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'HTTP-Referer': 'https://fingreen.vn',
+          'X-Title': 'FinGreen',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelToUse,
+          messages: formattedMessages,
+          temperature: currentMode === 'turbo' ? 0.7 : 0.4,
+        }),
+        signal: controller.signal
+      })
 
-    clearTimeout(timeoutId)
+      clearTimeout(timeoutId)
 
-    if (response.ok) {
-      const data = await response.json()
-      const rawContent = data?.choices?.[0]?.message?.content
-      if (rawContent && rawContent.trim()) {
-        const cleaned = cleanAIOutput(rawContent)
-        // Nếu câu trả lời sạch và đầy đủ, trả về ngay
-        if (cleaned.length > 50) {
-          return cleaned
+      if (response.ok) {
+        const data = await response.json()
+        const rawContent = data?.choices?.[0]?.message?.content
+        if (rawContent && rawContent.trim()) {
+          const cleaned = cleanAIOutput(rawContent)
+          if (cleaned.length > 50) return cleaned
         }
       }
+      return null
+    } catch (e) {
+      clearTimeout(timeoutId)
+      return null
     }
-  } catch (err) {
-    console.warn('OpenRouter request error, switching to FinGreen engine fallback:', err)
   }
 
-  // 5. NẾU OPENROUTER GẶP SỰ CỐ / RATE LIMIT / TIMEOUT:
-  // Fallback an toàn và chuyên nghiệp để người dùng không bao giờ gặp lỗi trống
+  // 4. Thử với model ưu tiên theo chế độ (Flash / Turbo)
+  let result = await queryOpenRouter(primaryModel)
+
+  // Nếu model chính gặp lỗi (rate limit, 429, 404...), tự động thử với fallbackModel
+  if (!result && primaryModel !== fallbackModel) {
+    result = await queryOpenRouter(fallbackModel)
+  }
+
+  if (result) return result
+
+  // 5. Nếu OpenRouter hoàn toàn mất kết nối: Fallback sang engine phân tích nội bộ FinGreen
   if (targetSymbol) {
     return generateComprehensiveStockAnalysis(targetSymbol)
   }
