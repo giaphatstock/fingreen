@@ -10,23 +10,23 @@ import {
 // Tuyên bố miễn trừ trách nhiệm bắt buộc theo chuẩn mực pháp lý
 export const MANDATORY_DISCLAIMER = '⚠️ **Tuyên bố miễn trừ trách nhiệm:** Tín hiệu từ dữ liệu thuật toán/kỹ thuật mang tính chất THAM KHẢO, không phải là lời khuyên hay khuyến nghị đầu tư chính thức. Đầu tư chứng khoán luôn tiềm ẩn rủi ro. Nhà đầu tư tự chịu trách nhiệm về quyết định mua bán của mình.'
 
-// Mô hình mặc định cho chế độ Nhanh (Flash) và Turbo
-export const DEFAULT_FAST_MODEL = 'google/gemma-4-26b-a4b-it:free'
-export const DEFAULT_TURBO_MODEL = 'nvidia/nemotron-3.5-lightning:free'
+// Mô hình mặc định thông minh & ổn định
+export const DEFAULT_FAST_MODEL = 'openai/gpt-4o-mini'
+export const DEFAULT_TURBO_MODEL = 'openai/gpt-4o-mini'
 
 // Danh sách gợi ý mô hình cho Admin
 export const SUGGESTED_FAST_MODELS = [
-  { id: 'google/gemma-4-26b-a4b-it:free', name: 'Google Gemma 4 26B A4B (Free)', provider: 'Google' },
-  { id: 'google/gemma-4-31b-it:free', name: 'Google Gemma 4 31B (Free)', provider: 'Google' },
-  { id: 'google/gemini-2.0-flash-exp:free', name: 'Google Gemini 2.0 Flash (Free)', provider: 'Google' },
-  { id: 'liquid/lfm-2.5-2.6b:free', name: 'LiquidAI LFM 2.5 (Free)', provider: 'Liquid' },
+  { id: 'openai/gpt-4o-mini', name: 'OpenAI GPT-4o Mini (Khuyên Dùng - Tốc Độ & Web Tốt)', provider: 'OpenAI' },
+  { id: 'deepseek/deepseek-chat', name: 'DeepSeek V3 (Phân Tích Cực Chuẩn)', provider: 'DeepSeek' },
+  { id: 'google/gemma-4-26b-a4b-it:free', name: 'Google Gemma 4 26B (Free)', provider: 'Google' },
+  { id: 'nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA Nemotron 3.5 Lightning (Free)', provider: 'Nvidia' },
 ]
 
 export const SUGGESTED_TURBO_MODELS = [
+  { id: 'openai/gpt-4o-mini', name: 'OpenAI GPT-4o Mini (Khuyên Dùng - Tốc Độ & Web Tốt)', provider: 'OpenAI' },
+  { id: 'deepseek/deepseek-chat', name: 'DeepSeek V3 (Suy Luận Đột Phá)', provider: 'DeepSeek' },
+  { id: 'openai/gpt-4o', name: 'OpenAI GPT-4o (Đỉnh Cao Toàn Diện)', provider: 'OpenAI' },
   { id: 'nvidia/nemotron-3.5-lightning:free', name: 'NVIDIA Nemotron 3.5 Lightning (Free)', provider: 'Nvidia' },
-  { id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', name: 'NVIDIA Nemotron 3 Reasoning (Free)', provider: 'Nvidia' },
-  { id: 'nvidia/nemotron-3-ultra-550b-a55b:free', name: 'NVIDIA Nemotron 3 Ultra (Free)', provider: 'Nvidia' },
-  { id: 'openai/gpt-4o', name: 'OpenAI GPT-4o (Cần Nạp Credits)', provider: 'OpenAI' },
 ]
 
 export const AVAILABLE_MODELS = [
@@ -322,6 +322,7 @@ export async function sendChatMessage({ messages, prompt, mode }) {
           model: modelToUse,
           messages: formattedMessages,
           temperature: currentMode === 'turbo' ? 0.6 : 0.3,
+          max_tokens: 2500,
         }),
         signal: controller.signal
       })
@@ -391,6 +392,7 @@ export async function streamChatMessage({ messages, prompt, mode, onChunk, onCom
           model: modelToUse,
           messages: formattedMessages,
           temperature: currentMode === 'turbo' ? 0.6 : 0.3,
+          max_tokens: 2500,
           stream: true
         }),
         signal: controller.signal
