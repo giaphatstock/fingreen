@@ -123,7 +123,8 @@ export function extractStockSymbols(text) {
   const IGNORED_WORDS = new Set([
     'PHI', 'PHIEU', 'CO', 'MA', 'GIA', 'BAN', 'MUA', 'XEM', 'CHO', 'TOI', 'VOI', 'NAO', 'LAM',
     'SAO', 'THE', 'CAC', 'QUY', 'NAM', 'HOT', 'TOP', 'BCTC', 'VND', 'USD', 'EPS', 'ROE', 'ROA',
-    'HOSE', 'HNX', 'UPCOM', 'UPC', 'RSI', 'MACD', 'BUY', 'SELL', 'HOLD', 'WTF', 'AI'
+    'HOSE', 'HNX', 'UPCOM', 'UPC', 'RSI', 'MACD', 'BUY', 'SELL', 'HOLD', 'WTF', 'AI', 'VPS',
+    'VSD', 'SSC', 'UBCK', 'BOD', 'NAV', 'OTC', 'API', 'MCP', 'DNSE', 'EUR', 'FED', 'SBV', 'NOT'
   ])
 
   const results = []
@@ -218,6 +219,38 @@ ${info.introduction ? info.introduction.replace(/\r\n/g, ' ') : `${info.name} l�
 > ⚠️ **Tuyên bố miễn trừ trách nhiệm:** Tín hiệu từ dữ liệu thuật toán/kỹ thuật mang tính chất THAM KHẢO, không phải là lời khuyên hay khuyến nghị đầu tư chính thức. Đầu tư chứng khoán luôn tiềm ẩn rủi ro. Nhà đầu tư tự chịu trách nhiệm về quyết định mua bán của mình.`
 }
 
+// CƠ SỞ DỮ LIỆU CÁC TỔ CHỨC TÀI CHÍNH & TẬP ĐOÀN LỚN THƯỜNG ĐƯỢC HỎI
+export const FAMOUS_ENTITIES_KNOWLEDGE_BASE = {
+  VPS: {
+    name: 'Công ty Cổ phần Chứng khoán VPS (VPS Securities)',
+    role: 'Doanh nghiệp dịch vụ tài chính & chứng khoán dẫn đầu thị phần',
+    status: 'Chưa niêm yết trên sàn (không có mã cổ phiếu VPS niêm yết)',
+    history: 'Tiền thân là Công ty Cổ phần Chứng khoán Ngân hàng TMCP Việt Nam Thịnh Vượng (VPBS), thành lập năm 2006. Sau đó tái cấu trúc độc lập và đổi tên thành Chứng khoán VPS.',
+    founder: 'Ông Nguyễn Lâm Dũng (Chủ tịch HĐQT kiêm Tổng Giám Đốc) là người sáng lập và linh hồn dẫn dắt đưa VPS vươn lên vị thế Top 1 thị phần.',
+    highlight: 'Nắm giữ vị trí Top 1 thị phần môi giới cổ phiếu và phái sinh trên HOSE, HNX và UPCoM tại Việt Nam (thị phần trên 18% - 19%).'
+  },
+  MASAN: {
+    name: 'Tập đoàn Masan (Masan Group - MSN)',
+    founder: 'Sáng lập bởi ông Nguyễn Đăng Quang và ông Hồ Hùng Anh tại Đông Âu từ những năm 1990.',
+    highlight: 'Tập đoàn tiêu dùng - bán lẻ hàng đầu sở hữu WinCommerce, Masan Consumer, Masan MEATLife, Masan High-Tech Materials (MSR).'
+  },
+  FPT: {
+    name: 'Tập đoàn FPT',
+    founder: 'Sáng lập ngày 13/09/1988 bởi ông Trương Gia Bình cùng 12 nhà khoa học (Bùi Quang Ngọc, Đỗ Cao Bảo, Hoàng Minh Châu...).',
+    highlight: 'Tập đoàn công nghệ, viễn thông và giáo dục hàng đầu Việt Nam.'
+  },
+  HOAPHAT: {
+    name: 'Tập đoàn Hòa Phát (HPG)',
+    founder: 'Sáng lập năm 1992 bởi ông Trần Đình Long cùng các cộng sự.',
+    highlight: 'Tập đoàn sản xuất thép số 1 Đông Nam Á.'
+  },
+  VINGROUP: {
+    name: 'Tập đoàn Vingroup (VIC)',
+    founder: 'Sáng lập bởi ông Phạm Nhật Vượng (khởi đầu từ Technocom tại Ukraina năm 1993).',
+    highlight: 'Tập đoàn đa ngành tư nhân lớn nhất Việt Nam với Vinhomes, VinFast, Vinpearl.'
+  }
+}
+
 // CƠ SỞ DỮ LIỆU ĐẦY ĐỦ CÁC CỔ PHIẾU VIỆT NAM (Cam kết số liệu thực tế 100%, không bao giờ có [X])
 export const STOCKS_KNOWLEDGE_BASE = {
   MSR: {
@@ -246,7 +279,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Dương Công Minh (Chủ tịch HĐQT) • Nguyễn Đức Thạch Diễm (Tổng Giám Đốc)',
     holder: 'Cổ đông đại chúng và các tổ chức đầu tư tài chính',
     summary: 'Ngân hàng bán lẻ quy mô lớn đang ở giai đoạn hoàn tất Đề án tái cơ cấu sau sáp nhập. Trọng điểm kỳ vọng là đấu giá thành công 32.5% cổ phần VAMC để ghi nhận lợi nhuận đột biến và xóa sạch nợ tồn đọng.',
-    recommendation: 'MUA VÙNG GIÁ TÍCH LŨY (Kỳ vọng đột biến từ xử lý xong nợ xấu VAMC)'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI NỀN GIÁ TÍCH LŨY (Kỳ vọng đột biến từ xử lý xong nợ xấu VAMC)'
   },
   HPG: {
     name: 'CTCP Tập đoàn Hòa Phát',
@@ -260,7 +293,8 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Trần Đình Long (Chủ tịch HĐQT) • Nguyễn Việt Thắng (Tổng Giám Đốc)',
     holder: 'Gia đình Chủ tịch Trần Đình Long (nắm giữ hơn 35%)',
     summary: 'Tập đoàn sản xuất thép số 1 Đông Nam Á, thị phần thép xây dựng dẫn đầu cả nước (>38%). Đại dự án Dung Quất 2 với tổng vốn 85.000 tỷ VNĐ đang là động lực tăng trưởng đột phá dài hạn.',
-    recommendation: 'TÍCH LŨY MUA VÙNG GIÁ 26.0 - 28.5 (Cổ phiếu trụ cột)'
+    bctc: 'Doanh thu thuần: ~120.000 tỷ VNĐ | LNTT: ~13.800 tỷ VNĐ | LNST: ~12.000 tỷ VNĐ | Biên lãi gộp: ~14.5% | Nợ vay D/E: ~0.65 lần (an toàn cao)',
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI TÍCH LŨY QUANH VÙNG HỖ TRỢ DÀI HẠN (Cổ phiếu đầu ngành thép)'
   },
   FPT: {
     name: 'CTCP FPT',
@@ -274,7 +308,8 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Trương Gia Bình (Chủ tịch HĐQT) • Nguyễn Văn Khoa (Tổng Giám Đốc)',
     holder: 'SCIC, Ban lãnh đạo sáng lập và các quỹ ngoại (hết room ngoại 49%)',
     summary: 'Tập đoàn công nghệ hàng đầu Việt Nam, tiên phong chuyển đổi số quốc tế, AI và bán dẫn. Doanh thu xuất khẩu phần mềm nước ngoài vượt 1 tỷ USD với tốc độ tăng trưởng ổn định trên 20%/năm.',
-    recommendation: 'NẮM GIỮ DÀI HẠN (Cổ phiếu tăng trưởng bền vững nhất thị trường)'
+    bctc: 'Doanh thu: ~53.000 tỷ VNĐ (+19.6%) | LNTT: ~9.200 tỷ VNĐ | LNST: ~7.800 tỷ VNĐ | Biên ròng: ~15% | Dòng tiền thuần hoạt động kinh doanh dương mạnh',
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: CỔ PHIẾU TĂNG TRƯỞNG BỀN VỮNG (Theo dõi kiểm định đường MA20/MA50)'
   },
   VCB: {
     name: 'Ngân hàng TMCP Ngoại thương Việt Nam (Vietcombank)',
@@ -288,7 +323,8 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Nguyễn Thanh Tùng (Chủ tịch HĐQT)',
     holder: 'Ngân hàng Nhà nước Việt Nam (74.8%) • Mizuho Bank Nhật Bản (15%)',
     summary: 'Ngân hàng có chất lượng tài sản và uy tín số 1 Việt Nam, tỷ lệ nợ xấu thấp nhất ngành và tỷ lệ bao phủ nợ xấu vượt trội (>200%), chi phí vốn rẻ nhờ nguồn CASA dồi dào.',
-    recommendation: 'MUA TÍCH LŨY TRUNG VÀ DÀI HẠN (Cổ phiếu phòng thủ vững chắc)'
+    bctc: 'Tổng thu nhập hoạt động (TOI): ~68.000 tỷ VNĐ (Thu nhập lãi thuần NII: ~54.000 tỷ VNĐ) | LNTT: ~41.200 tỷ VNĐ | LNST: ~33.000 tỷ VNĐ | NIM: ~3.15% | Nợ xấu NPL: 0.98% (thấp nhất hệ thống) | Bao phủ nợ xấu LLR: ~230% | CASA: ~34% | CAR: >11.5%',
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: CỔ PHIẾU PHÒNG THỦ TRỤ CỘT (Theo dõi dữ liệu dòng tiền tổ chức quanh vùng hỗ trợ toán học)'
   },
   SSI: {
     name: 'CTCP Chứng khoán SSI',
@@ -302,7 +338,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Nguyễn Duy Hưng (Chủ tịch HĐQT) • Nguyễn Đức Thông (Tổng Giám Đốc)',
     holder: 'Công ty TNHH Bất động sản Sài Gòn Đan Linh • Daiwa Securities Group (15%)',
     summary: 'Định chế tài chính chứng khoán quy mô vốn điều lệ và thị phần môi giới hàng đầu, hưởng lợi trực tiếp từ thanh khoản bùng nổ của thị trường và triển vọng nâng hạng FTSE Russell.',
-    recommendation: 'MUA THEO ĐÀ TĂNG TRƯỞNG THANH KHOẢN THỊ TRƯỜNG'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI THEO ĐÀ TĂNG TRƯỞNG THANH KHOẢN TOÀN THỊ TRƯỜNG'
   },
   VNM: {
     name: 'CTCP Sữa Việt Nam (Vinamilk)',
@@ -316,7 +352,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Mai Kiều Liên (Tổng Giám Đốc)',
     holder: 'SCIC (36%) • F&N Dairy Investments (17.7%)',
     summary: 'Thương hiệu sữa quốc gia chiếm hơn 55% thị phần nội địa. Dòng tiền kinh doanh cực kỳ mạnh mẽ, tỷ lệ chi trả cổ tức tiền mặt đều đặn 35% - 40%/năm.',
-    recommendation: 'NẮM GIỮ HƯỞNG CỔ TỨC TIỀN MẶT ĐỀU ĐẶN'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: CỔ PHIẾU GIÁ TRỊ VỚI DÒNG TIỀN CỔ TỨC TIỀN MẶT ĐỀU ĐẶN'
   },
   MWG: {
     name: 'CTCP Đầu tư Thế Giới Di Động',
@@ -330,7 +366,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Nguyễn Đức Tài (Chủ tịch HĐQT)',
     holder: 'Khối ngoại (kịch trần 49%) • Ban điều hành và nhân viên',
     summary: 'Thống trị ngành bán lẻ điện thoại, điện máy với thegioididong và DienmayXANH. Chuỗi Bách Hóa Xanh đã qua điểm hòa vốn và bắt đầu mang lại biên lợi nhuận tích cực.',
-    recommendation: 'MUA TẠI CÁC NHỊP ĐIỀU CHỈNH KỸ THUẬT'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI TÍN HIỆU PHỤC HỒI BIÊN LÃI CHUỖI BÁCH HÓA XANH'
   },
   TCB: {
     name: 'Ngân hàng TMCP Kỹ thương Việt Nam (Techcombank)',
@@ -344,7 +380,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Hồ Hùng Anh (Chủ tịch HĐQT) • Jens Lottner (Tổng Giám Đốc)',
     holder: 'Masan Group (15%) • Khối ngoại và gia đình Chủ tịch',
     summary: 'Ngân hàng tư nhân dẫn đầu về hiệu quả kinh doanh và tỷ lệ an toàn vốn CAR cao nhất ngành (>15%), tỷ lệ CASA thuộc nhóm cao nhất hệ thống.',
-    recommendation: 'MUA VÙNG ĐỊNH GIÁ HẤP DẪN (P/B quanh 1.1 - 1.2)'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI VÙNG ĐỊNH GIÁ P/B HẤP DẪN VÀ TỶ LỆ CASA HÀNG ĐẦU'
   },
   MBB: {
     name: 'Ngân hàng TMCP Quân đội (MBBank)',
@@ -358,7 +394,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Lưu Trung Thái (Chủ tịch HĐQT) • Phạm Như Ánh (Tổng Giám Đốc)',
     holder: 'Viettel (14.1%) • Tổng công ty Trực thăng (7.8%) • SCIC (9.4%)',
     summary: 'Ngân hàng có hiệu quả sinh lời ROE hàng đầu (>22%), định giá P/E thấp nhất trong nhóm ngân hàng quy mô lớn, tệp khách hàng số hóa tăng trưởng vượt bậc.',
-    recommendation: 'MUA TÍCH LŨY (Cổ phiếu giá trị có P/E và P/B cực kỳ rẻ)'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI VÙNG ĐỊNH GIÁ P/E VÀ HIỆU SUẤT ROE VƯỢT TRỘI'
   },
   VND: {
     name: 'CTCP Chứng khoán VNDIRECT',
@@ -372,7 +408,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Phạm Minh Hương (Chủ tịch HĐQT)',
     holder: 'CTCP Tập đoàn Đầu tư I.P.A (nắm hơn 25%)',
     summary: 'Top công ty chứng khoán có lượng tài khoản nhà đầu tư cá nhân lớn nhất, hệ thống công nghệ số mạnh và mảng nguồn vốn tăng trưởng nhanh.',
-    recommendation: 'THEO DÕI VÙNG GIÁ TÍCH LŨY'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI VÙNG TÍCH LŨY KỸ THUẬT QUANH NGƯỠNG HỖ TRỢ'
   },
   DIG: {
     name: 'Tổng CTCP Đầu tư Phát triển Xây dựng (DIC Corp)',
@@ -386,7 +422,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Nguyễn Thiện Tuấn (Chủ tịch HĐQT)',
     holder: 'Gia đình Chủ tịch và các nhà đầu tư lớn',
     summary: 'Doanh nghiệp sở hữu quỹ đất sạch lớn tại Vũng Tàu, Đồng Nai, Hậu Giang. Cổ phiếu có tính đầu cơ cao, biến động mạnh theo sóng bất động sản.',
-    recommendation: 'GIAO DỊCH LƯỚT SÓNG THEO DÒNG TIỀN ĐẦU CƠ'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI BIẾN ĐỘNG DÒNG TIỀN ĐẦU CƠ BẤT ĐỘNG SẢN'
   },
   NVL: {
     name: 'CTCP Tập đoàn Đầu tư Địa ốc No Va (Novaland)',
@@ -400,7 +436,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Bùi Thành Nhơn (Chủ tịch HĐQT)',
     holder: 'Gia đình Chủ tịch Bùi Thành Nhơn và NovaGroup',
     summary: 'Nhà phát triển bất động sản quy mô lớn nhất miền Nam. Doanh nghiệp đang nỗ lực tái cấu trúc nợ trái phiếu và tháo gỡ pháp lý cho các đại dự án Aqua City, NovaWorld Phan Thiết.',
-    recommendation: 'THEO DÕI TIẾN ĐỘ THÁO GỠ PHÁP LÝ & CƠ CẤU NỢ'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI TIẾN ĐỘ THÁO GỠ PHÁP LÝ & CƠ CẤU NỢ'
   },
   MSN: {
     name: 'CTCP Tập đoàn Masan',
@@ -414,7 +450,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Nguyễn Đăng Quang (Chủ tịch HĐQT) • Danny Le (Tổng Giám Đốc)',
     holder: 'Công ty Cổ phần Masan và các cổ đông sáng lập',
     summary: 'Hệ sinh thái tiêu dùng - bán lẻ số 1 Việt Nam gồm Masan Consumer Holdings, WinCommerce (WinMart/WinMart+), Masan MEATLife, Masan High-Tech Materials (MSR) và sở hữu gần 15% vốn Techcombank.',
-    recommendation: 'MUA VÙNG GIÁ TÍCH LŨY (Hưởng lợi từ phục hồi sức mua tiêu dùng nội địa)'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI CHU KỲ PHỤC HỒI TIÊU DÙNG BÁN LẺ NỘI ĐỊA'
   },
   VIC: {
     name: 'Tập đoàn Vingroup - CTCP',
@@ -428,7 +464,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Phạm Nhật Vượng (Chủ tịch HĐQT)',
     holder: 'Chủ tịch Phạm Nhật Vượng và Tập đoàn Đầu tư Việt Nam',
     summary: 'Tập đoàn kinh tế tư nhân lớn nhất Việt Nam sở hữu Vinhomes (VHM), Vinpearl, Vincom Retail (VRE) và mũi nhọn toàn cầu VinFast (VFS).',
-    recommendation: 'THEO DÕI DIỄN BIẾN MỞ RỘNG THỊ TRƯỜNG XE ĐIỆN VINFAST'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI DIỄN BIẾN MỞ RỘNG THỊ TRƯỜNG XE ĐIỆN TOÀN CẦU'
   },
   VHM: {
     name: 'CTCP Vinhomes',
@@ -442,7 +478,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Phạm Thiếu Hoa (Chủ tịch HĐQT) • Nguyễn Đức Thạch Diễm (Thành viên)',
     holder: 'Tập đoàn Vingroup (nắm giữ 66.6%)',
     summary: 'Doanh nghiệp phát triển bất động sản số 1 Việt Nam với quỹ đất sạch khổng lồ và các đại đô thị Ocean Park 1, 2, 3, Grand Park, Smart City, Royal Island.',
-    recommendation: 'MUA TÍCH LŨY VÙNG ĐỊNH GIÁ RẺ (P/E ~7.x, P/B dưới 1.0)'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI VÙNG ĐỊNH GIÁ P/B DƯỚI 1.0 VÀ DÒNG TIỀN BÀN GIAO ĐẠI DỰ ÁN'
   },
   DGC: {
     name: 'CTCP Tập đoàn Hóa chất Đức Giang',
@@ -456,7 +492,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Đào Hữu Huyền (Chủ tịch HĐQT)',
     holder: 'Gia đình Chủ tịch Đào Hữu Huyền',
     summary: 'Doanh nghiệp xuất khẩu Phốt pho vàng (P4) lớn nhất châu Á - nguyên liệu thiết yếu cho ngành công nghiệp bán dẫn, chip vi xử lý và pin lithium.',
-    recommendation: 'MUA THEO XU HƯỚNG BÙNG NỔ BÁN DẪN TOÀN CẦU'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI THEO XU HƯỚNG BÙNG NỔ BÁN DẪN TOÀN CẦU'
   },
   PVD: {
     name: 'Tổng CTCP Khoan và Dịch vụ Khoan Dầu khí',
@@ -470,7 +506,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Mai Thế Toàn (Chủ tịch HĐQT)',
     holder: 'Tập đoàn Dầu khí Việt Nam (PVN nắm 50.4%)',
     summary: 'Đội giàn khoan tự nâng hoạt động 100% công suất với đơn giá thuê giàn (day-rate) tăng trưởng mạnh theo chu kỳ đầu tư thượng tầng dầu khí.',
-    recommendation: 'MUA THEO CHU KỲ TĂNG GIÁ DỊCH VỤ THƯỢNG NGUỒN DẦU KHÍ'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI THEO CHU KỲ TĂNG GIÁ DỊCH VỤ THƯỢNG NGUỒN DẦU KHÍ'
   },
   PVS: {
     name: 'Tổng CTCP Dịch vụ Kỹ thuật Dầu khí Việt Nam',
@@ -484,7 +520,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Phan Thanh Tùng (Chủ tịch HĐQT)',
     holder: 'Tập đoàn Dầu khí Việt Nam (PVN nắm 51.4%)',
     summary: 'Tổng thầu EPCI hàng đầu khu vực, trúng thầu hàng loạt hợp đồng chân đế điện gió ngoài khơi quốc tế và hưởng lợi từ siêu dự án khí điện Lô B - Ô Môn.',
-    recommendation: 'MUA VÀ NẮM GIỮ (Hưởng lợi từ Lô B - Ô Môn và Điện gió ngoài khơi)'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI TIẾN ĐỘ DỰ ÁN KHÍ ĐIỆN LÔ B VÀ ĐIỆN GIÓ NGOÀI KHƠI'
   },
   GEX: {
     name: 'CTCP Tập đoàn GELEX',
@@ -498,7 +534,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Nguyễn Văn Tuấn (Tổng Giám Đốc)',
     holder: 'Cổ đông lớn và Ban điều hành',
     summary: 'Tập đoàn đa ngành sở hữu Cadivi (dây cáp điện số 1 VN), Thiết bị điện Thibidi, Viglacera (VGC) và hợp tác liên doanh bất động sản công nghiệp với Frasers Property.',
-    recommendation: 'MUA VÙNG GIÁ HỖ TRỢ KỸ THUẬT'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI NỀN GIÁ TÍCH LŨY VÀ TÍN HIỆU DÒNG TIỀN KHỐI NGOẠI'
   },
   VIX: {
     name: 'CTCP Chứng khoán VIX',
@@ -512,7 +548,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Thái Thị Thu Dậu (Chủ tịch HĐQT)',
     holder: 'Cổ đông thể nhân và các quỹ đầu tư',
     summary: 'Công ty chứng khoán có danh mục tự doanh cổ phiếu quy mô lớn và nhạy bén với nhịp sóng của thị trường chứng khoán Việt Nam.',
-    recommendation: 'GIAO DỊCH THEO XU HƯỚNG DÒNG TIỀN THỊ TRƯỜNG'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: GIAO DỊCH THEO XU HƯỚNG DÒNG TIỀN VÀ THANH KHOẢN TOÀN THỊ TRƯỜNG'
   },
   NKG: {
     name: 'CTCP Thép Nam Kim',
@@ -526,7 +562,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Hồ Minh Quang (Chủ tịch HĐQT)',
     holder: 'Ban lãnh đạo và các quỹ ngoại',
     summary: 'Doanh nghiệp xuất khẩu tôn mạ hàng đầu sang thị trường Bắc Mỹ và châu Âu. Đang triển khai nhà máy Nam Kim Phú Mỹ để nâng cao công suất.',
-    recommendation: 'THEO DÕI PHỤC HỒI BIÊN LÃI XUẤT KHẨU'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI SỰ PHỤC HỒI BIÊN LÃI XUẤT KHẨU TÔN MẠ'
   },
   HSG: {
     name: 'CTCP Tập đoàn Hoa Sen',
@@ -540,7 +576,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Lê Phước Vũ (Chủ tịch HĐQT)',
     holder: 'Chủ tịch Lê Phước Vũ và các tổ chức đầu tư',
     summary: 'Thương hiệu tôn mạ số 1 Việt Nam với hệ sinh thái chuỗi bán lẻ Hoa Sen Home rộng khắp trên toàn quốc.',
-    recommendation: 'MUA KHI GIÁ THÉP THẾ GIỚI TẠO ĐÁY'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI NỀN GIÁ THEO CHU KỲ GIÁ NGUYÊN VẬT LIỆU THÉP'
   },
   VPB: {
     name: 'Ngân hàng TMCP Việt Nam Thịnh Vượng (VPBank)',
@@ -554,7 +590,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Ngô Chí Dũng (Chủ tịch HĐQT)',
     holder: 'SMBC Nhật Bản (15%) • Gia đình Chủ tịch Ngô Chí Dũng',
     summary: 'Ngân hàng có vốn chủ sở hữu thuộc Top đầu toàn ngành sau thương vụ bán 15% vốn cho SMBC, mở rộng hệ sinh thái VPBankS và OPES.',
-    recommendation: 'MUA VÙNG ĐỊNH GIÁ P/B QUANH 1.0'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI VÙNG ĐỊNH GIÁ P/B QUANH 1.0'
   },
   ACB: {
     name: 'Ngân hàng TMCP Á Châu',
@@ -568,7 +604,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Trần Hùng Huy (Chủ tịch HĐQT)',
     holder: 'Gia đình Chủ tịch Trần Hùng Huy và các quỹ ngoại (hết room 30%)',
     summary: 'Ngân hàng bán lẻ tư nhân an toàn và hiệu quả nhất, không dính nợ xấu bất động sản hay trái phiếu doanh nghiệp, quản trị rủi ro hàng đầu hệ thống.',
-    recommendation: 'MUA TÍCH LŨY DÀI HẠN (Ngân hàng chất lượng cao nhất)'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: CỔ PHIẾU NGÂN HÀNG CHẤT LƯỢNG TÀI SẢN TỐT NHẤT'
   },
   CTG: {
     name: 'Ngân hàng TMCP Công thương Việt Nam (VietinBank)',
@@ -582,7 +618,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Trần Minh Bình (Chủ tịch HĐQT)',
     holder: 'Ngân hàng Nhà nước (64.5%) • MUFG Bank Nhật Bản (19.7%)',
     summary: 'Một trong nhóm Big 4 ngân hàng trụ cột quốc gia, chất lượng tài sản cải thiện mạnh mẽ và tăng trưởng tín dụng phục vụ sản xuất kinh doanh.',
-    recommendation: 'MUA NẮM GIỮ THEO NHỊP TĂNG TRƯỞNG NGÀNH NGÂN HÀNG'
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI THEO NHỊP TĂNG TRƯỞNG TÍN DỤNG CỦA NHÓM BIG 4'
   },
   BID: {
     name: 'Ngân hàng TMCP Đầu tư và Phát triển Việt Nam (BIDV)',
@@ -595,8 +631,8 @@ export const STOCKS_KNOWLEDGE_BASE = {
     eps: '4.100 VNĐ',
     leader: 'Phan Đức Tú (Chủ tịch HĐQT)',
     holder: 'Ngân hàng Nhà nước (81%) • KEB Hana Bank Hàn Quốc (15%)',
-    summary: 'Ngân hàng có tổng quy mô tài sản lớn nhất hệ thống ngân hàng Việt Nam, đóng vai trò dẫn dắt điều tiết lãi suất và nguồn vốn nền kinh tế.',
-    recommendation: 'MUA TÍCH LŨY TRONG CÁC NHỊP ĐIỀU CHỈNH'
+    summary: 'Ngân hàng có tổng quy quy mô tài sản lớn nhất hệ thống ngân hàng Việt Nam, đóng vai trò dẫn dắt điều tiết lãi suất và nguồn vốn nền kinh tế.',
+    signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI TÍCH LŨY TRONG CÁC NHỊP ĐIỀU CHỈNH'
   }
 }
 

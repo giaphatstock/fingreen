@@ -3,7 +3,7 @@ import {
   callDNSEToolLive, formatStockAnalysisFromDNSE,
   extractStockSymbols, generateComprehensiveStockAnalysis,
   getDNSEContextForPrompt, STOCKS_KNOWLEDGE_BASE,
-  fetchRealtimeQuote
+  fetchRealtimeQuote, FAMOUS_ENTITIES_KNOWLEDGE_BASE
 } from './dnseService'
 
 // Tuyên bố miễn trừ trách nhiệm bắt buộc theo chuẩn mực pháp lý
@@ -122,43 +122,77 @@ function cleanAIOutput(text) {
 
   // 5. Cắt bỏ TRIỆT ĐỂ bất kỳ đoạn disclaimer cũ/mới nào đã sinh ra để không bao giờ bị lặp 2 lần
   cleaned = cleaned
-    .replace(/(?:---\s*)?>?\s*💡\s*\*?Dữ liệu (đồng bộ|phục vụ)[\s\S]*$/gi, '')
-    .replace(/(?:---\s*)?>?\s*⚠️\s*\*?Tuyên bố miễn trừ trách nhiệm[\s\S]*$/gi, '')
+    .replace(/(?:[\r\n]+---)?[\s\r\n]*(?:>|###)?\s*(?:⚠️|💡)?\s*[\*#_]*(?:Tuyên bố|Miễn trừ trách nhiệm|Disclaimer)[\s\S]*$/gi, '')
+    .trim()
+    .replace(/(?:[\r\n]+---)+$/g, '')
     .trim()
 
   // 6. GẮN DUY NHẤT 1 TUYÊN BỐ MIỄN TRỪ TRÁCH NHIỆM BẮT BUỘC Ở CUỐI TIN NHẮN
   return `${cleaned}\n\n---\n> ${MANDATORY_DISCLAIMER}`
 }
 
-// Xây dựng System Prompt với nguyên tắc ngôn ngữ chặt chẽ và bối cảnh thực tế
-function buildSystemPrompt(stockContext, marketContext) {
-  return `Bạn là FinGreen AI - Trợ lý phân tích dữ liệu thuật toán và kỹ thuật chứng khoán của nền tảng FinGreen ("Kiến tạo giá trị thực").
+// Xây dựng System Prompt thích ứng thông minh theo Ý ĐỊNH người dùng
+function buildSystemPrompt(stockContext, marketContext, intent) {
+  let taskInstruction = ''
 
-QUY ĐỊNH BẮT BUỘC VỀ THỊ GIÁ THỰC TẾ & PHÁP LÝ:
-1. TUYỆT ĐỐI TUÂN THỦ THỊ GIÁ THỰC TẾ TRÊN SÀN:
-   - Khi người dùng hỏi về thị giá hoặc phân tích một mã cổ phiếu, BẮT BUỘC sử dụng đúng số liệu "Thị giá khớp lệnh" được cung cấp trong phần dữ liệu thực tế bên dưới.
-   - TUYỆT ĐỐI KHÔNG tự bịa đặt, suy đoán hay đưa ra mức giá sai lệch với thị giá thực tế được cung cấp. Nếu người dùng hỏi "giá [mã] hiện tại", hãy trả lời trực diện con số thị giá mới nhất, biến động và biên độ phiên.
-2. TUYỆT ĐỐI TRÁNH CÁC TỪ NGỮ TƯ VẤN ĐẦU TƯ:
+  if (intent.isBCTC) {
+    taskInstruction = `
+NGƯỜI DÙNG ĐANG YÊU CẦU: Phân tích Báo Cáo Tài Chính (BCTC).
+BẮT BUỘC TRẢ LỜI ĐÚNG TRỌNG TÂM BCTC THEO CẤU TRÚC:
+### 📑 Báo Cáo Tài Chính & Sức Khỏe Doanh Nghiệp [MÃ]
+**1. Kết Quả Kinh Doanh Cốt Lõi (Doanh thu & Lợi nhuận)**
+- Doanh thu / Thu nhập hoạt động (NII nếu là ngân hàng)
+- Lợi nhuận trước thuế & Lợi nhuận sau thuế
+- Biên lợi nhuận (NIM đối với ngân hàng, Biên lãi gộp đối với sản xuất/bán lẻ)
+**2. Chất Lượng Tài Sản & Đòn Bẩy (NPL, LLR, CASA hoặc Nợ vay D/E)**
+- Nợ vay / Đòn bẩy tài chính D/E (đối với ngân hàng: Nợ xấu NPL, Bao phủ nợ xấu LLR, Tỷ lệ CASA)
+- Cơ cấu tài sản và mức độ an toàn nguồn vốn
+**3. Chỉ Số Hiệu Quả Sinh Lời & Định Giá Từ BCTC**
+- ROE, ROA, EPS, P/E, P/B
+**4. Đánh Giá Khách Quan & Triển Vọng Tài Chính**
+Tuyệt đối không nhầm sang bài phân tích kỹ thuật chung.`
+  } else if (intent.isFactual) {
+    taskInstruction = `
+NGƯỜI DÙNG ĐANG HỎI CÂU HỎI THÔNG TIN / NHÂN SỰ / LỊCH SỬ DOANH NGHIỆP:
+- BẮT BUỘC TRẢ LỜI TRỰC DIỆN, RÕ RÀNG, CHÍNH XÁC VÀ SÚC TÍCH.
+- Nêu rõ danh tính người sáng lập, lãnh đạo, lịch sử hình thành hoặc nội dung được hỏi.
+- TUYỆT ĐỐI KHÔNG xuất bài phân tích kỹ thuật hay biểu mẫu cổ phiếu rập khuôn nếu người dùng không yêu cầu phân tích cổ phiếu!`
+  } else if (intent.isPrice) {
+    taskInstruction = `
+NGƯỜI DÙNG ĐANG HỎI VỀ THỊ GIÁ CỔ PHIẾU:
+- BẮT BUỘC TRẢ LỜI TRỰC DIỆN con số "Thị giá khớp lệnh" được cung cấp trong phần dữ liệu thực tế bên dưới.
+- Nêu rõ: Thị giá hiện tại, biến động trong phiên, vùng dao động cao nhất / thấp nhất và khối lượng khớp lệnh.
+- TUYỆT ĐỐI KHÔNG tự bịa đặt hoặc suy đoán mức giá khác.`
+  } else {
+    taskInstruction = `
+NGƯỜI DÙNG ĐANG YÊU CẦU PHÂN TÍCH TỔNG HỢP CỔ PHIẾU:
+Trình bày bài phân tích có cấu trúc khoa học:
+### 📊 Phân Tích Kỹ Thuật & Cổ Phiếu [MÃ]
+**1. Thị Giá Thực Tế & Tín Hiệu Giao Dịch**
+**2. Thông Tin Doanh Nghiệp & Vị Thế Ngành**
+**3. Sức Khỏe Tài Chính & Chỉ Số Định Giá (P/E, P/B, ROE, EPS)**
+**4. Góc Nhìn Thuật Toán & Tín Hiệu Dòng Tiền FinGreen**`
+  }
+
+  return `Bạn là FinGreen AI - Trợ lý phân tích dữ liệu tài chính và chứng khoán thông minh của nền tảng FinGreen ("Kiến tạo giá trị thực").
+
+${taskInstruction}
+
+QUY ĐỊNH BẮT BUỘC VỀ PHÁP LÝ & TỪ NGỮ:
+1. TUYỆT ĐỐI TRÁNH CÁC TỪ NGỮ TƯ VẤN ĐẦU TƯ:
    - KHÔNG DÙNG: "Khuyến nghị", "Khuyến nghị mua", "Khuyến nghị bán", "Lệnh mua", "Lệnh bán", "Mục tiêu", "Giá mục tiêu", "Tư vấn đầu tư".
    - BẮT BUỘC DÙNG THUẬT NGỮ KỸ THUẬT & DÒNG TIỀN:
      • "Vùng quan sát kỹ thuật" (thay cho vùng giá khuyến nghị)
      • "Vùng hỗ trợ/kháng cự toán học" (thay cho giá mục tiêu / cắt lỗ)
      • "Dữ liệu dòng tiền kích hoạt" (thay cho lệnh mua)
      • "Tín hiệu dòng tiền" hoặc "Góc nhìn thuật toán FinGreen"
-3. NGÔN NGỮ & CẤU TRÚC:
-   - 100% Tiếng Việt chuẩn mực, văn phong kỹ thuật, số liệu khách quan. Tuyệt đối không chêm chữ Hán, chữ Trung Quốc hay từ ngữ ngoại lai lạ.
-   - Nếu người dùng hỏi BCTC: Phân tích Doanh thu, Lợi nhuận sau thuế, Biên lãi gộp, Đòn bẩy nợ vay D/E, EPS, ROE, dự án tăng trưởng.
-   - Trình bày bài phân tích cổ phiếu theo cấu trúc khoa học:
-     ### 📊 Phân Tích Kỹ Thuật & Cổ Phiếu [MÃ]
-     **1. Thị Giá Thực Tế & Tín Hiệu Giao Dịch**
-     **2. Thông Tin Doanh Nghiệp & Vị Thế Ngành**
-     **3. Sức Khỏe Tài Chính & Chỉ Số Định Giá (P/E, P/B, ROE, EPS)**
-     **4. Góc Nhìn Thuật Toán & Tín Hiệu Dòng Tiền FinGreen**
+2. NGÔN NGỮ & SỐ LIỆU:
+   - 100% Tiếng Việt chuẩn mực, khách quan, chính xác. Tuyệt đối không chêm chữ Hán, chữ Trung Quốc hay từ ngữ ngoại lai lạ.
    - TUYỆT ĐỐI KHÔNG DÙNG placeholder rỗng [X], [Số liệu], [Tên].
    - TUYỆT ĐỐI BẢO MẬT: Không nhắc đến "DNSE" hay "MCP".
 
 ${stockContext ? `---
-CƠ SỞ DỮ LIỆU THỰC TẾ XÁC THỰC TỪ SÀN CHỨNG KHOÁN:
+CƠ SỞ DỮ LIỆU XÁC THỰC DÀNH CHO CÂU HỎI NÀY:
 ${stockContext}
 ---` : ''}
 
@@ -169,15 +203,33 @@ ${marketContext}
 `
 }
 
-// Thu thập ngữ cảnh thị giá thời gian thực và thông tin doanh nghiệp
+// Thu thập ngữ cảnh thị giá thời gian thực, thông tin BCTC và phân loại ý định
 async function gatherStockAndMarketContext(prompt) {
-  const symbols = extractStockSymbols(prompt)
-  let stockContext = ''
-  let targetSymbol = symbols.length > 0 ? symbols[0] : null
+  const isBCTC = /bctc|báo cáo tài chính|kết quả kinh doanh|doanh thu|lợi nhuận|nợ xấu|biên lãi|casa|nim|roe|roa/i.test(prompt)
+  const isFactual = /ai là|người sáng lập|ông chủ|lãnh đạo|lịch sử|thành lập|tại sao|ở đâu|giải thích|khái niệm|định nghĩa|tin tức|sự kiện|chủ tịch|tổng giám đốc|ceo/i.test(prompt)
+  const isPrice = /giá|thị giá|bao nhiêu|giá hiện tại/i.test(prompt)
+  const intent = { isBCTC, isFactual, isPrice }
 
+  let stockContext = ''
+  let targetSymbol = null
+
+  // 1. Kiểm tra các thực thể tài chính lớn nổi tiếng (VPS, Masan, FPT, Hòa Phát, Vingroup...)
+  if (/vps|chứng khoán vps/i.test(prompt)) {
+    const vps = FAMOUS_ENTITIES_KNOWLEDGE_BASE.VPS
+    stockContext += `\nTHÔNG TIN XÁC THỰC VỀ THỰC THỂ ĐƯỢC HỎI (${vps.name}):
+- Vị thế: ${vps.role}
+- Trạng thái niêm yết: ${vps.status}
+- Người sáng lập & Lãnh đạo chủ chốt: ${vps.founder}
+- Lịch sử hình thành: ${vps.history}
+- Điểm nổi bật: ${vps.highlight}\n`
+  }
+
+  // 2. Trích xuất mã cổ phiếu nếu có
+  const symbols = extractStockSymbols(prompt)
   if (symbols.length > 0) {
+    targetSymbol = symbols[0]
     for (const sym of symbols) {
-      // 1. Lấy dữ liệu thị giá thời gian thực từ sàn chứng khoán
+      // Thị giá thời gian thực
       const quote = await fetchRealtimeQuote(sym)
       if (quote) {
         stockContext += `\nDỮ LIỆU THỊ GIÁ THỜI GIAN THỰC TỪ SÀN CHỨNG KHOÁN (Phiên ${quote.date}):
@@ -188,14 +240,14 @@ async function gatherStockAndMarketContext(prompt) {
 - Khối lượng giao dịch: ${quote.volume} cổ phiếu\n`
       }
 
-      // 2. Thông tin cơ bản doanh nghiệp
+      // Thông tin cơ bản & BCTC từ Knowledge Base
       if (STOCKS_KNOWLEDGE_BASE[sym]) {
         const s = STOCKS_KNOWLEDGE_BASE[sym]
-        stockContext += `\nThông tin doanh nghiệp mã ${sym} (${s.name} - Sàn ${s.exchange}):
+        stockContext += `\nThông tin doanh nghiệp & BCTC mã ${sym} (${s.name} - Sàn ${s.exchange}):
 - Nhóm ngành: ${s.sector}
 - Vốn hóa thị trường: ${s.capital}
-- Chỉ số tài chính cốt lõi: P/E: ${s.pe} | P/B: ${s.pb} | ROE: ${s.roe} | EPS: ${s.eps}
-- Lãnh đạo chủ chốt: ${s.leader}
+- Dữ liệu tài chính & BCTC: P/E: ${s.pe} | P/B: ${s.pb} | ROE: ${s.roe} | EPS: ${s.eps}
+${s.bctc ? `- Số liệu BCTC chi tiết: ${s.bctc}\n` : ''}- Lãnh đạo chủ chốt: ${s.leader}
 - Cơ cấu cổ đông: ${s.holder}
 - Cốt lõi kinh doanh: ${s.summary}
 - Tín hiệu dòng tiền & Vùng quan sát kỹ thuật: ${s.signal || s.recommendation}\n`
@@ -206,15 +258,15 @@ async function gatherStockAndMarketContext(prompt) {
   }
 
   const marketContext = getDNSEContextForPrompt(prompt)
-  const systemPrompt = buildSystemPrompt(stockContext, marketContext)
+  const systemPrompt = buildSystemPrompt(stockContext, marketContext, intent)
 
-  return { stockContext, marketContext, systemPrompt, targetSymbol }
+  return { stockContext, marketContext, systemPrompt, targetSymbol, intent }
 }
 
 // Xử lý gửi tin nhắn phân tích qua OpenRouter API
 export async function sendChatMessage({ messages, prompt, mode }) {
   const apiKey = getOpenRouterKey()
-  const { systemPrompt, targetSymbol } = await gatherStockAndMarketContext(prompt)
+  const { systemPrompt, targetSymbol, intent } = await gatherStockAndMarketContext(prompt)
 
   const currentMode = mode || getChatMode() || 'fast'
   const primaryModel = currentMode === 'turbo' ? getTurboModel() : getFastModel()
@@ -247,7 +299,7 @@ export async function sendChatMessage({ messages, prompt, mode }) {
         body: JSON.stringify({
           model: modelToUse,
           messages: formattedMessages,
-          temperature: currentMode === 'turbo' ? 0.7 : 0.4,
+          temperature: currentMode === 'turbo' ? 0.6 : 0.3,
         }),
         signal: controller.signal
       })
@@ -285,7 +337,7 @@ export async function sendChatMessage({ messages, prompt, mode }) {
 // Xử lý gửi tin nhắn phân tích thời gian thực dạng Streaming (SSE)
 export async function streamChatMessage({ messages, prompt, mode, onChunk, onComplete, onError }) {
   const apiKey = getOpenRouterKey()
-  const { systemPrompt, targetSymbol } = await gatherStockAndMarketContext(prompt)
+  const { systemPrompt, targetSymbol, intent } = await gatherStockAndMarketContext(prompt)
 
   const currentMode = mode || getChatMode() || 'fast'
   const primaryModel = currentMode === 'turbo' ? getTurboModel() : getFastModel()
@@ -318,7 +370,7 @@ export async function streamChatMessage({ messages, prompt, mode, onChunk, onCom
         body: JSON.stringify({
           model: modelToUse,
           messages: formattedMessages,
-          temperature: currentMode === 'turbo' ? 0.7 : 0.4,
+          temperature: currentMode === 'turbo' ? 0.6 : 0.3,
           stream: true
         }),
         signal: controller.signal
