@@ -151,11 +151,18 @@ BẮT BUỘC TRẢ LỜI ĐÚNG TRỌNG TÂM BCTC THEO CẤU TRÚC:
 - ROE, ROA, EPS, P/E, P/B
 **4. Đánh Giá Khách Quan & Triển Vọng Tài Chính**
 Tuyệt đối không nhầm sang bài phân tích kỹ thuật chung.`
+  } else if (intent.isNewsOrGeneral) {
+    taskInstruction = `
+NGƯỜI DÙNG ĐANG HỎI CÂU HỎI THÔNG TIN / TIN TỨC / TẠI SAO / LỊCH SỬ / GIAO DỊCH CỔ PHẦN:
+- TỰ ĐỘNG TRA CỨU TIN TỨC THỜI GIAN THỰC & BÁO CHÍ (CafeF, Vietstock, VnEconomy, Tin Nhanh Chứng Khoán, Tuổi Trẻ...).
+- Trả lời rõ ràng, chính xác, cập nhật nhất về nguyên nhân, sự kiện hoặc danh tính được hỏi (Ví dụ: tại sao giá vonfram tăng, ai bán cổ phần, ai sáng lập...).
+- BẮT BUỘC TRÍCH DẪN NGUỒN BÁO HOẶC TRANG TIN TỨC ĐÃ TRA CỨU ở cuối câu trả lời dạng Markdown link (ví dụ: [CafeF](https://cafef.vn), [Vietstock](https://vietstock.vn)...).
+- TUYỆT ĐỐI KHÔNG xuất bài phân tích kỹ thuật hay biểu mẫu cổ phiếu rập khuôn!`
   } else if (intent.isFactual) {
     taskInstruction = `
 NGƯỜI DÙNG ĐANG HỎI CÂU HỎI THÔNG TIN / NHÂN SỰ / LỊCH SỬ DOANH NGHIỆP:
 - BẮT BUỘC TRẢ LỜI TRỰC DIỆN, RÕ RÀNG, CHÍNH XÁC VÀ SÚC TÍCH.
-- Nêu rõ danh tính người sáng lập, lãnh đạo, lịch sử hình thành hoặc nội dung được hỏi.
+- Nêu rõ danh tính người sáng lập, lãnh đạo, lịch sử hình thành hoặc nội dung được hỏi kèm trích dẫn nguồn tin cậy nếu có.
 - TUYỆT ĐỐI KHÔNG xuất bài phân tích kỹ thuật hay biểu mẫu cổ phiếu rập khuôn nếu người dùng không yêu cầu phân tích cổ phiếu!`
   } else if (intent.isPrice) {
     taskInstruction = `
@@ -206,9 +213,11 @@ ${marketContext}
 // Thu thập ngữ cảnh thị giá thời gian thực, thông tin BCTC và phân loại ý định
 async function gatherStockAndMarketContext(prompt) {
   const isBCTC = /bctc|báo cáo tài chính|kết quả kinh doanh|doanh thu|lợi nhuận|nợ xấu|biên lãi|casa|nim|roe|roa/i.test(prompt)
-  const isFactual = /ai là|người sáng lập|ông chủ|lãnh đạo|lịch sử|thành lập|tại sao|ở đâu|giải thích|khái niệm|định nghĩa|tin tức|sự kiện|chủ tịch|tổng giám đốc|ceo/i.test(prompt)
   const isPrice = /giá|thị giá|bao nhiêu|giá hiện tại/i.test(prompt)
-  const intent = { isBCTC, isFactual, isPrice }
+  const isFactual = /ai là|người sáng lập|ông chủ|lãnh đạo|lịch sử|thành lập|chủ tịch|tổng giám đốc|ceo/i.test(prompt)
+  const isNewsOrGeneral = /vì sao|tại sao|nguyên nhân|tin tức|sự kiện|bán cổ phần|mua cổ phần|thoái vốn|sáp nhập|mua lại|m&a|thương vụ|dự án|tin mới|báo chí|cafef|vietstock|vneconomy|thế giới|quốc tế|hàng hóa|vonfram|dầu thô|vàng|fed|lãi suất/i.test(prompt) || (isFactual && !/vps/i.test(prompt))
+
+  const intent = { isBCTC, isPrice, isFactual, isNewsOrGeneral }
 
   let stockContext = ''
   let targetSymbol = null
@@ -263,14 +272,26 @@ ${s.bctc ? `- Số liệu BCTC chi tiết: ${s.bctc}\n` : ''}- Lãnh đạo ch�
   return { stockContext, marketContext, systemPrompt, targetSymbol, intent }
 }
 
+// Hàm chọn model thông minh: Nếu là câu hỏi tin tức/sự kiện/lý do thì tự động thêm :online để tra cứu web
+function resolveModelWithWebSearch(baseModel, intent) {
+  if (!baseModel) return DEFAULT_TURBO_MODEL
+  if (intent?.isNewsOrGeneral) {
+    if (baseModel.endsWith(':online')) return baseModel
+    // Thêm hậu tố :online để OpenRouter tự động search Google/Exa và trích nguồn
+    return `${baseModel}:online`
+  }
+  return baseModel
+}
+
 // Xử lý gửi tin nhắn phân tích qua OpenRouter API
 export async function sendChatMessage({ messages, prompt, mode }) {
   const apiKey = getOpenRouterKey()
   const { systemPrompt, targetSymbol, intent } = await gatherStockAndMarketContext(prompt)
 
   const currentMode = mode || getChatMode() || 'fast'
-  const primaryModel = currentMode === 'turbo' ? getTurboModel() : getFastModel()
-  const fallbackModel = DEFAULT_TURBO_MODEL
+  const rawPrimary = currentMode === 'turbo' ? getTurboModel() : getFastModel()
+  const primaryModel = resolveModelWithWebSearch(rawPrimary, intent)
+  const fallbackModel = resolveModelWithWebSearch(DEFAULT_TURBO_MODEL, intent)
 
   const recentMessages = (messages || [])
     .filter(m => m.id !== 'welcome')
@@ -340,8 +361,9 @@ export async function streamChatMessage({ messages, prompt, mode, onChunk, onCom
   const { systemPrompt, targetSymbol, intent } = await gatherStockAndMarketContext(prompt)
 
   const currentMode = mode || getChatMode() || 'fast'
-  const primaryModel = currentMode === 'turbo' ? getTurboModel() : getFastModel()
-  const fallbackModel = DEFAULT_TURBO_MODEL
+  const rawPrimary = currentMode === 'turbo' ? getTurboModel() : getFastModel()
+  const primaryModel = resolveModelWithWebSearch(rawPrimary, intent)
+  const fallbackModel = resolveModelWithWebSearch(DEFAULT_TURBO_MODEL, intent)
 
   const recentMessages = (messages || [])
     .filter(m => m.id !== 'welcome')
