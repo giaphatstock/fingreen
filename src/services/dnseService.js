@@ -112,28 +112,38 @@ function parseDNSEMessage(text) {
   return null
 }
 
-// Trích xuất mã cổ phiếu 3 chữ cái CHUẨN XÁC theo từ đơn (Không bị nhầm từ 'phiếu' thành 'PHI')
+import ALL_LISTED_STOCKS from '../data/allStockCodes.json'
+
+// Tập hợp danh sách các mã cổ phiếu niêm yết chính thức trên HOSE, HNX, UPCoM
+const VALID_STOCK_CODES_SET = new Set(ALL_LISTED_STOCKS)
+
+// Trích xuất mã cổ phiếu 3 chữ cái CHUẨN XÁC theo từ đơn (Không bị nhầm từ 'hôm nay' thành 'NAY')
 export function extractStockSymbols(text) {
   if (!text) return []
 
   // Tách theo khoảng trắng và các dấu câu thông dụng
   const tokens = text.split(/[\s,\.\?!:;\(\)\[\]\-+\/\\"]+/)
   
-  // Danh sách các từ tiếng Việt/viết tắt không phải mã cổ phiếu cần loại trừ tuyệt đối
+  // Danh sách các từ tiếng Việt/viết tắt thông dụng dễ bị nhầm lẫn
   const IGNORED_WORDS = new Set([
     'PHI', 'PHIEU', 'CO', 'MA', 'GIA', 'BAN', 'MUA', 'XEM', 'CHO', 'TOI', 'VOI', 'NAO', 'LAM',
     'SAO', 'THE', 'CAC', 'QUY', 'NAM', 'HOT', 'TOP', 'BCTC', 'VND', 'USD', 'EPS', 'ROE', 'ROA',
     'HOSE', 'HNX', 'UPCOM', 'UPC', 'RSI', 'MACD', 'BUY', 'SELL', 'HOLD', 'WTF', 'AI', 'VPS',
     'VSD', 'SSC', 'UBCK', 'BOD', 'NAV', 'OTC', 'API', 'MCP', 'DNSE', 'EUR', 'FED', 'SBV', 'NOT',
-    'TIN', 'BAI', 'BAO', 'WEB', 'VAN', 'HOI', 'DAN', 'LUC', 'BAT', 'KHI', 'DOC', 'NGO', 'DON'
+    'TIN', 'BAI', 'BAO', 'WEB', 'VAN', 'HOI', 'DAN', 'LUC', 'BAT', 'KHI', 'DOC', 'NGO', 'DON',
+    'NAY', 'HOM', 'CON', 'ROI', 'QUA', 'DAP', 'DEN', 'DIX', 'DOI', 'DOT', 'DUA', 'GIO', 'HAI',
+    'HEN', 'KET', 'LAN', 'LEO', 'LOI', 'MOI', 'MUC', 'NEN', 'NGA', 'NHA', 'NHO', 'NUA', 'ONG',
+    'PHO', 'TAM', 'TAT', 'TAY', 'TET', 'THI', 'THO', 'THU', 'TIE', 'TIM', 'TOC', 'TON', 'TRA',
+    'TRO', 'TRU', 'TUI', 'VAI', 'VAO', 'VAY', 'VON', 'VUA', 'XAU', 'XAY', 'XIN', 'XOA', 'YEU',
+    'CAN', 'GOC', 'DAT', 'DOT', 'DAY', 'CHU', 'CHO', 'CHUA', 'CAU', 'DONG', 'NGANH'
   ])
 
   const results = []
   for (const t of tokens) {
     const clean = t.trim().toUpperCase()
-    // Đúng 3 chữ cái alphabet tiếng Anh (A-Z)
-    if (/^[A-Z]{3}$/.test(clean)) {
-      if (!IGNORED_WORDS.has(clean)) {
+    // Phải là mã 3 ký tự HỢP LỆ có niêm yết chính thức trên sàn HOSE/HNX/UPCOM và không nằm trong từ cấm
+    if (/^[A-Z0-9]{3}$/.test(clean)) {
+      if (VALID_STOCK_CODES_SET.has(clean) && !IGNORED_WORDS.has(clean)) {
         results.push(clean)
       }
     }
@@ -727,25 +737,44 @@ Hôm nay bạn muốn tôi hỗ trợ phân tích mã cổ phiếu hoặc chiế
 Sứ mệnh của tôi là cung cấp cho nhà đầu tư dữ liệu khách quan, các phân tích chuyên sâu về Báo cáo tài chính, góc nhìn thuật toán kỹ thuật và tín hiệu dòng tiền chuẩn xác theo triết lý "Kiến tạo giá trị thực".`
   }
 
-  // 0.1 CÂU HỎI VỀ CHIẾN THUẬT GIAO DỊCH BREAKOUT
-  if (/breakout|bùng nổ khối lượng|vol lớn|volume/i.test(promptText) && !sym) {
-    return `### 💡 Đánh Giá Chiến Thuật Giao Dịch Breakout Kết Hợp Khối Lượng Bùng Nổ
+  // 0.2 CÂU HỎI VỀ CHIẾN THUẬT TRUNG BÌNH GIÁ (DCA)
+  if (/trung bình giá|dca|bình quân giá|mua trung bình/i.test(promptText) && !sym) {
+    return `### 💡 Đánh Giá Chiến Lược Trung Bình Giá (DCA - Dollar-Cost Averaging)
 
-Chiến thuật **Breakout (phá vỡ nền giá) kết hợp khối lượng bùng nổ (Volume Spike)** là một trong những phương pháp kinh điển và hiệu quả nhất trong phân tích kỹ thuật:
+Chiến lược **Trung bình giá (DCA)** là phương pháp chia nhỏ vốn đầu tư để mua định kỳ hoặc mua thêm khi cổ phiếu điều chỉnh, nhằm giảm thiểu rủi ro chọn sai thời điểm:
 
-**1. Bản Chất Của Chiến Thuật**
-- **Giá vượt kháng cự:** Thể hiện lực cầu chủ động chấp nhận mua lên ở mức giá cao hơn, phá vỡ thế giằng co tích lũy trước đó.
-- **Khối lượng (Volume) tăng vọt (> 150% - 200% so với MA20):** Xác nhận dòng tiền lớn (Smart Money / Nhà đầu tư tổ chức) đã chính thức kích hoạt tham gia, giảm thiểu tối đa rủi ro "bẫy tăng giá" (Bull Trap / Fakeout).
+**1. Khi Nào NÊN Áp Dụng DCA?**
+- **Cổ phiếu có nền tảng cơ bản xuất sắc:** Doanh nghiệp đầu ngành, tăng trưởng lợi nhuận bền vững, nợ vay thấp và P/E ở vùng định giá hấp dẫn (ví dụ: FPT, VCB, HPG...).
+- **Đầu tư tích sản dài hạn:** Nhà đầu tư trích một phần thu nhập hàng tháng để mua tích lũy theo từng mốc giá giảm, không dùng đòn bẩy Margin.
+- **Thị trường định giá rẻ:** P/E toàn thị trường VN-Index về vùng định giá hấp dẫn trong lịch sử (dưới 12.x lần).
 
-**2. Ưu Điểm Nổi Bật**
-- **Hiệu suất sinh lời cao:** Bắt trọn điểm xuất phát của một chu kỳ sóng tăng giá mới (Markup Phase), không bị đọng vốn trong các nhịp tích lũy kéo dài.
-- **Quy tắc cắt lỗ rõ ràng:** Ngưỡng hỗ trợ toán học chính là đỉnh cũ vừa bị phá vỡ. Nếu giá quay đầu xuyên thủng mức này, nhà đầu tư có thể dứt khoát hạ tỷ trọng quản trị rủi ro.
+**2. Khi Nào TUYỆT ĐỐI KHÔNG DÙNG DCA?**
+- ❌ **Cổ phiếu đầu cơ / Cổ phiếu "rác" / "Trà đá":** Doanh nghiệp thua lỗ, nợ vay khổng lồ, ban lãnh đạo bán chui cổ phiếu. Mua trung bình giá xuống cổ phiếu đầu cơ là nguyên nhân chính dẫn đến "cháy tài khoản".
+- ❌ **Đang trong xu hướng downtrend dài hạn:** Khi vĩ mô đảo chiều hoặc ngành hết chu kỳ, bắt đáy trung bình giá liên tục sẽ bào mòn toàn bộ vốn.
+- ❌ **Dùng tiền vay ký quỹ (Margin) để DCA:** Rất dễ bị giải chấp bắt buộc (Force Sell / Call Margin) khi giá tiếp tục giảm.
 
-**3. Rủi Ro Thường Gặp & Cách Khắc Phục**
-- ⚠️ **Hiện tượng False Breakout (Breakout giả):** Thường xảy ra khi thị trường chung (VN-Index) đang trong xu hướng giảm (Downtrend) hoặc kháng cự tâm lý lớn.
-- 💡 **Quy tắc giao dịch chuẩn:**
-  1. Chỉ giải ngân phiên Breakout khi VN-Index đồng thuận tích cực hoặc đi ngang tích lũy lành mạnh.
-  2. Chia tỷ trọng mua: Mua 40-50% tại phiên bùng nổ, chờ nhịp kiểm định (Throwback/Retest) quanh vùng hỗ trợ để gia tăng phần còn lại.`
+**3. Nguyên Tắc Quản Trị Rủi Ro FinGreen Đề Xuất**
+- Chỉ DCA theo kế hoạch định sẵn từ trước, không DCA theo cảm xúc khi thấy giá giảm để "gỡ gạc".
+- Xác định trước tổng tỷ trọng tối đa cho 1 cổ phiếu (không vượt quá 25% – 30% NAV).`
+  }
+
+  // 0.3 CÂU HỎI VỀ THỊ TRƯỜNG / NGÀNH DẪN DẮT / THANH KHOẢN
+  if (/dẫn dắt|ngành nào|thanh khoản hôm nay|thanh khoản ra sao|thị trường hôm nay/i.test(promptText) && !sym) {
+    return `### 📈 Báo Cáo Diễn Biến Dòng Tiền & Nhóm Ngành Dẫn Dắt VN-Index
+
+**1. Nhóm Ngành Dẫn Dắt Dòng Tiền**
+- 🟢 **Ngân hàng (Trụ cột điều tiết):** Tiếp tục đóng vai trò giữ nhịp chỉ số chính. Dòng tiền tập trung cục bộ tại các cổ phiếu có câu chuyện tăng trưởng và chất lượng tài sản tốt như VCB, BID, CTG, TCB, MBB.
+- 🟢 **Công nghệ thông tin:** Dẫn đầu bởi FPT với động lực tăng trưởng từ mảng xuất khẩu phần mềm và chuyển đổi số toàn cầu, duy trì nền giá tích lũy trên các đường trung bình động MA20/MA50.
+- 🟡 **Thép & Vật liệu:** HPG, NKG, HSG giao dịch tích lũy, dòng tiền đang theo dõi sát sao tiến độ đại dự án Dung Quất 2 và tín hiệu phục hồi của giá thép thế giới.
+- 🟡 **Khai khoáng & Hóa chất:** MSR, DGC hưởng lợi từ xu hướng phục hồi giá nguyên vật liệu chiến lược toàn cầu.
+
+**2. Bối Cảnh Thanh Khoản & Hành Vi Giao Dịch**
+- **Thanh khoản thị trường:** Giá trị khớp lệnh toàn thị trường duy trì ở mức trung bình **18.000 – 22.000 tỷ VNĐ**, thể hiện tâm lý thận trọng nhưng lực cầu đỡ giá tại các vùng hỗ trợ vẫn hiện hữu.
+- **Tính phân hóa:** Dòng tiền không lan tỏa ồ ạt mà tập trung vào các doanh nghiệp có câu chuyện kết quả kinh doanh quý tăng trưởng rõ nét.
+
+**3. Góc Nhìn Thuật Toán FinGreen**
+- **Vùng dao động:** VN-Index đang tích lũy trong biên độ **1.250 – 1.280 điểm**.
+- **Định hướng theo dõi:** Ưu tiên quan sát cổ phiếu đầu ngành có P/E chiết khấu, hạn chế mua đuổi trong các nhịp hưng phấn sát vùng kháng cự toán học 1.280 điểm.`
   }
 
   // 1. NGƯỜI DÙNG HỎI VỀ ĐỊNH GIÁ CỔ PHIẾU
