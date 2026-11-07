@@ -217,7 +217,7 @@ ${info.introduction ? info.introduction.replace(/\r\n/g, ' ') : `${info.name} l�
 - **Vùng quan sát kỹ thuật:** Phù hợp theo dõi dữ liệu dòng tiền lớn kích hoạt, kiểm định các vùng hỗ trợ/kháng cự toán học.
 
 ---
-> ⚠️ **Tuyên bố miễn trừ trách nhiệm:** Tín hiệu từ dữ liệu thuật toán/kỹ thuật mang tính chất THAM KHẢO, không phải là lời khuyên hay khuyến nghị đầu tư chính thức. Đầu tư chứng khoán luôn tiềm ẩn rủi ro. Nhà đầu tư tự chịu trách nhiệm về quyết định mua bán của mình.`
+> ⚠️ **Tuyên bố miễn trừ trách nhiệm:** Thông tin, số liệu và tín hiệu chỉ mang tính chất tham khảo, không phải lời khuyên đầu tư. Chúng tôi không đảm bảo tính toàn vẹn, chính xác của dữ liệu và không chịu trách nhiệm dưới mọi hình thức đối với sai sót, chậm trễ, tổn thất giao dịch hoặc việc người dùng tự ý trích dẫn, phát tán thông tin cho bên thứ ba. Nhà đầu tư tự chịu trách nhiệm cho mọi quyết định của mình.`
 }
 
 // CƠ SỞ DỮ LIỆU CÁC TỔ CHỨC TÀI CHÍNH & TẬP ĐOÀN LỚN THƯỜNG ĐƯỢC HỎI

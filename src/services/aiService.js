@@ -8,7 +8,7 @@ import {
 } from './dnseService'
 
 // Tuyên bố miễn trừ trách nhiệm bắt buộc theo chuẩn mực pháp lý
-export const MANDATORY_DISCLAIMER = '⚠️ **Tuyên bố miễn trừ trách nhiệm:** Tín hiệu từ dữ liệu thuật toán/kỹ thuật mang tính chất THAM KHẢO, không phải là lời khuyên hay khuyến nghị đầu tư chính thức. Đầu tư chứng khoán luôn tiềm ẩn rủi ro. Nhà đầu tư tự chịu trách nhiệm về quyết định mua bán của mình.'
+export const MANDATORY_DISCLAIMER = '⚠️ **Tuyên bố miễn trừ trách nhiệm:** Thông tin, số liệu và tín hiệu chỉ mang tính chất tham khảo, không phải lời khuyên đầu tư. Chúng tôi không đảm bảo tính toàn vẹn, chính xác của dữ liệu và không chịu trách nhiệm dưới mọi hình thức đối với sai sót, chậm trễ, tổn thất giao dịch hoặc việc người dùng tự ý trích dẫn, phát tán thông tin cho bên thứ ba. Nhà đầu tư tự chịu trách nhiệm cho mọi quyết định của mình.'
 
 // Mô hình mặc định thông minh & ổn định
 export const DEFAULT_FAST_MODEL = 'openai/gpt-4o-mini'
@@ -93,6 +93,44 @@ export function saveOpenRouterKey(key) {
   }
 }
 
+// Chuẩn hóa định dạng trích dẫn nguồn dữ liệu theo phong cách FinGreen AI
+function formatFinGreenSources(text) {
+  if (!text) return ''
+
+  // Regex tìm khối nguồn tham khảo dạng:
+  // Nguồn tham khảo: [Vietcap](...), [XTB](...)
+  // hoặc Nguồn: ...
+  const sourceBlockRegex = /(?:[\r\n]+---)?[\s\r\n]*(?:\*{0,2}(?:Nguồn(?:\s+tin|\s+tham\s+khảo|\s+báo|\s+dữ\s+liệu)?|Sources?):\*{0,2})\s*([\s\S]*?)(?=(?:[\r\n]+---)|(?:[\r\n]+>)|$)/i
+
+  const match = text.match(sourceBlockRegex)
+  if (!match) return text
+
+  const rawSources = match[1].trim()
+  if (!rawSources) return text
+
+  // Trích xuất các tên trang/nguồn
+  const links = [...rawSources.matchAll(/\[([^\]]+)\](?:\([^)]+\))?/g)]
+  let sourceNames = []
+  if (links.length > 0) {
+    sourceNames = links.map(m => m[1].replace(/https?:\/\/[^\s]+/g, '').trim()).filter(Boolean)
+  }
+
+  if (sourceNames.length === 0) {
+    sourceNames = rawSources
+      .split(/[,;\n•\/\-]+/)
+      .map(s => s.replace(/\[|\]|\*|\(|\)/g, '').trim())
+      .filter(s => s.length > 1 && !s.startsWith('http'))
+  }
+
+  if (sourceNames.length === 0) return text
+
+  const uniqueNames = Array.from(new Set(sourceNames)).join(', ')
+  const formattedSource = `📊 **Nguồn dữ liệu:** Được tổng hợp và phân tích bởi **FinGreen AI** (tham chiếu dữ liệu từ ${uniqueNames}).`
+
+  // Thay thế khối cũ bằng định dạng chuẩn
+  return text.replace(sourceBlockRegex, `\n\n${formattedSource}`)
+}
+
 // Hàm làm sạch output của AI & chuẩn hóa thuật ngữ pháp lý an toàn (Chặn lặp disclaimer 2 lần)
 function cleanAIOutput(text) {
   if (!text) return ''
@@ -121,14 +159,17 @@ function cleanAIOutput(text) {
     .replace(/tư vấn đầu tư/gi, 'dữ liệu thuật toán tham khảo')
     .trim()
 
-  // 5. Cắt bỏ TRIỆT ĐỂ bất kỳ đoạn disclaimer cũ/mới nào đã sinh ra để không bao giờ bị lặp 2 lần
+  // 5. Chuẩn hóa khối Nguồn tham khảo sang cấu trúc FinGreen AI
+  cleaned = formatFinGreenSources(cleaned)
+
+  // 6. Cắt bỏ TRIỆT ĐỂ bất kỳ đoạn disclaimer cũ/mới nào đã sinh ra để không bao giờ bị lặp 2 lần
   cleaned = cleaned
     .replace(/(?:[\r\n]+---)?[\s\r\n]*(?:>|###)?\s*(?:⚠️|💡)?\s*[\*#_]*(?:Tuyên bố|Miễn trừ trách nhiệm|Disclaimer)[\s\S]*$/gi, '')
     .trim()
     .replace(/(?:[\r\n]+---)+$/g, '')
     .trim()
 
-  // 6. GẮN DUY NHẤT 1 TUYÊN BỐ MIỄN TRỪ TRÁCH NHIỆM BẮT BUỘC Ở CUỐI TIN NHẮN
+  // 7. GẮN DUY NHẤT 1 TUYÊN BỐ MIỄN TRỪ TRÁCH NHIỆM BẮT BUỘC Ở CUỐI TIN NHẮN
   return `${cleaned}\n\n---\n> ${MANDATORY_DISCLAIMER}`
 }
 
@@ -156,8 +197,9 @@ Tuyệt đối không nhầm sang bài phân tích kỹ thuật chung.`
     taskInstruction = `
 NGƯỜI DÙNG ĐANG HỎI CÂU HỎI THÔNG TIN / TIN TỨC / TẠI SAO / LỊCH SỬ / GIAO DỊCH CỔ PHẦN:
 - TỰ ĐỘNG TRA CỨU TIN TỨC THỜI GIAN THỰC & BÁO CHÍ (CafeF, Vietstock, VnEconomy, Tin Nhanh Chứng Khoán, Tuổi Trẻ...).
-- Trả lời rõ ràng, chính xác, cập nhật nhất về nguyên nhân, sự kiện hoặc danh tính được hỏi (Ví dụ: tại sao giá vonfram tăng, ai bán cổ phần, ai sáng lập...).
-- BẮT BUỘC TRÍCH DẪN NGUỒN BÁO HOẶC TRANG TIN TỨC ĐÃ TRA CỨU ở cuối câu trả lời dạng Markdown link (ví dụ: [CafeF](https://cafef.vn), [Vietstock](https://vietstock.vn)...).
+- Trả lời rõ ràng, chính xác, cập nhật nhất về nguyên nhân, sự kiện hoặc danh tính được hỏi (Ví dụ: tại sao giá vonfram tăng, ai bán cổ phần, ai sáng lập, chiến lược đầu tư...).
+- TRÍCH DẪN NGUỒN CHUẨN MỰC: Ở cuối câu trả lời, hãy trình bày nguồn tham chiếu theo mẫu:
+📊 **Nguồn dữ liệu:** Được tổng hợp và phân tích bởi **FinGreen AI** (tham chiếu dữ liệu từ [Tên nguồn 1], [Tên nguồn 2]...).
 - TUYỆT ĐỐI KHÔNG xuất bài phân tích kỹ thuật hay biểu mẫu cổ phiếu rập khuôn!`
   } else if (intent.isFactual) {
     taskInstruction = `
