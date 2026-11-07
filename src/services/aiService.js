@@ -193,6 +193,22 @@ BẮT BUỘC TRẢ LỜI ĐÚNG TRỌNG TÂM BCTC THEO CẤU TRÚC:
 - ROE, ROA, EPS, P/E, P/B
 **4. Đánh Giá Khách Quan & Triển Vọng Tài Chính**
 Tuyệt đối không nhầm sang bài phân tích kỹ thuật chung.`
+  } else if (intent.isValuation) {
+    taskInstruction = `
+NGƯỜI DÙNG ĐANG YÊU CẦU: ĐỊNH GIÁ CỔ PHIẾU [MÃ].
+BẮT BUỘC TRẢ LỜI ĐÚNG TRỌNG TÂM ĐỊNH GIÁ & HIỆU QUẢ SINH LỜI:
+### 💎 Báo Cáo Định Giá Cổ Phiếu [MÃ]
+**1. Mặt Bằng Chỉ Số Định Giá Cốt Lõi (P/E, P/B, EPS, ROE)**
+- P/E hiện tại so với P/E trung bình ngành và trung bình lịch sử 3-5 năm.
+- P/B hiện tại so với giá trị sổ sách (Book Value).
+- Chỉ số sinh lời ROE, ROA và EPS pha loãng.
+**2. Phương Pháp Định Giá Tham Chiếu (P/E tương đối & Chiết khấu dòng tiền DCF)**
+- Định giá theo P/E mục tiêu ngành.
+- Định giá theo dòng tiền tự do FCFF/FCFE hoặc mô hình chiết khấu cổ tức nếu có.
+**3. Đánh Giá Rẻ Hay Đắt & Biên An Toàn**
+- Đánh giá khách quan mức định giá hiện tại: Đang ở vùng định giá hấp dẫn, hợp lý hay đã phản ánh hết kỳ vọng.
+**4. Góc Nhìn Thuật Toán & Vùng Quan Sát Kỹ Thuật FinGreen**
+Tuyệt đối không nhầm sang chỉ trả lời thị giá khớp lệnh!`
   } else if (intent.isNewsOrGeneral) {
     taskInstruction = `
 NGƯỜI DÙNG ĐANG HỎI CÂU HỎI THÔNG TIN / TIN TỨC / TẠI SAO / LỊCH SỬ / GIAO DỊCH CỔ PHẦN:
@@ -255,12 +271,14 @@ ${marketContext}
 
 // Thu thập ngữ cảnh thị giá thời gian thực, thông tin BCTC và phân loại ý định
 async function gatherStockAndMarketContext(prompt, apiKey) {
-  const isBCTC = /bctc|báo cáo tài chính|kết quả kinh doanh|doanh thu|lợi nhuận|nợ xấu|biên lãi|casa|nim|roe|roa/i.test(prompt)
-  const isPrice = /giá|thị giá|bao nhiêu|giá hiện tại/i.test(prompt)
+  const isValuation = /định giá|dinh gia|pe|pb|dcf|rẻ hay đắt|đắt hay rẻ|fair value/i.test(prompt)
+  const isBCTC = !isValuation && /bctc|báo cáo tài chính|kết quả kinh doanh|doanh thu|lợi nhuận|nợ xấu|biên lãi|casa|nim|roe|roa/i.test(prompt)
+  // Chỉ coi là hỏi thị giá đơn thuần nếu KHÔNG PHẢI là câu hỏi định giá (vì từ 'định giá' có chứa 'giá')
+  const isPrice = !isValuation && /(?:thị giá|giá hiện tại|bao nhiêu|giá cp|giá cổ phiếu)/i.test(prompt)
   const isFactual = /ai là|người sáng lập|ông chủ|lãnh đạo|lịch sử|thành lập|chủ tịch|tổng giám đốc|ceo/i.test(prompt)
   const isNewsOrGeneral = /shark|bình|vụ án|bắt|khởi tố|tin tức|sự kiện|vì sao|tại sao|nguyên nhân|bán cổ phần|mua cổ phần|thoái vốn|sáp nhập|mua lại|m&a|thương vụ|dự án|tin mới|báo chí|cafef|vietstock|vneconomy|thế giới|quốc tế|hàng hóa|vonfram|dầu thô|vàng|fed|lãi suất/i.test(prompt) || (isFactual && !/vps/i.test(prompt))
 
-  const intent = { isBCTC, isPrice, isFactual, isNewsOrGeneral }
+  const intent = { isValuation, isBCTC, isPrice, isFactual, isNewsOrGeneral }
 
   let stockContext = ''
   let targetSymbol = null
