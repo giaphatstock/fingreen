@@ -214,21 +214,22 @@ function buildSystemPrompt(stockContext, marketContext, intent) {
   if (intent.isBCTC) {
     taskInstruction = `
 NGƯỜI DÙNG ĐANG YÊU CẦU: Phân tích Báo Cáo Tài Chính (BCTC) [MÃ].
-- KẾT HỢP DỮ LIỆU CÓ SẴN VỚI TỰ ĐỘNG TRA CỨU WEB / BÁO CHÍ (CafeF, Vietstock, FireAnt...) để lấy đầy đủ các con số doanh thu, lợi nhuận, nợ vay, tổng tài sản mới nhất.
-- TUYỆT ĐỐI KHÔNG TRẢ LỜI "Chưa có số liệu cụ thể" nếu có thể tra cứu từ web!
-BẮT BUỘC TRÌNH BÀY ĐẦY ĐỦ CÁC CON SỐ THEO CẤU TRÚC:
+- NGUYÊN TẮC TỐI THƯỢNG: PHẢI CÓ SỐ LIỆU TÀI CHÍNH CỤ THỂ (Bao nhiêu tỷ đồng, bao nhiêu %, tỷ lệ bao nhiêu). TUYỆT ĐỐI KHÔNG nhận định chung chung "tăng trưởng", "ở mức hợp lý", "ở mức thấp" mà không đưa ra con số cụ thể!
+- Nếu trong cơ sở dữ liệu bên dưới đã có số liệu BCTC: BẮT BUỘC TRÍCH XUẤT ĐẦY ĐỦ CON SỐ ĐÓ VÀO BÀI.
+- TỰ ĐỘNG TRA CỨU WEB / BÁO CHÍ (CafeF, Vietstock, FireAnt...) để lấy đầy đủ các con số doanh thu, lợi nhuận, nợ vay, tổng tài sản mới nhất.
+- BẮT BUỘC TRÌNH BÀY ĐẦY ĐỦ CÁC CON SỐ CỤ THỂ THEO CẤU TRÚC:
 ### 📑 Báo Cáo Tài Chính & Sức Khỏe Doanh Nghiệp [MÃ]
 **1. Kết Quả Kinh Doanh Cốt Lõi (Doanh thu & Lợi nhuận)**
-- Doanh thu thuần / Thu nhập hoạt động (NII nếu là ngân hàng)
-- Lợi nhuận trước thuế & Lợi nhuận sau thuế (LNST)
-- Biên lợi nhuận (NIM đối với ngân hàng, Biên lãi gộp đối với sản xuất/khai khoáng/bán lẻ)
+- Doanh thu thuần: [Ghi rõ số tỷ đồng cụ thể và tăng trưởng %]
+- Lợi nhuận trước thuế & Lợi nhuận sau thuế (LNST): [Ghi rõ số tỷ đồng cụ thể]
+- Biên lợi nhuận: [Ghi rõ % biên lãi gộp/biên ròng hoặc NIM nếu là ngân hàng]
 **2. Chất Lượng Tài Sản & Đòn Bẩy (Nợ vay D/E, Tổng tài sản hoặc NPL, CASA)**
-- Nợ vay / Đòn bẩy tài chính D/E hoặc chi phí lãi vay (đối với ngân hàng: Nợ xấu NPL, Bao phủ nợ xấu LLR, Tỷ lệ CASA)
-- Tổng tài sản và mức độ an toàn cơ cấu vốn
+- Nợ vay / Đòn bẩy tài chính D/E: [Ghi rõ số nợ vay tỷ đồng và hệ số D/E, với ngân hàng ghi rõ NPL %, LLR %, CASA %]
+- Tổng tài sản & Vốn chủ sở hữu: [Ghi rõ số tỷ đồng]
 **3. Chỉ Số Hiệu Quả Sinh Lời & Định Giá Từ BCTC**
-- ROE, ROA, EPS, P/E, P/B
+- ROE: [Con số % cụ thể] | ROA: [Con số % cụ thể] | EPS: [Con số VNĐ cụ thể] | P/E: [Số lần] | P/B: [Số lần]
 **4. Đánh Giá Khách Quan & Triển Vọng Tài Chính**
-- Nhận định sức khỏe tài chính và động lực tăng trưởng dài hạn.
+- Nhận định sức khỏe tài chính dựa trên các con số đã nêu ở trên và động lực tăng trưởng dài hạn.
 Tuyệt đối không nhầm sang bài phân tích kỹ thuật chung.`
   } else if (intent.isValuation) {
     taskInstruction = `
