@@ -636,6 +636,25 @@ export const STOCKS_KNOWLEDGE_BASE = {
   }
 }
 
+// Báo cáo tổng quan thị trường mặc định
+export function generateMarketOverviewReport() {
+  return `### 📈 Tổng Quan Thị Trường & Dữ Liệu Dòng Tiền FinGreen
+
+**1. Diễn Biến Chỉ Số VN-Index**
+- **Vùng chỉ số:** VN-Index đang dao động tích lũy trong biên độ **1.250 – 1.280 điểm**.
+- **Thanh khoản:** Khối lượng giao dịch đạt khoảng **18.000 – 22.000 tỷ VNĐ**, dòng tiền có tính phân hóa cao giữa các nhóm ngành.
+
+**2. Phân Bổ Dòng Tiền Theo Nhóm Ngành**
+- 🟢 **Ngân hàng & Tài chính:** Dữ liệu dòng tiền kích hoạt tích cực với các mã trụ VCB, BID, CTG, TCB, STB, MBB.
+- 🟢 **Công nghệ & Viễn thông:** Giữ nhịp tăng trưởng bền vững dẫn đầu bởi FPT.
+- 🟡 **Thép & Vật liệu:** HPG, NKG, HSG đang trong vùng quan sát kỹ thuật chờ đón chu kỳ tiêu thụ mới và đại dự án Dung Quất 2.
+- 🟡 **Khai khoáng & Kim loại:** MSR ghi nhận tín hiệu dòng tiền hồi phục theo chu kỳ giá Vonfram và kim loại chiến lược toàn cầu.
+
+**3. Vùng Quan Sát & Tín Hiệu Thuật Toán Gợi Ý**
+- Ưu tiên quan sát danh mục các cổ phiếu đầu ngành có kết quả kinh doanh tăng trưởng bền vững và P/E dưới mức trung bình 5 năm.
+- Cân nhắc quản trị rủi ro tại các phiên hưng phấn gần vùng kháng cự toán học 1.280 điểm.`
+}
+
 // Hàm sinh báo cáo phản hồi chuyên sâu hoặc trực diện theo Ý ĐỊNH người dùng
 export async function generateSmartFallbackResponse(symbol, intent = {}) {
   const sym = symbol ? symbol.toUpperCase().trim() : null
