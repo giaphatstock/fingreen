@@ -280,6 +280,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Dương Công Minh (Chủ tịch HĐQT) • Nguyễn Đức Thạch Diễm (Tổng Giám Đốc)',
     holder: 'Cổ đông đại chúng và các tổ chức đầu tư tài chính',
     summary: 'Ngân hàng bán lẻ quy mô lớn đang ở giai đoạn hoàn tất Đề án tái cơ cấu sau sáp nhập. Trọng điểm kỳ vọng là đấu giá thành công 32.5% cổ phần VAMC để ghi nhận lợi nhuận đột biến và xóa sạch nợ tồn đọng.',
+    bctc: 'Tổng thu nhập hoạt động (TOI): ~26.500 tỷ VNĐ (Thu nhập lãi thuần NII: ~22.000 tỷ VNĐ) | Lợi nhuận trước thuế (LNTT): ~8.100 tỷ VNĐ | Lợi nhuận sau thuế (LNST): ~6.500 tỷ VNĐ | NIM: ~2.95% | Tỷ lệ nợ xấu NPL nội bảng: ~4.5% (đang giảm nhanh nhờ quyết liệt xử lý nợ tồn đọng) | Bao phủ nợ xấu LLR: ~85% | CASA: ~17.5% | CAR: >10.5%',
     signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI NỀN GIÁ TÍCH LŨY (Kỳ vọng đột biến từ xử lý xong nợ xấu VAMC)'
   },
   HPG: {
@@ -381,6 +382,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Hồ Hùng Anh (Chủ tịch HĐQT) • Jens Lottner (Tổng Giám Đốc)',
     holder: 'Masan Group (15%) • Khối ngoại và gia đình Chủ tịch',
     summary: 'Ngân hàng tư nhân dẫn đầu về hiệu quả kinh doanh và tỷ lệ an toàn vốn CAR cao nhất ngành (>15%), tỷ lệ CASA thuộc nhóm cao nhất hệ thống.',
+    bctc: 'Tổng thu nhập hoạt động (TOI): ~44.500 tỷ VNĐ (NII: ~31.000 tỷ VNĐ) | LNTT: ~27.200 tỷ VNĐ | LNST: ~21.800 tỷ VNĐ | NIM: ~4.1% | NPL: 1.25% | LLR: ~115% | CASA: ~40.5% | CAR: >15.0%',
     signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI VÙNG ĐỊNH GIÁ P/B HẤP DẪN VÀ TỶ LỆ CASA HÀNG ĐẦU'
   },
   MBB: {
@@ -395,6 +397,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Lưu Trung Thái (Chủ tịch HĐQT) • Phạm Như Ánh (Tổng Giám Đốc)',
     holder: 'Viettel (14.1%) • Tổng công ty Trực thăng (7.8%) • SCIC (9.4%)',
     summary: 'Ngân hàng có hiệu quả sinh lời ROE hàng đầu (>22%), định giá P/E thấp nhất trong nhóm ngân hàng quy mô lớn, tệp khách hàng số hóa tăng trưởng vượt bậc.',
+    bctc: 'Tổng thu nhập hoạt động (TOI): ~51.000 tỷ VNĐ (NII: ~41.500 tỷ VNĐ) | LNTT: ~26.300 tỷ VNĐ | LNST: ~21.000 tỷ VNĐ | NIM: ~4.6% | NPL: 1.55% | LLR: ~120% | CASA: ~37.2% | CAR: >11.8%',
     signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI VÙNG ĐỊNH GIÁ P/E VÀ HIỆU SUẤT ROE VƯỢT TRỘI'
   },
   VND: {
@@ -409,6 +412,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Phạm Minh Hương (Chủ tịch HĐQT)',
     holder: 'CTCP Tập đoàn Đầu tư I.P.A (nắm hơn 25%)',
     summary: 'Top công ty chứng khoán có lượng tài khoản nhà đầu tư cá nhân lớn nhất, hệ thống công nghệ số mạnh và mảng nguồn vốn tăng trưởng nhanh.',
+    bctc: 'Doanh thu hoạt động: ~6.200 tỷ VNĐ | LNTT: ~2.500 tỷ VNĐ | LNST: ~2.000 tỷ VNĐ | Dư nợ cho vay Margin: ~10.500 tỷ VNĐ | Tỷ lệ an toàn tài chính: >250%',
     signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI VÙNG TÍCH LŨY KỸ THUẬT QUANH NGƯỠNG HỖ TRỢ'
   },
   DIG: {
@@ -423,6 +427,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Nguyễn Thiện Tuấn (Chủ tịch HĐQT)',
     holder: 'Gia đình Chủ tịch và các nhà đầu tư lớn',
     summary: 'Doanh nghiệp sở hữu quỹ đất sạch lớn tại Vũng Tàu, Đồng Nai, Hậu Giang. Cổ phiếu có tính đầu cơ cao, biến động mạnh theo sóng bất động sản.',
+    bctc: 'Doanh thu thuần: ~1.850 tỷ VNĐ | LNTT: ~350 tỷ VNĐ | LNST: ~280 tỷ VNĐ | Nợ vay D/E: ~0.42 lần (cơ cấu nợ vay rất thấp) | Hàng tồn kho và dự án dở dang: >7.500 tỷ VNĐ',
     signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI BIẾN ĐỘNG DÒNG TIỀN ĐẦU CƠ BẤT ĐỘNG SẢN'
   },
   NVL: {
@@ -437,6 +442,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Bùi Thành Nhơn (Chủ tịch HĐQT)',
     holder: 'Gia đình Chủ tịch Bùi Thành Nhơn và NovaGroup',
     summary: 'Nhà phát triển bất động sản quy mô lớn nhất miền Nam. Doanh nghiệp đang nỗ lực tái cấu trúc nợ trái phiếu và tháo gỡ pháp lý cho các đại dự án Aqua City, NovaWorld Phan Thiết.',
+    bctc: 'Doanh thu: ~4.700 tỷ VNĐ | Lợi nhuận sau thuế: ~1.200 tỷ VNĐ | Tổng dư nợ trái phiếu và nợ vay: ~55.000 tỷ VNĐ (giảm mạnh sau các đợt gia hạn và hoán đổi tài sản) | Tiền mặt: ~3.400 tỷ VNĐ',
     signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI TIẾN ĐỘ THÁO GỠ PHÁP LÝ & CƠ CẤU NỢ'
   },
   MSN: {
@@ -451,6 +457,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Nguyễn Đăng Quang (Chủ tịch HĐQT) • Danny Le (Tổng Giám Đốc)',
     holder: 'Công ty Cổ phần Masan và các cổ đông sáng lập',
     summary: 'Hệ sinh thái tiêu dùng - bán lẻ số 1 Việt Nam gồm Masan Consumer Holdings, WinCommerce (WinMart/WinMart+), Masan MEATLife, Masan High-Tech Materials (MSR) và sở hữu gần 15% vốn Techcombank.',
+    bctc: 'Doanh thu hợp nhất: ~82.000 tỷ VNĐ | LNTT: ~4.200 tỷ VNĐ | LNST: ~3.200 tỷ VNĐ | EBITDA: ~14.500 tỷ VNĐ | Biên EBITDA: ~17.5% | WinCommerce có EBIT dương liên tục',
     signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI CHU KỲ PHỤC HỒI TIÊU DÙNG BÁN LẺ NỘI ĐỊA'
   },
   VIC: {
@@ -605,6 +612,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Trần Hùng Huy (Chủ tịch HĐQT)',
     holder: 'Gia đình Chủ tịch Trần Hùng Huy và các quỹ ngoại (hết room 30%)',
     summary: 'Ngân hàng bán lẻ tư nhân an toàn và hiệu quả nhất, không dính nợ xấu bất động sản hay trái phiếu doanh nghiệp, quản trị rủi ro hàng đầu hệ thống.',
+    bctc: 'Tổng thu nhập hoạt động (TOI): ~35.000 tỷ VNĐ (NII: ~27.000 tỷ VNĐ) | LNTT: ~21.000 tỷ VNĐ | LNST: ~16.800 tỷ VNĐ | NIM: ~3.85% | NPL: 1.21% (rất an toàn) | LLR: ~135% | CASA: ~23.5% | CAR: >12.5%',
     signal: 'VÙNG QUAN SÁT KỸ THUẬT: CỔ PHIẾU NGÂN HÀNG CHẤT LƯỢNG TÀI SẢN TỐT NHẤT'
   },
   CTG: {
@@ -619,6 +627,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Trần Minh Bình (Chủ tịch HĐQT)',
     holder: 'Ngân hàng Nhà nước (64.5%) • MUFG Bank Nhật Bản (19.7%)',
     summary: 'Một trong nhóm Big 4 ngân hàng trụ cột quốc gia, chất lượng tài sản cải thiện mạnh mẽ và tăng trưởng tín dụng phục vụ sản xuất kinh doanh.',
+    bctc: 'Tổng thu nhập hoạt động (TOI): ~74.000 tỷ VNĐ (NII: ~56.000 tỷ VNĐ) | LNTT: ~26.500 tỷ VNĐ | LNST: ~21.200 tỷ VNĐ | NIM: ~2.95% | NPL: 1.35% | LLR: ~160% | CASA: ~22.8% | CAR: >11.0%',
     signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI THEO NHỊP TĂNG TRƯỞNG TÍN DỤNG CỦA NHÓM BIG 4'
   },
   BID: {
@@ -633,6 +642,7 @@ export const STOCKS_KNOWLEDGE_BASE = {
     leader: 'Phan Đức Tú (Chủ tịch HĐQT)',
     holder: 'Ngân hàng Nhà nước (81%) • KEB Hana Bank Hàn Quốc (15%)',
     summary: 'Ngân hàng có tổng quy quy mô tài sản lớn nhất hệ thống ngân hàng Việt Nam, đóng vai trò dẫn dắt điều tiết lãi suất và nguồn vốn nền kinh tế.',
+    bctc: 'Tổng thu nhập hoạt động (TOI): ~78.000 tỷ VNĐ (NII: ~58.500 tỷ VNĐ) | LNTT: ~29.000 tỷ VNĐ | LNST: ~23.200 tỷ VNĐ | NIM: ~2.8% | NPL: 1.40% | LLR: ~170% | CASA: ~20.5% | CAR: >10.8%',
     signal: 'VÙNG QUAN SÁT KỸ THUẬT: THEO DÕI TÍCH LŨY TRONG CÁC NHỊP ĐIỀU CHỈNH'
   }
 }
