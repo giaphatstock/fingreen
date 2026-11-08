@@ -284,15 +284,35 @@ export default function GreenSmartOneChart({
 
     const handleResize = () => {
       if (chartContainerRef.current && chartRef.current) {
-        chartRef.current.applyOptions({
-          width: chartContainerRef.current.clientWidth,
-          height: chartContainerRef.current.clientHeight || 580,
-        });
+        const w = chartContainerRef.current.clientWidth;
+        const h = chartContainerRef.current.clientHeight || 580;
+        if (w > 0) {
+          chartRef.current.applyOptions({ width: w, height: h });
+          chartRef.current.timeScale().fitContent();
+        }
       }
     };
     window.addEventListener('resize', handleResize);
 
+    // Dùng ResizeObserver để bảo đảm khi container vừa hiển thị (width > 0) là chart tự vẽ ngay, không bao giờ bị trắng màn hình
+    let resizeObserver = null;
+    if (typeof ResizeObserver !== 'undefined' && chartContainerRef.current) {
+      resizeObserver = new ResizeObserver((entries) => {
+        if (!entries || entries.length === 0 || !chartRef.current) return;
+        const { width, height } = entries[0].contentRect;
+        if (width > 0) {
+          chartRef.current.applyOptions({
+            width: width,
+            height: height || 580,
+          });
+          chartRef.current.timeScale().fitContent();
+        }
+      });
+      resizeObserver.observe(chartContainerRef.current);
+    }
+
     return () => {
+      if (resizeObserver) resizeObserver.disconnect();
       window.removeEventListener('resize', handleResize);
       chart.remove();
       chartRef.current = null;
@@ -465,6 +485,14 @@ export default function GreenSmartOneChart({
     }
 
     // ⚡ TỰ ĐỘNG CĂN CHỈNH GIÁ & THỜI GIAN KHI ĐỔI MÃ (AUTO-ALIGN & AUTO-SCALE)
+    if (chartContainerRef.current) {
+      const curW = chartContainerRef.current.clientWidth;
+      const curH = chartContainerRef.current.clientHeight || 580;
+      if (curW > 0) {
+        chartRef.current.applyOptions({ width: curW, height: curH });
+      }
+    }
+
     const rightScale = chartRef.current.priceScale('right');
     rightScale.applyOptions({ autoScale: true });
     chartRef.current.timeScale().resetTimeScale();

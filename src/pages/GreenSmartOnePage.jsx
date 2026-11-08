@@ -7,7 +7,6 @@ import {
 import toast from 'react-hot-toast';
 import GreenSmartOneChart from '../components/chart/GreenSmartOneChart';
 import SmartAdaptiveHUD from '../components/chart/SmartAdaptiveHUD';
-import BacktestPerformancePanel from '../components/chart/BacktestPerformancePanel';
 import IndicatorSettingsModal from '../components/chart/IndicatorSettingsModal';
 import ExpiredLicenseModal from '../components/chart/ExpiredLicenseModal';
 import TradingViewClassicWidget from '../components/chart/TradingViewClassicWidget';
@@ -19,18 +18,36 @@ import ALL_LISTED_STOCKS from '../data/allStockCodes.json';
 
 export default function GreenSmartOnePage() {
   const { theme } = useTheme();
-  const { user, profile, isAdmin } = useAuth();
+  const { user, profile, isAdmin, loading: authLoading } = useAuth();
 
   // Kiểm tra hạn sử dụng GreenSmartOne
   const expiresAt = profile?.greensmartone_expires_at;
   const isExpired = useMemo(() => {
+    if (authLoading) return false; // Đang nạp Auth session, chưa phán quyết hết hạn
     if (isAdmin) return false; // Admin luôn có quyền vĩnh viễn
     if (!user) return true; // Chưa đăng nhập
     if (!expiresAt) return true; // Chưa được kích hoạt
     return new Date(expiresAt).getTime() < Date.now();
-  }, [isAdmin, user, expiresAt]);
+  }, [authLoading, isAdmin, user, expiresAt]);
 
-  // Trạng thái chọn mã & khung thời gian
+  // Chuyển đổi thủ công độ nhạy Sens & Chế độ Tự Động
+  const handleSelectSens = (sens) => {
+    setConfig(prev => ({
+      ...prev,
+      smartAdaptive: false,
+      sensManual: sens,
+    }));
+    toast.success(`Đã chuyển sang Sens ${sens.toFixed(1)}`);
+  };
+
+  const handleToggleAutoMode = () => {
+    setConfig(prev => ({
+      ...prev,
+      smartAdaptive: true,
+    }));
+    toast.success('Đã kích hoạt chế độ Tự Động (SmartAdaptive AI)');
+  };
+
   const [symbol, setSymbol] = useState('FPT');
   const [timeframe, setTimeframe] = useState('1D'); // '1D' | '1H'
   const [searchQuery, setSearchQuery] = useState('');
@@ -356,11 +373,14 @@ export default function GreenSmartOnePage() {
               {/* Floating HUD SmartAdaptive Engine (Bảng 7 Mức Sens) */}
               <SmartAdaptiveHUD
                 candSensTable={indicatorResults.candSensTable || []}
-                finalEffSens={indicatorResults.finalEffSens || 2.0}
+                finalEffSens={indicatorResults.finalEffSens || config.sensManual}
                 bestSens={indicatorResults.bestSens || 1.6}
                 recalibCnt={indicatorResults.recalibCnt || 0}
                 isSmartAdaptive={config.smartAdaptive}
                 isLicActive={isLicValid}
+                currentSens={config.sensManual}
+                onSelectSens={handleSelectSens}
+                onToggleAutoMode={handleToggleAutoMode}
               />
 
               {/* Canvas Chart */}
@@ -409,12 +429,7 @@ export default function GreenSmartOnePage() {
           )}
         </div>
 
-        {/* Khối Hiệu Suất Chiến Lược & Kiểm Thử Tự Động (Backtest Performance) */}
-        <BacktestPerformancePanel
-          stats={indicatorResults.stats || {}}
-          trades={indicatorResults.trades || []}
-          symbol={symbol}
-        />
+        
 
         {/* Khối Giới Thiệu Chuyên Sâu Về Chỉ Báo GreenSmartOne */}
         <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-5 shadow-xl space-y-4">
