@@ -43,6 +43,17 @@ export default function AuthPage() {
     }
   }, [searchParams])
 
+  // Lắng nghe sự kiện đăng nhập tự động khi người dùng bấm vào link trong email
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session) {
+        toast.success('Xác thực tài khoản thành công!')
+        navigate(redirectPath)
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [navigate, redirectPath])
+
   // Đếm ngược chống spam đăng nhập / đăng ký
   const startCooldown = () => {
     setCooldown(COOLDOWN_SECONDS)
