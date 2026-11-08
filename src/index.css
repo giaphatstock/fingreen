@@ -189,4 +189,41 @@ html.theme-light {
       radial-gradient(ellipse at 20% 50%, rgba(81, 84, 240, 0.09) 0%, transparent 60%),
       radial-gradient(ellipse at 80% 20%, rgba(168, 170, 248, 0.06) 0%, transparent 60%);
   }
+
+  /* KINETIC TYPOGRAPHY & FINTECH MOTION GRAPHICS */
+  @keyframes kineticFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
+  @keyframes kineticPulseGlow {
+    0%, 100% { opacity: 0.85; filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.4)); }
+    50% { opacity: 1; filter: drop-shadow(0 0 24px rgba(16, 185, 129, 0.85)); }
+  }
+
+  @keyframes kineticScaleIn {
+    0% { transform: scale(0.92); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes radarSweep {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .animate-kinetic-float {
+    animation: kineticFloat 3.5s ease-in-out infinite;
+  }
+
+  .animate-pulse-glow {
+    animation: kineticPulseGlow 2s ease-in-out infinite;
+  }
+
+  .animate-scale-in {
+    animation: kineticScaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-radar-sweep {
+    animation: radarSweep 3.2s linear infinite;
+  }
 }

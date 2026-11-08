@@ -44,7 +44,13 @@ export const AuthProvider = ({ children }) => {
   }
 
   useEffect(() => {
+    // Timeout an toàn: Đảm bảo không bao giờ bị đơ màn hình đen nếu Supabase phản hồi chậm
+    const safetyTimer = setTimeout(() => {
+      setLoading(false)
+    }, 1500)
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      clearTimeout(safetyTimer)
       const currentUser = session?.user ?? null
       setUser(currentUser)
       if (currentUser) {
@@ -52,7 +58,10 @@ export const AuthProvider = ({ children }) => {
       } else {
         setLoading(false)
       }
-    }).catch(() => setLoading(false))
+    }).catch(() => {
+      clearTimeout(safetyTimer)
+      setLoading(false)
+    })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {

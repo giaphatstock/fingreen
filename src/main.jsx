@@ -14,6 +14,7 @@ import PostDetailPage from './pages/PostDetailPage'
 import ProfilePage from './pages/ProfilePage'
 import AIAssistantPage from './pages/AIAssistantPage'
 import GreenSmartOnePage from './pages/GreenSmartOnePage'
+import TikTokStudioPage from './pages/TikTokStudioPage'
 import './index.css'
 
 function ProtectedRoute({ children }) {
@@ -89,6 +90,10 @@ function AppRoutes() {
                 <AIAssistantPage />
               </ProtectedRoute>
             } />
+            <Route path="/tiktok-studio" element={<TikTokStudioPage />} />
+            <Route path="/tiktok studio" element={<TikTokStudioPage />} />
+            <Route path="/tiktok" element={<TikTokStudioPage />} />
+            <Route path="/studio" element={<TikTokStudioPage />} />
             
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

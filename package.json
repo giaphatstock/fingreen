@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@remotion/player": "^4.0.484",
     "@supabase/supabase-js": "^2.46.1",
     "@tiptap/core": "^2.9.1",
     "@tiptap/extension-bold": "^2.9.1",
@@ -32,10 +33,13 @@
     "date-fns": "^4.1.0",
     "lightweight-charts": "^5.2.1",
     "lucide-react": "^0.460.0",
+    "msedge-tts": "^2.1.1",
+    "node-edge-tts": "^1.2.12",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.4.1",
-    "react-router-dom": "^7.0.1"
+    "react-router-dom": "^7.0.1",
+    "remotion": "^4.0.484"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
