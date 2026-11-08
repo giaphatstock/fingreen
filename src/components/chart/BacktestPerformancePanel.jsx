@@ -27,16 +27,28 @@ export default function BacktestPerformancePanel({
   const pnlNum = parseFloat(totalPnl);
   const isPnlPositive = pnlNum >= 0;
 
+  // Sắp xếp danh sách lệnh với LỆNH GẦN NHẤT XẾP TRÊN CÙNG
+  const sortedTrades = useMemo(() => {
+    return [...trades].sort((a, b) => {
+      if (b.exitBar !== undefined && a.exitBar !== undefined) {
+        return b.exitBar - a.exitBar;
+      }
+      const timeB = b.exitTime || b.time || '';
+      const timeA = a.exitTime || a.time || '';
+      return timeB.localeCompare(timeA);
+    });
+  }, [trades]);
+
   // Lọc danh sách lệnh theo yêu cầu
   const filteredTrades = useMemo(() => {
-    return trades.filter(t => {
+    return sortedTrades.filter(t => {
       if (filterType === 'WIN') return t.pnlPct >= 0;
       if (filterType === 'LOSS') return t.pnlPct < 0;
       if (filterType === 'LONG') return t.type === 'Long';
       if (filterType === 'SHORT') return t.type === 'Short';
       return true;
     });
-  }, [trades, filterType]);
+  }, [sortedTrades, filterType]);
 
   // Phân trang
   const totalPages = Math.ceil(filteredTrades.length / pageSize) || 1;

@@ -88,11 +88,11 @@ export default function GreenSmartOnePage() {
 
   const isLicValid = useMemo(() => (!isExpired && validateLicense(config.licenseKey)), [isExpired, config.licenseKey]);
 
-  // Tải dữ liệu nến từ Entrade/DNSE
+  // Tải dữ liệu nến từ Entrade/DNSE (toàn bộ lịch sử 1500 ngày cho 1D)
   const loadCandles = async (targetSymbol, tf) => {
     setLoading(true);
     try {
-      const data = await fetchStockCandles(targetSymbol, tf, tf === '1D' ? 365 : 60);
+      const data = await fetchStockCandles(targetSymbol, tf, tf === '1D' ? 1500 : 120);
       setBars(data);
       setLastRefreshed(new Date());
     } catch (err) {
