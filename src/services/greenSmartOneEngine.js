@@ -674,15 +674,15 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
   const signals = [];
   const trades = [];
 
-  let pendLongHigh = null;
+  let pendLongClose = null;
   let pendLongLow = null;
+  let pendLongHigh = null;
   let pendLongBar = null;
-  let pendLongPassedVong1 = false;
 
+  let pendShortClose = null;
   let pendShortHigh = null;
   let pendShortLow = null;
   let pendShortBar = null;
-  let pendShortPassedVong1 = false;
 
   let activeSL_Long = null;
   let activeSL_Short = null;
@@ -701,24 +701,24 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
     const curLow = lows[i];
     const curHigh = highs[i];
     const isBullBar = direction[i] === -1; // Vàng chanh
-    const isBearBar = direction[i] === 1;  // Đỏ thắm
+    const isBearBar = direction[i] === 1;  // Đỏ thẫm
 
-    // Tín hiệu kim cương đảo chiều (gồm cả Kim Cương Cấp 1 ◆ và Kim Cương Cấp 2 ❖)
-    const isDiamondUp = diamondUp[i] || qqeLong[i];
-    const isDiamondDn = diamondDown[i] || qqeShort[i];
+    // Tín hiệu kim cương đảo chiều (Theo chuẩn Pine Script: breakup & breakdn)
+    const isDiamondUp = diamondUp[i];
+    const isDiamondDn = diamondDown[i];
 
-    // Ghi nhớ nến kim cương A (Đỉnh & Đáy nến kim cương)
+    // Ghi nhớ nến kim cương (Pine Script: lines 410-418)
     if (isDiamondUp) {
-      pendLongHigh = curHigh;
+      pendLongClose = curClose;
       pendLongLow = curLow;
+      pendLongHigh = curHigh;
       pendLongBar = i;
-      pendLongPassedVong1 = false;
     }
     if (isDiamondDn) {
+      pendShortClose = curClose;
       pendShortHigh = curHigh;
       pendShortLow = curLow;
       pendShortBar = i;
-      pendShortPassedVong1 = false;
     }
 
     // Khi đang giữ vị thế, ghi nhận kim cương ngược chiều
@@ -729,24 +729,24 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
       exitDiamondUpHigh = curHigh;
     }
 
-    // Hủy setup hết hạn (quá 15 nến)
-    if (pendLongBar !== null && (i - pendLongBar) > (config.validBars || 15)) {
+    // Hủy setup hết hạn (Pine Script: lines 421-429)
+    if (pendLongBar !== null && (i - pendLongBar) > (config.validBars || 10)) {
       pendLongBar = null;
+      pendLongClose = null;
       pendLongHigh = null;
       pendLongLow = null;
-      pendLongPassedVong1 = false;
     }
-    if (pendShortBar !== null && (i - pendShortBar) > (config.validBars || 15)) {
+    if (pendShortBar !== null && (i - pendShortBar) > (config.validBars || 10)) {
       pendShortBar = null;
+      pendShortClose = null;
       pendShortHigh = null;
       pendShortLow = null;
-      pendShortPassedVong1 = false;
     }
 
     // 1. Quản trị vị thế đang mở (Cắt lỗ & Chốt lời)
     if (currentPosition > 0) {
-      // Cắt lỗ: nếu nến sau đóng dưới nến kim cương (giá thấp nhất nến kim cương nãy)
-      if (curClose < activeSL_Long || curLow <= activeSL_Long) {
+      // Cắt lỗ: SL tại đáy nến kim cương
+      if (config.useSL && (curClose < activeSL_Long || curLow <= activeSL_Long)) {
         const exitPr = curClose < activeSL_Long ? curClose : activeSL_Long;
         trades.push({
           type: 'Long',
@@ -784,8 +784,8 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
         exitDiamondDnLow = null;
       }
     } else if (currentPosition < 0) {
-      // Cắt lỗ: nếu nến sau đóng trên nến kim cương (giá cao nhất nến kim cương nãy)
-      if (curClose > activeSL_Short || curHigh >= activeSL_Short) {
+      // Cắt lỗ: SL tại đỉnh nến kim cương
+      if (config.useSL && (curClose > activeSL_Short || curHigh >= activeSL_Short)) {
         const exitPr = curClose > activeSL_Short ? curClose : activeSL_Short;
         trades.push({
           type: 'Short',
@@ -827,13 +827,12 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
     // 2. Xét điều kiện Vào Lệnh (Entry) nếu đang không giữ lệnh
     if (isLicActive && currentPosition === 0) {
       // CHECK LONG (Kim Cương Đảo Chiều Lên)
-      if (config.enLong && pendLongBar !== null && i > pendLongBar) {
-        // Vòng 1: xem coi mấy cây sau có đóng cao hơn nến kim cương không (đóng trên đỉnh nến kim cương)
-        if (curClose > pendLongHigh) {
-          pendLongPassedVong1 = true;
-        }
-        // Vòng 2: xem coi nến có đang vàng không nếu có mới entry
-        if (pendLongPassedVong1 && isBullBar) {
+      if (config.enLong && pendLongBar !== null && (i - pendLongBar) >= (config.waitBars || 1)) {
+        // Breakout: Nến đóng cao hơn nến kim cương (đóng trên Close hoặc High) VÀ nến trước đó chưa đóng trên
+        const breakoutLong = (curClose > pendLongClose && prevClose <= pendLongClose) ||
+                             (curClose > pendLongHigh && prevClose <= pendLongHigh);
+        // Nến phải ĐANG VÀNG (isBullBar) tại thời điểm bứt phá kim cương
+        if (breakoutLong && isBullBar) {
           currentPosition = 1;
           currentEntryPrice = curClose;
           currentEntryBar = i;
@@ -848,20 +847,19 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
             sl: pendLongLow
           });
           pendLongBar = null;
+          pendLongClose = null;
           pendLongHigh = null;
           pendLongLow = null;
-          pendLongPassedVong1 = false;
         }
       }
 
       // CHECK SHORT (Kim Cương Đảo Chiều Xuống)
-      if (config.enShort && pendShortBar !== null && i > pendShortBar && currentPosition === 0) {
-        // Vòng 1: xem coi mấy cây sau có đóng dưới nến kim cương không (đóng dưới đáy nến kim cương)
-        if (curClose < pendShortLow) {
-          pendShortPassedVong1 = true;
-        }
-        // Vòng 2: xem coi nến có đang đỏ không nếu có mới entry
-        if (pendShortPassedVong1 && isBearBar) {
+      if (config.enShort && pendShortBar !== null && (i - pendShortBar) >= (config.waitBars || 1) && currentPosition === 0) {
+        // Breakdown: Nến đóng thấp hơn nến kim cương (đóng dưới Close hoặc Low) VÀ nến trước đó chưa đóng dưới
+        const breakdownShort = (curClose < pendShortClose && prevClose >= pendShortClose) ||
+                              (curClose < pendShortLow && prevClose >= pendShortLow);
+        // Nến phải ĐANG ĐỎ (isBearBar) tại thời điểm bứt phá kim cương
+        if (breakdownShort && isBearBar) {
           currentPosition = -1;
           currentEntryPrice = curClose;
           currentEntryBar = i;
@@ -876,15 +874,14 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
             sl: pendShortHigh
           });
           pendShortBar = null;
+          pendShortClose = null;
           pendShortHigh = null;
           pendShortLow = null;
-          pendShortPassedVong1 = false;
         }
       }
     }
   }
 
-  // Tính thống kê Backtest
   let wins = 0;
   let losses = 0;
   let totalPnl = 0;
