@@ -222,6 +222,7 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
   const cPrevDn = new Array(nCand).fill(null);
   const cPrevSt = new Array(nCand).fill(null);
   const cPrevClose = new Array(nCand).fill(null);
+  const cPrevDir = new Array(nCand).fill(1);
 
   const cWins = new Array(nCand).fill(0);
   const cLosses = new Array(nCand).fill(0);
@@ -258,7 +259,7 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
         let dir_new = 0;
         if (pSt === null) {
           dir_new = 1;
-        } else if (pSt === pUp) {
+        } else if (cPrevDir[i] === 1) {
           dir_new = curClose > up_cur ? -1 : 1;
         } else {
           dir_new = curClose < dn_cur ? 1 : -1;
@@ -272,6 +273,7 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
         cPrevDn[i] = dn_cur;
         cPrevSt[i] = st_new;
         cPrevClose[i] = curClose;
+        cPrevDir[i] = dir_new;
 
         // Quản lý lệnh ảo
         const pdir = cPendDir[i];
@@ -344,6 +346,7 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
   let pDn_main = null;
   let pUp_main = null;
   let pSt_main = null;
+  let prevDir_main = 1;
 
   for (let i = 0; i < N; i++) {
     const curAtr = atr11[i];
@@ -366,7 +369,7 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
     let dir = 1;
     if (i === 0 || atr11[i - 1] === null) {
       dir = 1;
-    } else if (pSt_main === pUp_main) {
+    } else if (prevDir_main === 1) {
       dir = cClose > up ? -1 : 1;
     } else {
       dir = cClose < dn ? 1 : -1;
@@ -376,6 +379,7 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
     pDn_main = dn;
     pUp_main = up;
     pSt_main = st;
+    prevDir_main = dir;
 
     supertrend[i] = st;
     direction[i] = dir;

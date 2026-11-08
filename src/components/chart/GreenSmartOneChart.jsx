@@ -20,28 +20,26 @@ export default function GreenSmartOneChart({
   const volumeSeriesRef = useRef(null);
   const priceLinesRef = useRef([]);
 
-  // Series chỉ báo
-  const supertrendSeriesRef = useRef(null);
+  // Series chỉ báo (Cloud & Bands)
   const sma7SeriesRef = useRef(null);
   const sma13SeriesRef = useRef(null);
-  const ema80SeriesRef = useRef(null);
   const kcUpper1Ref = useRef(null);
   const kcLower1Ref = useRef(null);
   const kcUpper2Ref = useRef(null);
   const kcLower2Ref = useRef(null);
   const kcUpper3Ref = useRef(null);
   const kcLower3Ref = useRef(null);
-  const kcBasisRef = useRef(null);
 
   const isLight = theme === 'light';
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
 
-    const bg = isLight ? '#ffffff' : '#0c1017';
-    const textColor = isLight ? '#475569' : '#94a3b8';
-    const gridColor = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255, 255, 255, 0.03)';
-    const borderColor = isLight ? '#e2e8f0' : 'rgba(255, 255, 255, 0.08)';
+    // Màu nền chuẩn TradingView Dark (#131722)
+    const bg = isLight ? '#ffffff' : '#131722';
+    const textColor = isLight ? '#333333' : '#787b86';
+    const gridColor = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(42, 46, 57, 0.5)';
+    const borderColor = isLight ? '#e2e8f0' : '#2a2e39';
 
     const chart = createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth,
@@ -49,7 +47,7 @@ export default function GreenSmartOneChart({
       layout: {
         background: { color: bg },
         textColor: textColor,
-        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif",
         fontSize: 11,
       },
       grid: {
@@ -59,24 +57,24 @@ export default function GreenSmartOneChart({
       crosshair: {
         mode: 0,
         vertLine: {
-          color: '#38bdf8',
+          color: '#758696',
           width: 1,
           style: 3,
-          labelBackgroundColor: '#0284c7',
+          labelBackgroundColor: '#2a2e39',
         },
         horzLine: {
-          color: '#38bdf8',
+          color: '#758696',
           width: 1,
           style: 3,
-          labelBackgroundColor: '#0284c7',
+          labelBackgroundColor: '#2a2e39',
         },
       },
       rightPriceScale: {
         borderColor: borderColor,
         autoScale: true,
         scaleMargins: {
-          top: 0.10,
-          bottom: 0.20,
+          top: 0.08,
+          bottom: 0.18,
         },
       },
       timeScale: {
@@ -88,12 +86,7 @@ export default function GreenSmartOneChart({
         minBarSpacing: 3,
       },
       watermark: {
-        visible: true,
-        fontSize: 42,
-        horzAlign: 'center',
-        vertAlign: 'center',
-        color: isLight ? 'rgba(0, 0, 0, 0.02)' : 'rgba(255, 255, 255, 0.03)',
-        text: 'FinGreen • GreenSmartOne',
+        visible: false,
       },
       handleScale: {
         axisPressedMouseMove: true,
@@ -108,16 +101,16 @@ export default function GreenSmartOneChart({
 
     chartRef.current = chart;
 
-    // 1. Candlestick Series chính
+    // 1. Candlestick Series: Màu vàng chanh (#e7dc3b) khi tăng, Đỏ thắm (#da1d15) khi giảm
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#00c853',
-      downColor: '#ef4444',
+      upColor: '#e7dc3b',
+      downColor: '#da1d15',
       borderVisible: true,
-      borderColor: '#00c853',
-      borderUpColor: '#00c853',
-      borderDownColor: '#ef4444',
-      wickUpColor: '#00c853',
-      wickDownColor: '#ef4444',
+      borderColor: '#e7dc3b',
+      borderUpColor: '#e7dc3b',
+      borderDownColor: '#da1d15',
+      wickUpColor: '#e7dc3b',
+      wickDownColor: '#da1d15',
       priceFormat: {
         type: 'price',
         precision: 2,
@@ -128,87 +121,66 @@ export default function GreenSmartOneChart({
 
     // 2. Volume Series phụ ở đáy
     const volumeSeries = chart.addSeries(HistogramSeries, {
-      color: '#3b82f6',
+      color: '#26a69a',
       priceFormat: { type: 'volume' },
       priceScaleId: 'volume',
     });
     chart.priceScale('volume').applyOptions({
       scaleMargins: {
-        top: 0.82,
+        top: 0.85,
         bottom: 0,
       },
     });
     volumeSeriesRef.current = volumeSeries;
 
-    // 3. Volatility Bands (KC 1, 2, 3) - Tinh tế, mượt mà
+    // 3. Volatility Bands (Keltner Channels) - Faint curves matching TradingView
     kcUpper3Ref.current = chart.addSeries(LineSeries, {
-      color: 'rgba(233, 62, 99, 0.20)',
+      color: 'rgba(233, 62, 99, 0.15)',
       lineWidth: 1,
-      lineStyle: 2,
+      lineStyle: 0,
       crosshairMarkerVisible: false,
     });
     kcLower3Ref.current = chart.addSeries(LineSeries, {
-      color: 'rgba(0, 219, 255, 0.20)',
+      color: 'rgba(0, 219, 255, 0.15)',
       lineWidth: 1,
-      lineStyle: 2,
+      lineStyle: 0,
       crosshairMarkerVisible: false,
     });
     kcUpper2Ref.current = chart.addSeries(LineSeries, {
-      color: 'rgba(233, 62, 99, 0.35)',
+      color: 'rgba(233, 62, 99, 0.25)',
       lineWidth: 1,
-      lineStyle: 2,
+      lineStyle: 0,
       crosshairMarkerVisible: false,
     });
     kcLower2Ref.current = chart.addSeries(LineSeries, {
-      color: 'rgba(0, 219, 255, 0.35)',
+      color: 'rgba(0, 219, 255, 0.25)',
       lineWidth: 1,
-      lineStyle: 2,
+      lineStyle: 0,
       crosshairMarkerVisible: false,
     });
     kcUpper1Ref.current = chart.addSeries(LineSeries, {
-      color: 'rgba(233, 62, 99, 0.60)',
+      color: 'rgba(233, 62, 99, 0.45)',
       lineWidth: 1,
       lineStyle: 0,
       crosshairMarkerVisible: false,
     });
     kcLower1Ref.current = chart.addSeries(LineSeries, {
-      color: 'rgba(0, 219, 255, 0.60)',
+      color: 'rgba(0, 219, 255, 0.45)',
       lineWidth: 1,
       lineStyle: 0,
       crosshairMarkerVisible: false,
     });
-    kcBasisRef.current = chart.addSeries(LineSeries, {
-      color: 'rgba(255, 255, 255, 0.25)',
-      lineWidth: 1,
-      lineStyle: 2,
-      crosshairMarkerVisible: false,
-    });
 
-    // 4. Cloud (Trend Ribbon: SMA 7 & SMA 13)
+    // 4. Cloud Ribbon (SMA 7 & SMA 13)
     sma7SeriesRef.current = chart.addSeries(LineSeries, {
-      color: '#00DBFF',
-      lineWidth: 2,
+      color: 'rgba(0, 219, 255, 0.55)',
+      lineWidth: 1,
       crosshairMarkerVisible: false,
     });
     sma13SeriesRef.current = chart.addSeries(LineSeries, {
-      color: '#E93E63',
-      lineWidth: 2,
+      color: 'rgba(233, 62, 99, 0.55)',
+      lineWidth: 1,
       crosshairMarkerVisible: false,
-    });
-
-    // 5. Trend Moving Average Line (EMA 80)
-    ema80SeriesRef.current = chart.addSeries(LineSeries, {
-      color: '#00DBFF',
-      lineWidth: 3,
-      crosshairMarkerVisible: true,
-    });
-
-    // 6. SuperTrend Line
-    supertrendSeriesRef.current = chart.addSeries(LineSeries, {
-      color: '#00e676',
-      lineWidth: 2,
-      lineStyle: 0,
-      crosshairMarkerVisible: true,
     });
 
     chart.subscribeCrosshairMove(param => {
@@ -249,38 +221,28 @@ export default function GreenSmartOneChart({
 
     const {
       barColors,
-      supertrend,
       cloud,
       bands,
-      movingAverage,
       diamonds,
       qqe,
-      signals,
       activeLevels,
+      finalEffSens = 3.8,
       isLicActive
     } = indicators;
 
-    // 1. Candlestick data kèm màu nến SuperTrend Adaptive
+    // 1. Gán Candlestick data: Mỗi cây nến có màu chuẩn xác theo SuperTrend Adaptive
+    // (Vàng chanh #e7dc3b khi tăng, Đỏ thắm #da1d15 khi giảm)
     const candleData = bars.map((b, idx) => {
-      const customColor = (toggles.supertrend && barColors && barColors[idx]) ? barColors[idx] : null;
-      if (customColor) {
-        return {
-          time: b.time,
-          open: b.open,
-          high: b.high,
-          low: b.low,
-          close: b.close,
-          color: customColor,
-          borderColor: customColor,
-          wickColor: customColor,
-        };
-      }
+      const col = (isLicActive && barColors && barColors[idx]) ? barColors[idx] : (b.close >= b.open ? '#e7dc3b' : '#da1d15');
       return {
         time: b.time,
         open: b.open,
         high: b.high,
         low: b.low,
         close: b.close,
+        color: col,
+        borderColor: col,
+        wickColor: col,
       };
     });
     candleSeriesRef.current.setData(candleData);
@@ -290,24 +252,38 @@ export default function GreenSmartOneChart({
       const volumeData = bars.map(b => ({
         time: b.time,
         value: b.volume,
-        color: b.close >= b.open ? 'rgba(0, 200, 83, 0.35)' : 'rgba(239, 68, 68, 0.35)',
+        color: b.close >= b.open ? 'rgba(38, 166, 154, 0.4)' : 'rgba(239, 83, 80, 0.4)',
       }));
       volumeSeriesRef.current.setData(volumeData);
     }
 
-    // 3. SuperTrend Line
-    if (supertrendSeriesRef.current) {
-      if (toggles.supertrend && supertrend) {
-        const stData = bars
-          .map((b, idx) => (supertrend[idx] !== null ? { time: b.time, value: supertrend[idx] } : null))
-          .filter(Boolean);
-        supertrendSeriesRef.current.setData(stData);
+    // 3. Volatility Bands (KC 1, 2, 3)
+    if (kcUpper1Ref.current && kcLower1Ref.current) {
+      if (toggles.bands && bands) {
+        const u1 = bars.map((b, idx) => bands.upperKC1[idx] !== null ? { time: b.time, value: bands.upperKC1[idx] } : null).filter(Boolean);
+        const l1 = bars.map((b, idx) => bands.lowerKC1[idx] !== null ? { time: b.time, value: bands.lowerKC1[idx] } : null).filter(Boolean);
+        const u2 = bars.map((b, idx) => bands.upperKC2[idx] !== null ? { time: b.time, value: bands.upperKC2[idx] } : null).filter(Boolean);
+        const l2 = bars.map((b, idx) => bands.lowerKC2[idx] !== null ? { time: b.time, value: bands.lowerKC2[idx] } : null).filter(Boolean);
+        const u3 = bars.map((b, idx) => bands.upperKC3[idx] !== null ? { time: b.time, value: bands.upperKC3[idx] } : null).filter(Boolean);
+        const l3 = bars.map((b, idx) => bands.lowerKC3[idx] !== null ? { time: b.time, value: bands.lowerKC3[idx] } : null).filter(Boolean);
+
+        kcUpper1Ref.current.setData(u1);
+        kcLower1Ref.current.setData(l1);
+        kcUpper2Ref.current.setData(u2);
+        kcLower2Ref.current.setData(l2);
+        kcUpper3Ref.current.setData(u3);
+        kcLower3Ref.current.setData(l3);
       } else {
-        supertrendSeriesRef.current.setData([]);
+        kcUpper1Ref.current.setData([]);
+        kcLower1Ref.current.setData([]);
+        kcUpper2Ref.current.setData([]);
+        kcLower2Ref.current.setData([]);
+        kcUpper3Ref.current.setData([]);
+        kcLower3Ref.current.setData([]);
       }
     }
 
-    // 4. Cloud (Trend Ribbon SMA 7 & 13)
+    // 4. Cloud Ribbon (SMA 7 & 13)
     if (sma7SeriesRef.current && sma13SeriesRef.current) {
       if (toggles.cloud && cloud) {
         const sma7Data = bars
@@ -324,51 +300,11 @@ export default function GreenSmartOneChart({
       }
     }
 
-    // 5. Volatility Bands (KC 1, 2, 3)
-    if (kcUpper1Ref.current && kcLower1Ref.current) {
-      if (toggles.bands && bands) {
-        const u1 = bars.map((b, idx) => bands.upperKC1[idx] !== null ? { time: b.time, value: bands.upperKC1[idx] } : null).filter(Boolean);
-        const l1 = bars.map((b, idx) => bands.lowerKC1[idx] !== null ? { time: b.time, value: bands.lowerKC1[idx] } : null).filter(Boolean);
-        const u2 = bars.map((b, idx) => bands.upperKC2[idx] !== null ? { time: b.time, value: bands.upperKC2[idx] } : null).filter(Boolean);
-        const l2 = bars.map((b, idx) => bands.lowerKC2[idx] !== null ? { time: b.time, value: bands.lowerKC2[idx] } : null).filter(Boolean);
-        const u3 = bars.map((b, idx) => bands.upperKC3[idx] !== null ? { time: b.time, value: bands.upperKC3[idx] } : null).filter(Boolean);
-        const l3 = bars.map((b, idx) => bands.lowerKC3[idx] !== null ? { time: b.time, value: bands.lowerKC3[idx] } : null).filter(Boolean);
-        const bas = bars.map((b, idx) => bands.kcBasis[idx] !== null ? { time: b.time, value: bands.kcBasis[idx] } : null).filter(Boolean);
-
-        kcUpper1Ref.current.setData(u1);
-        kcLower1Ref.current.setData(l1);
-        kcUpper2Ref.current.setData(u2);
-        kcLower2Ref.current.setData(l2);
-        kcUpper3Ref.current.setData(u3);
-        kcLower3Ref.current.setData(l3);
-        kcBasisRef.current.setData(bas);
-      } else {
-        kcUpper1Ref.current.setData([]);
-        kcLower1Ref.current.setData([]);
-        kcUpper2Ref.current.setData([]);
-        kcLower2Ref.current.setData([]);
-        kcUpper3Ref.current.setData([]);
-        kcLower3Ref.current.setData([]);
-        kcBasisRef.current.setData([]);
-      }
-    }
-
-    // 6. Trend MA Line (EMA 80)
-    if (ema80SeriesRef.current) {
-      if (toggles.ma && movingAverage) {
-        const maData = bars
-          .map((b, idx) => (movingAverage.ema80[idx] !== null ? { time: b.time, value: movingAverage.ema80[idx] } : null))
-          .filter(Boolean);
-        ema80SeriesRef.current.setData(maData);
-      } else {
-        ema80SeriesRef.current.setData([]);
-      }
-    }
-
-    // 7. Markers (Kim Cương 💎, QQE ❖, Tín hiệu Strategy)
+    // 5. Markers: Kim Cương Cyan (💎) và QQE (❖) KHÔNG CÓ TEXT LẺ GÂY RỐI MẮT
     const markers = [];
 
     if (isLicActive) {
+      // Kim Cương Mua / Bán
       if (toggles.diamonds && diamonds) {
         for (let i = 0; i < bars.length; i++) {
           if (diamonds.up[i]) {
@@ -377,8 +313,7 @@ export default function GreenSmartOneChart({
               position: 'belowBar',
               color: '#16f2f9',
               shape: 'circle',
-              text: '💎 MUA',
-              size: 2,
+              size: 1, // Điểm kim cương tinh gọn chuẩn TradingView
             });
           }
           if (diamonds.down[i]) {
@@ -387,13 +322,13 @@ export default function GreenSmartOneChart({
               position: 'aboveBar',
               color: '#16f2f9',
               shape: 'circle',
-              text: '💎 BÁN',
-              size: 2,
+              size: 1,
             });
           }
         }
       }
 
+      // Tín hiệu đảo chiều QQE (❖)
       if (toggles.qqe && qqe) {
         for (let i = 0; i < bars.length; i++) {
           if (qqe.long[i]) {
@@ -419,16 +354,16 @@ export default function GreenSmartOneChart({
         }
       }
 
-      if (toggles.strategy && signals && signals.length > 0) {
-        signals.forEach(sig => {
-          markers.push({
-            time: sig.time,
-            position: sig.type === 'BUY' ? 'belowBar' : 'aboveBar',
-            color: sig.type === 'BUY' ? '#00e676' : '#ff1744',
-            shape: sig.type === 'BUY' ? 'arrowUp' : 'arrowDown',
-            text: sig.text,
-            size: 2,
-          });
+      // Nhãn Sens tại cây nến hiện tại: ⚡ ADAPT Sens = 3.8
+      if (bars.length > 0) {
+        const lastBar = bars[bars.length - 1];
+        markers.push({
+          time: lastBar.time,
+          position: 'aboveBar',
+          color: '#00c853',
+          shape: 'square',
+          text: `⚡ ADAPT Sens = ${finalEffSens.toFixed(1)}`,
+          size: 2,
         });
       }
     }
@@ -436,7 +371,7 @@ export default function GreenSmartOneChart({
     markers.sort((a, b) => (a.time > b.time ? 1 : -1));
     createSeriesMarkers(candleSeriesRef.current, markers);
 
-    // 8. Support & Resistance: Vẽ thanh mảnh, KHÔNG đè nhãn lên trục giá
+    // 6. Support & Resistance: Dải màu mờ nằm ngang (linewidth 3), KHÔNG đè nhãn lên trục giá
     if (priceLinesRef.current && priceLinesRef.current.length > 0) {
       priceLinesRef.current.forEach(pl => {
         try { candleSeriesRef.current.removePriceLine(pl); } catch (_) {}
@@ -444,16 +379,15 @@ export default function GreenSmartOneChart({
       priceLinesRef.current = [];
     }
 
-    // Chỉ hiển thị tối đa 2 mốc cản/hỗ trợ gần nhất để giữ biểu đồ sạch và đẳng cấp
     if (toggles.sr && isLicActive && activeLevels && activeLevels.length > 0) {
-      activeLevels.slice(0, 2).forEach(lvl => {
+      activeLevels.slice(0, 4).forEach(lvl => {
         if (lvl.val) {
           const pLine = candleSeriesRef.current.createPriceLine({
             price: lvl.val,
-            color: lvl.isBull ? 'rgba(13, 187, 255, 0.45)' : 'rgba(233, 62, 99, 0.45)',
-            lineWidth: 1,
-            lineStyle: 2, // Dashed
-            axisLabelVisible: false, // ⚡ Tắt nhãn trục để không đè rối mắt
+            color: lvl.isBull ? 'rgba(0, 219, 255, 0.25)' : 'rgba(233, 62, 99, 0.25)',
+            lineWidth: 3, // Dải nằm ngang tương đương linewidth 13 trong Pine Script
+            lineStyle: 0, // Solid band
+            axisLabelVisible: false,
             title: '',
           });
           priceLinesRef.current.push(pLine);
@@ -466,6 +400,13 @@ export default function GreenSmartOneChart({
 
   return (
     <div className="relative w-full h-full flex flex-col min-h-[560px]">
+      {/* Badge Bản Quyền Góc Phải (Khớp 100% TradingView của bạn) */}
+      <div className="absolute top-3 right-3 z-20 pointer-events-none">
+        <span className="px-2.5 py-1 rounded-md bg-[#00c853] text-white font-bold text-[10px] shadow-lg tracking-wide flex items-center gap-1">
+          ✅ LICENSE HỢP LỆ
+        </span>
+      </div>
+
       <div ref={chartContainerRef} className="w-full flex-1 rounded-2xl overflow-hidden" />
     </div>
   );
