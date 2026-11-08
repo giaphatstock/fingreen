@@ -9,6 +9,7 @@ import GreenSmartOneChart from '../components/chart/GreenSmartOneChart';
 import SmartAdaptiveHUD from '../components/chart/SmartAdaptiveHUD';
 import IndicatorSettingsModal from '../components/chart/IndicatorSettingsModal';
 import ExpiredLicenseModal from '../components/chart/ExpiredLicenseModal';
+import DisclaimerModal from '../components/chart/DisclaimerModal';
 import TradingViewClassicWidget from '../components/chart/TradingViewClassicWidget';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -102,6 +103,7 @@ export default function GreenSmartOnePage() {
   });
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [disclaimerOpen, setDisclaimerOpen] = useState(true);
 
   const isLicValid = useMemo(() => (!isExpired && validateLicense(config.licenseKey)), [isExpired, config.licenseKey]);
 
@@ -486,6 +488,14 @@ export default function GreenSmartOnePage() {
       />
 
       {/* Modal Báo Hết Hạn / Yêu Cầu Kích Hoạt Bản Quyền */}
+      {/* Modal Miễn Trừ Trách Nhiệm & Điều Khoản Sử Dụng */}
+      <DisclaimerModal
+        isOpen={disclaimerOpen}
+        onAccepted={() => setDisclaimerOpen(false)}
+        user={user}
+        profile={profile}
+      />
+
       <ExpiredLicenseModal
         isOpen={isExpired}
         user={user}

@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 import {
-  Users, FileText, Shield, TrendingUp, CheckCircle, XCircle,
+  Users, Scale, CheckCircle2, FileText, Shield, TrendingUp, CheckCircle, XCircle,
   Ban, Lock, Eye, Search, ChevronDown, AlertTriangle, Loader2,
   ClipboardList, UserCheck, UserX, Trash2, RefreshCw, Activity,
   Bot, Key, Sparkles, Check, Globe, Zap, Calendar, Clock, X
@@ -63,6 +63,8 @@ export default function AdminPage() {
   const [selectedUserForRenew, setSelectedUserForRenew] = useState(null)
   const [customRenewDate, setCustomRenewDate] = useState('')
   const [savingRenew, setSavingRenew] = useState(false)
+  const [gsSubTab, setGsSubTab] = useState('licenses') // 'licenses' | 'consents'
+  const [searchGs, setSearchGs] = useState('')
 
   const handleApplyRenewDuration = (days) => {
     const base = (selectedUserForRenew?.greensmartone_expires_at && new Date(selectedUserForRenew.greensmartone_expires_at) > new Date())
@@ -210,7 +212,7 @@ export default function AdminPage() {
 
   useEffect(() => { fetchStats() }, [])
   useEffect(() => {
-    if (activeTab === 'users') fetchUsers()
+    if (activeTab === 'users' || activeTab === 'greensmartone') fetchUsers()
     if (activeTab === 'posts') fetchPosts()
     if (activeTab === 'applications') fetchApplications()
   }, [activeTab, searchUser])
@@ -281,6 +283,7 @@ export default function AdminPage() {
 
   const TABS = [
     { id: 'dashboard', label: 'Tổng Quan', icon: Activity },
+    { id: 'greensmartone', label: 'Quản Trị GreenSmartOne', icon: Zap },
     { id: 'users', label: 'Quản Lý Thành Viên', icon: Users },
     { id: 'posts', label: 'Duyệt Bài Viết', icon: FileText, badge: stats.pending },
     { id: 'applications', label: 'Đơn Hợp Tác', icon: ClipboardList, badge: stats.applications },
@@ -357,6 +360,303 @@ export default function AdminPage() {
               Sử dụng các tab phía trên để phê duyệt bài viết phân tích, quản lý người dùng, duyệt hồ sơ Đối tác IB và Cộng tác viên.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* TAB GREENSMARTONE: DÀNH RIÊNG QUẢN TRỊ LICENSE & NHẬT KÝ ĐIỀU KHOẢN PHÁP LÝ */}
+      {activeTab === 'greensmartone' && (
+        <div className="animate-fade-in space-y-6">
+          {/* Header Banner GreenSmartOne */}
+          <div className="card p-6 border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-[var(--bg-card)] to-cyan-500/10 shadow-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                  <Zap className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-black text-[var(--text-main)]">Trung Tâm Quản Trị GreenSmartOne PRO</h2>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                      PRO ENGINE
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    Quản lý cấp phép bản quyền, gia hạn thời hạn sử dụng và tra cứu nhật ký bằng chứng chấp thuận điều khoản pháp lý (IP & thời gian).
+                  </p>
+                </div>
+              </div>
+
+              {/* Sub-Tabs: Cấp Phép vs Nhật Ký Pháp Lý */}
+              <div className="flex items-center p-1 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-color)] text-xs font-bold">
+                <button
+                  onClick={() => setGsSubTab('licenses')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                    gsSubTab === 'licenses'
+                      ? 'bg-primary-500 text-white shadow-md'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                  }`}
+                >
+                  <Key className="w-3.5 h-3.5" />
+                  <span>Cấp Phép License ({users.filter(u => u.role === 'admin_fingreen' || (u.greensmartone_expires_at && new Date(u.greensmartone_expires_at) > new Date())).length})</span>
+                </button>
+                <button
+                  onClick={() => setGsSubTab('consents')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+                    gsSubTab === 'consents'
+                      ? 'bg-amber-500 text-slate-950 shadow-md font-bold'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                  }`}
+                >
+                  <Scale className="w-3.5 h-3.5" />
+                  <span>Nhật Ký Điều Khoản & IP</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Sub-view 1: Cấp Phép & Quản Lý Hạn License */}
+          {gsSubTab === 'licenses' && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="relative flex-1 w-full">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+                  <input
+                    type="text"
+                    placeholder="Tìm thành viên theo tên hoặc email để cấp phép / gia hạn..."
+                    value={searchGs}
+                    onChange={e => setSearchGs(e.target.value)}
+                    className="input-field pl-10 text-xs sm:text-sm w-full"
+                  />
+                </div>
+                <button onClick={fetchUsers} className="btn-secondary text-xs sm:text-sm flex items-center gap-2 whitespace-nowrap">
+                  <RefreshCw className="w-3.5 h-3.5" /> <span>Làm Mới</span>
+                </button>
+              </div>
+
+              <div className="card overflow-hidden p-0 border border-[var(--border-color)]">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-[var(--border-color)] bg-[var(--bg-subtle)] text-[var(--text-muted)] text-[11px] font-bold uppercase tracking-wider">
+                        <th className="px-4 py-3">Thành Viên</th>
+                        <th className="px-4 py-3">Vai Trò</th>
+                        <th className="px-4 py-3">Thời Hạn GreenSmartOne</th>
+                        <th className="px-4 py-3">Trạng Thái Bản Quyền</th>
+                        <th className="px-4 py-3">Ngày Đăng Ký</th>
+                        <th className="px-4 py-3 text-right">Thao Tác Cấp Phép</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--border-color)] text-xs">
+                      {users
+                        .filter(u => {
+                          if (!searchGs.trim()) return true;
+                          const q = searchGs.toLowerCase().trim();
+                          return (u.full_name && u.full_name.toLowerCase().includes(q)) || (u.email && u.email.toLowerCase().includes(q));
+                        })
+                        .map(u => {
+                          const isAdminRole = u.role === 'admin_fingreen';
+                          const hasExpiry = Boolean(u.greensmartone_expires_at);
+                          const isLifetime = u.greensmartone_expires_at && u.greensmartone_expires_at.startsWith('2099');
+                          const isValid = isAdminRole || isLifetime || (hasExpiry && new Date(u.greensmartone_expires_at).getTime() >= Date.now());
+
+                          return (
+                            <tr key={u.id} className="hover:bg-[var(--bg-subtle)]/60 transition-colors">
+                              <td className="px-4 py-3.5">
+                                <div className="flex items-center gap-3">
+                                  {u.avatar_url ? (
+                                    <img src={u.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover ring-1 ring-primary-500/40" />
+                                  ) : (
+                                    <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-700 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                                      {u.full_name?.charAt(0) || u.email?.charAt(0) || '?'}
+                                    </div>
+                                  )}
+                                  <div className="min-w-0">
+                                    <p className="font-bold text-[var(--text-main)] truncate max-w-[170px]">{u.full_name || 'Chưa cập nhật'}</p>
+                                    <p className="text-[11px] text-[var(--text-muted)] truncate">{u.email}</p>
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td className="px-4 py-3.5">
+                                <span className={`badge ${ROLE_BADGE[u.role] || 'badge-gray'} text-[10px] font-bold`}>
+                                  {ROLE_LABEL[u.role] || u.role}
+                                </span>
+                              </td>
+
+                              <td className="px-4 py-3.5 font-mono">
+                                {isAdminRole || isLifetime ? (
+                                  <span className="text-emerald-400 font-bold flex items-center gap-1.5">
+                                    <Zap className="w-3.5 h-3.5" /> Vĩnh Viễn
+                                  </span>
+                                ) : hasExpiry ? (
+                                  <span className={isValid ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
+                                    {new Date(u.greensmartone_expires_at).toLocaleDateString('vi-VN')}
+                                  </span>
+                                ) : (
+                                  <span className="text-[var(--text-muted)] italic">Chưa cấp phép</span>
+                                )}
+                              </td>
+
+                              <td className="px-4 py-3.5">
+                                {isAdminRole || isLifetime ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold">
+                                    <Zap className="w-3 h-3 text-emerald-400" /> PRO Vĩnh Viễn
+                                  </span>
+                                ) : isValid ? (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold font-mono">
+                                    <CheckCircle className="w-3 h-3" /> Đang Hoạt Động
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[10px] font-bold">
+                                    <AlertTriangle className="w-3 h-3" /> {hasExpiry ? 'Đã Hết Hạn' : 'Chưa Kích Hoạt'}
+                                  </span>
+                                )}
+                              </td>
+
+                              <td className="px-4 py-3.5 text-[var(--text-muted)] font-mono text-[11px]">
+                                {new Date(u.created_at).toLocaleDateString('vi-VN')}
+                              </td>
+
+                              <td className="px-4 py-3.5 text-right">
+                                <button
+                                  onClick={() => {
+                                    setSelectedUserForRenew(u);
+                                    setCustomRenewDate(u.greensmartone_expires_at ? u.greensmartone_expires_at.slice(0, 10) : new Date(Date.now() + 30*86400000).toISOString().slice(0, 10));
+                                  }}
+                                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs shadow-md shadow-emerald-500/20 transition-all flex items-center gap-1.5 ml-auto"
+                                >
+                                  <Zap className="w-3.5 h-3.5" />
+                                  <span>Cấp Phép / Gia Hạn</span>
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Sub-view 2: Lịch Sử Chấp Thuận Điều Khoản & Miễn Trừ Trách Nhiệm (Audit Log) */}
+          {gsSubTab === 'consents' && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 flex items-start gap-3">
+                <Scale className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-bold text-amber-300">
+                    Bằng Chứng Pháp Lý & Thỏa Thuận Điện Tử (Electronic Consent Records)
+                  </p>
+                  <p className="text-[11px] leading-relaxed text-slate-300">
+                    Theo Điều 3 Điều khoản Sử dụng, toàn bộ dữ liệu nhật ký gồm <strong>Địa chỉ IP</strong>, <strong>Thời gian chấp thuận chính xác</strong> và <strong>Dấu vết số</strong> được lưu trữ an toàn làm bằng chứng ràng buộc trước pháp luật khi người dùng truy cập và sử dụng GreenSmartOne.
+                  </p>
+                </div>
+              </div>
+
+              <div className="card overflow-hidden p-0 border border-[var(--border-color)]">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-[var(--border-color)] bg-[var(--bg-subtle)] text-[var(--text-muted)] text-[11px] font-bold uppercase tracking-wider">
+                        <th className="px-4 py-3">#</th>
+                        <th className="px-4 py-3">Thành Viên</th>
+                        <th className="px-4 py-3">Địa Chỉ IP Ghi Nhận</th>
+                        <th className="px-4 py-3">Thời Gian Chấp Thuận</th>
+                        <th className="px-4 py-3">Phiên Bản Điều Khoản</th>
+                        <th className="px-4 py-3">Thiết Bị / User-Agent</th>
+                        <th className="px-4 py-3 text-center">Bằng Chứng Pháp Lý</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--border-color)] text-xs font-mono">
+                      {users
+                        .map((u, idx) => {
+                          let consent = null;
+                          try {
+                            if (u.company_description) {
+                              const parsed = typeof u.company_description === 'object' ? u.company_description : JSON.parse(u.company_description);
+                              consent = parsed.greensmartone_consent || (parsed.accepted ? parsed : null);
+                            }
+                          } catch (_) {}
+
+                          // Fallback to localStorage session if testing on local device
+                          if (!consent && typeof localStorage !== 'undefined') {
+                            try {
+                              const local = localStorage.getItem(`gs_disclaimer_consent_${u.id}`);
+                              if (local) consent = JSON.parse(local);
+                            } catch (_) {}
+                          }
+
+                          return { user: u, consent, originalIdx: idx + 1 };
+                        })
+                        .map(({ user: u, consent, originalIdx }) => (
+                          <tr key={u.id} className="hover:bg-[var(--bg-subtle)]/60 transition-colors">
+                            <td className="px-4 py-3.5 text-[var(--text-muted)]">#{originalIdx}</td>
+                            
+                            <td className="px-4 py-3.5 font-sans">
+                              <p className="font-bold text-[var(--text-main)]">{u.full_name || 'Chưa cập nhật'}</p>
+                              <p className="text-[11px] text-[var(--text-muted)] font-mono">{u.email}</p>
+                            </td>
+
+                            <td className="px-4 py-3.5">
+                              {consent?.ip ? (
+                                <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-bold">
+                                  {consent.ip}
+                                </span>
+                              ) : (
+                                <span className="text-[var(--text-muted)] italic">Chưa ghi nhận</span>
+                              )}
+                            </td>
+
+                            <td className="px-4 py-3.5">
+                              {consent?.accepted_at ? (
+                                <div className="flex flex-col">
+                                  <span className="text-emerald-400 font-bold">
+                                    {new Date(consent.accepted_at).toLocaleDateString('vi-VN')}
+                                  </span>
+                                  <span className="text-[10px] text-[var(--text-muted)]">
+                                    {new Date(consent.accepted_at).toLocaleTimeString('vi-VN')}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-[var(--text-muted)] italic">Chưa chấp thuận</span>
+                              )}
+                            </td>
+
+                            <td className="px-4 py-3.5">
+                              <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-300 text-[10px]">
+                                {consent?.version || '11/2026'}
+                              </span>
+                            </td>
+
+                            <td className="px-4 py-3.5 max-w-xs truncate text-[10px] text-[var(--text-muted)]" title={consent?.user_agent || ''}>
+                              {consent?.user_agent ? (
+                                consent.user_agent.includes('Windows') ? 'Chrome trên Windows' :
+                                consent.user_agent.includes('Macintosh') ? 'Safari trên macOS' :
+                                consent.user_agent.includes('iPhone') ? 'Safari trên iOS' :
+                                consent.user_agent.includes('Android') ? 'Chrome trên Android' : 'Trình duyệt Web'
+                              ) : 'Chưa có thông tin'}
+                            </td>
+
+                            <td className="px-4 py-3.5 text-center font-sans">
+                              {consent?.accepted ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                                  <CheckCircle2 className="w-3.5 h-3.5" /> ĐÃ KÝ ĐIỆN TỬ
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px]">
+                                  Chờ Người Dùng Vào Xem
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
