@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { EdgeTTS } from 'node-edge-tts'
-import { openDesignPlugin } from './vite-opendesign-plugin'
 
 // Plugin cung cấp endpoint TTS tiếng Việt Neural chất lượng cao chuẩn VTV / TikTok Financial Studio
 function ttsProxyPlugin() {
@@ -138,7 +137,7 @@ function articleScraperPlugin() {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), ttsProxyPlugin(), articleScraperPlugin(), openDesignPlugin()],
+  plugins: [react(), ttsProxyPlugin(), articleScraperPlugin()],
   server: {
     proxy: {
       '/api/stock-candles': {

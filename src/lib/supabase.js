@@ -14,6 +14,15 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   }
 })
 
+// Client không lưu session dùng để truy vấn dữ liệu công khai (tác giả bài viết, thông tin chung)
+// mà không bị giới hạn bởi RLS "auth.uid() = id" khi một user bình thường đăng nhập
+export const supabasePublic = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  }
+})
+
 // Lấy giờ Hà Nội
 export const getHanoiTime = () => {
   return new Date().toLocaleString('vi-VN', {

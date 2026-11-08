@@ -402,20 +402,31 @@ export default function CreatePostPage() {
               </div>
             ) : (
               /* Chế độ nhập link URL */
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  value={form.cover_image}
-                  onChange={e => setForm(f => ({ ...f, cover_image: e.target.value }))}
-                  placeholder="https://example.com/hinh-anh.jpg"
-                  className="input-field text-sm"
-                />
-                {form.cover_image && (
-                  <img
-                    src={form.cover_image}
-                    alt=""
-                    className="w-14 h-12 object-cover rounded-xl border border-[var(--border-color)] flex-shrink-0"
+              <div className="space-y-1.5">
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={form.cover_image}
+                    onChange={e => setForm(f => ({ ...f, cover_image: e.target.value }))}
+                    placeholder="https://example.com/hinh-anh.jpg"
+                    className="input-field text-sm"
                   />
+                  {form.cover_image && (
+                    <img
+                      src={form.cover_image}
+                      alt=""
+                      className="w-14 h-12 object-cover rounded-xl border border-[var(--border-color)] flex-shrink-0"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null
+                        e.currentTarget.src = '/logo-horizontal.png'
+                      }}
+                    />
+                  )}
+                </div>
+                {form.cover_image && (form.cover_image.includes('discordapp.com') || form.cover_image.includes('discord.gg')) && (
+                  <p className="text-[11px] text-amber-400 flex items-center gap-1">
+                    ⚠️ Link Discord sẽ tự động hết hạn sau 24 giờ gây lỗi ảnh. Hãy chuyển sang chế độ "Tải từ máy" để lưu ảnh vĩnh viễn trên FinGreen!
+                  </p>
                 )}
               </div>
             )}

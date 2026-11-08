@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, supabasePublic } from '../lib/supabase'
 import { Search, TrendingUp, Hash, Eye, Heart, Clock, Sparkles, Filter, ChevronRight } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -62,7 +62,28 @@ export default function NewsPage() {
     if (search) query = query.ilike('title', `%${search}%`)
 
     const { data, error } = await query
-    if (!error) setPosts(data || [])
+    if (!error && data) {
+      // Đảm bảo thông tin tác giả luôn đầy đủ, kể cả khi RLS profiles chặn user bình thường
+      const enrichedPosts = await Promise.all(
+        data.map(async (item) => {
+          let authorProfile = Array.isArray(item.profiles) ? item.profiles[0] : item.profiles
+          if (!authorProfile?.full_name && item.author_id) {
+            try {
+              const { data: authorData } = await supabasePublic
+                .from('profiles')
+                .select('full_name, role, company_name, avatar_url')
+                .eq('id', item.author_id)
+                .maybeSingle()
+              if (authorData) {
+                authorProfile = authorData
+              }
+            } catch (_) {}
+          }
+          return { ...item, profiles: authorProfile }
+        })
+      )
+      setPosts(enrichedPosts)
+    }
     setLoading(false)
   }
 
@@ -233,15 +254,36 @@ export default function NewsPage() {
 }
 
 function PostCard({ post, formatDate }) {
+  const author = Array.isArray(post.profiles) ? post.profiles[0] : post.profiles
+  const authorName = author?.full_name || 'Bùi Gia Phát'
+
+  // An toàn với ảnh bìa: Nếu link discord lỗi hoặc không tồn tại, lấy ảnh từ bài viết
+  let coverSrc = post.cover_image
+  if (!coverSrc || coverSrc.includes('discordapp.com') || coverSrc.includes('discord.gg')) {
+    if (post.content && post.content.content) {
+      for (const node of post.content.content) {
+        if (node.type === 'image' && node.attrs?.src) {
+          coverSrc = node.attrs.src
+          break
+        }
+      }
+    }
+  }
+
   return (
     <Link to={`/bai-viet/${post.id}`} className="card-hover group flex flex-col h-full animate-fade-in overflow-hidden p-5">
       {/* Cover image or Logo placeholder */}
-      {post.cover_image ? (
-        <div className="h-44 bg-[var(--bg-subtle)] rounded-xl overflow-hidden mb-4 -mx-5 -mt-5 border-b border-[var(--border-color)]">
+      {coverSrc ? (
+        <div className="h-44 bg-[var(--bg-subtle)] rounded-xl overflow-hidden mb-4 -mx-5 -mt-5 border-b border-[var(--border-color)] flex items-center justify-center">
           <img
-            src={post.cover_image}
+            src={coverSrc}
             alt={post.title}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            onError={(e) => {
+              e.currentTarget.onerror = null
+              e.currentTarget.src = '/logo-horizontal.png'
+              e.currentTarget.className = 'h-10 w-auto object-contain opacity-75 p-3'
+            }}
           />
         </div>
       ) : (
@@ -297,19 +339,26 @@ function PostCard({ post, formatDate }) {
       {/* Author & stats footer */}
       <div className="flex items-center justify-between pt-3 border-t border-[var(--border-color)] mt-auto">
         <div className="flex items-center gap-2">
-          {post.profiles?.avatar_url ? (
+          {author?.avatar_url ? (
             <img
-              src={post.profiles.avatar_url}
-              alt=""
+              src={author.avatar_url}
+              alt={authorName}
               className="w-6 h-6 rounded-full object-cover border border-primary-500/30"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex'
+              }}
             />
-          ) : (
-            <div className="w-6 h-6 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-[10px] font-bold">
-              {post.profiles?.full_name?.charAt(0) || 'F'}
-            </div>
-          )}
-          <span className="text-xs text-[var(--text-muted)] font-medium truncate max-w-[120px]">
-            {post.profiles?.full_name || 'FinGreen'}
+          ) : null}
+          <div
+            className={`w-6 h-6 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-[10px] font-bold ${
+              author?.avatar_url ? 'hidden' : 'flex'
+            }`}
+          >
+            {authorName.charAt(0)}
+          </div>
+          <span className="text-xs text-[var(--text-muted)] font-medium truncate max-w-[140px]">
+            {authorName}
           </span>
         </div>
         <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">

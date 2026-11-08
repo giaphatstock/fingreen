@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { supabase, updateMetaTags } from '../lib/supabase'
+import { supabase, supabasePublic, updateMetaTags } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 import {
   ArrowLeft, Eye, Heart, Hash, Calendar, User, Share2,
   TrendingUp, Loader2, AlertTriangle, Lock, LogIn, UserPlus,
-  Check, Copy, ExternalLink, X
+  Check, Copy, ExternalLink, X, Sparkles
 } from 'lucide-react'
 import { generateHTML } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
@@ -18,6 +18,40 @@ import TextStyle from '@tiptap/extension-text-style'
 
 const TEMPLATE_ICONS = { standard: '📰', analysis: '📊', signal: '🎯', report: '📋', news: '⚡' }
 const TEMPLATE_LABELS = { standard: 'Tin Tức', analysis: 'Phân Tích', signal: 'Tín Hiệu', report: 'Báo Cáo', news: 'Tin Nhanh' }
+
+// Helper tách nội dung cho khách chưa đăng nhập: 2 đoạn đầu hiển thị rõ ràng, phần còn lại làm mờ
+const splitContentForGuest = (html) => {
+  if (!html) return { preview: '', rest: '' }
+  const matches = [...html.matchAll(/<\/(p|h1|h2|h3|blockquote|div)>/gi)]
+  if (matches.length >= 2) {
+    const splitIndex = matches[1].index + matches[1][0].length
+    return {
+      preview: html.substring(0, splitIndex),
+      rest: html.substring(splitIndex)
+    }
+  }
+  return {
+    preview: html.substring(0, Math.min(300, html.length)),
+    rest: html.substring(Math.min(300, html.length))
+  }
+}
+
+// Helper lấy ảnh bìa an toàn (tránh link Discord bị 404, fallback vào ảnh đính kèm trong bài)
+const resolvePostCover = (postItem) => {
+  if (!postItem) return null
+  const cover = postItem.cover_image
+  if (cover && !cover.includes('discordapp.com') && !cover.includes('discord.gg')) {
+    return cover
+  }
+  if (postItem.content && postItem.content.content) {
+    for (const node of postItem.content.content) {
+      if (node.type === 'image' && node.attrs?.src) {
+        return node.attrs.src
+      }
+    }
+  }
+  return cover || null
+}
 
 export default function PostDetailPage() {
   const { id } = useParams()
@@ -38,7 +72,30 @@ export default function PostDetailPage() {
         .eq('id', id)
         .single()
       if (!error && data) {
-        setPost(data)
+        let postData = data
+
+        // Nếu profiles bị null do RLS khi user bình thường đăng nhập, truy vấn tác giả bằng supabasePublic
+        let authorProfile = postData.profiles
+        if (Array.isArray(authorProfile)) {
+          authorProfile = authorProfile[0]
+        }
+        if (!authorProfile?.full_name && postData.author_id) {
+          try {
+            const { data: authorData } = await supabasePublic
+              .from('profiles')
+              .select('full_name, role, company_name, avatar_url')
+              .eq('id', postData.author_id)
+              .maybeSingle()
+            if (authorData) {
+              authorProfile = authorData
+            }
+          } catch (e) {
+            console.warn('Lỗi lấy thông tin tác giả:', e)
+          }
+        }
+        postData = { ...postData, profiles: authorProfile }
+        setPost(postData)
+
         // Convert JSON content to HTML
         try {
           if (data.content && data.content.type === 'doc') {
@@ -55,7 +112,7 @@ export default function PostDetailPage() {
 
         // Cập nhật thẻ meta OpenGraph cho Facebook, Zalo, Twitter preview
         const fullUrl = window.location.href
-        const coverImg = data.cover_image || `${window.location.origin}/logo-horizontal.png`
+        const coverImg = resolvePostCover(postData) || `${window.location.origin}/logo-horizontal.png`
         updateMetaTags({
           title: data.title,
           description: data.summary || `Phân tích chứng khoán: ${data.title} trên FinGreen`,
@@ -139,6 +196,11 @@ export default function PostDetailPage() {
   const shareUrl = encodeURIComponent(window.location.href)
   const shareTitleEncoded = encodeURIComponent(post.title)
 
+  const coverImage = resolvePostCover(post)
+  const authorProfile = Array.isArray(post.profiles) ? post.profiles[0] : post.profiles
+  const authorName = authorProfile?.full_name || 'Bùi Gia Phát (Founder FinGreen)'
+  const { preview: previewHtml, rest: blurredHtml } = splitContentForGuest(htmlContent)
+
   return (
     <div className="max-w-3xl mx-auto">
       {/* Back button */}
@@ -152,10 +214,19 @@ export default function PostDetailPage() {
 
       {/* Article Card */}
       <article className="card relative overflow-hidden">
-        {/* Cover image */}
-        {post.cover_image && (
-          <div className="h-64 sm:h-80 bg-[var(--bg-subtle)] rounded-xl overflow-hidden mb-6 -mx-6 -mt-6 border-b border-[var(--border-color)]">
-            <img src={post.cover_image} alt={post.title} className="w-full h-full object-cover" />
+        {/* Cover image an toàn: Tự fallback sang ảnh biểu đồ trong nội dung hoặc logo nếu link ngoài lỗi 404 */}
+        {coverImage && (
+          <div className="h-64 sm:h-80 bg-[var(--bg-subtle)] rounded-xl overflow-hidden mb-6 -mx-6 -mt-6 border-b border-[var(--border-color)] flex items-center justify-center">
+            <img
+              src={coverImage}
+              alt={post.title}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.onerror = null
+                e.currentTarget.src = '/logo-horizontal.png'
+                e.currentTarget.className = 'h-16 w-auto object-contain opacity-70 p-4'
+              }}
+            />
           </div>
         )}
 
@@ -184,24 +255,38 @@ export default function PostDetailPage() {
         )}
 
         {/* Author & Date */}
-        <div className="flex items-center justify-between py-4 border-y border-[var(--border-color)] mb-6">
+        <div className="flex items-center justify-between py-4 border-y border-[var(--border-color)] mb-6 flex-wrap gap-4">
           <div className="flex items-center gap-3">
-            {post.profiles?.avatar_url ? (
+            {authorProfile?.avatar_url ? (
               <img
-                src={post.profiles.avatar_url}
-                alt=""
-                className="w-10 h-10 rounded-full object-cover border border-primary-500/40"
+                src={authorProfile.avatar_url}
+                alt={authorName}
+                className="w-11 h-11 rounded-full object-cover border-2 border-primary-500/40 shadow-sm"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                  if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex'
+                }}
               />
-            ) : (
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
-                {post.profiles?.full_name?.charAt(0) || 'F'}
-              </div>
-            )}
+            ) : null}
+            <div
+              className={`w-11 h-11 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md ${
+                authorProfile?.avatar_url ? 'hidden' : 'flex'
+              }`}
+            >
+              {authorName.charAt(0)}
+            </div>
             <div>
-              <p className="font-bold text-sm">{post.profiles?.full_name || 'Chuyên gia FinGreen'}</p>
-              {post.profiles?.company_name && (
-                <p className="text-xs text-[var(--text-muted)]">{post.profiles.company_name}</p>
-              )}
+              <div className="flex items-center gap-2">
+                <p className="font-bold text-sm sm:text-base text-[var(--text-main)]">{authorName}</p>
+                {authorProfile?.role === 'admin_fingreen' && (
+                  <span className="text-[10px] bg-primary-500/20 text-primary-300 border border-primary-500/40 px-2 py-0.5 rounded-full font-semibold">
+                    Admin FinGreen
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-[var(--text-muted)] font-medium">
+                {authorProfile?.company_name ? `${authorProfile.company_name} • Đội ngũ phân tích` : 'Chuyên gia Phân tích Đầu tư FinGreen'}
+              </p>
             </div>
           </div>
           <div className="text-right">
@@ -212,7 +297,7 @@ export default function PostDetailPage() {
           </div>
         </div>
 
-        {/* CONTENT WITH 50% BLUR FOR GUEST */}
+        {/* NỘI DUNG BÀI VIẾT: ĐÃ ĐĂNG NHẬP XEM 100%, CHƯA ĐĂNG NHẬP XEM BẢN MỜ (BLUR PAYWALL) */}
         {user ? (
           /* Đã đăng nhập: Hiển thị 100% nội dung */
           <div
@@ -220,39 +305,78 @@ export default function PostDetailPage() {
             dangerouslySetInnerHTML={{ __html: htmlContent || '<p>Nội dung đang được cập nhật...</p>' }}
           />
         ) : (
-          /* Khách vãng lai: Hiển thị 50% nội dung + lớp phủ BLUR */
-          <div className="relative">
-            {/* Vùng nội dung bị cắt và làm mờ dần */}
-            <div
-              className="ProseMirror max-h-[320px] overflow-hidden select-none filter blur-[1.5px] opacity-80"
-              dangerouslySetInnerHTML={{ __html: htmlContent || '<p>Nội dung đang được cập nhật...</p>' }}
-            />
+          /* Khách vãng lai: Hiển thị 2 đoạn mở đầu rõ nét + phần còn lại bị làm mờ (BLUR) */
+          <div>
+            {/* Phần mở đầu xem trước (rõ nét) */}
+            {previewHtml && (
+              <div
+                className="ProseMirror leading-relaxed mb-4"
+                dangerouslySetInnerHTML={{ __html: previewHtml }}
+              />
+            )}
 
-            {/* Lớp phủ BLUR + Hộp kêu gọi đăng nhập */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-card)] via-[var(--bg-card)]/85 to-transparent backdrop-blur-[4px] flex flex-col items-center justify-end p-6 text-center z-10">
-              <div className="max-w-md w-full bg-[var(--bg-card)] border border-primary-500/40 rounded-2xl p-6 shadow-2xl backdrop-blur-xl animate-fade-in">
-                <div className="w-12 h-12 rounded-2xl bg-primary-500/15 border border-primary-500/30 flex items-center justify-center mx-auto mb-3 text-primary-400">
-                  <Lock className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-bold text-[var(--text-main)] mb-1">
-                  Mở Khóa Toàn Bộ Bài Viết
-                </h3>
-                <p className="text-xs text-[var(--text-muted)] mb-5 leading-relaxed">
-                  Bạn đang xem bản rút gọn (50%). Đăng nhập hoặc tạo tài khoản FinGreen hoàn toàn miễn phí để xem trọn vẹn phân tích chuyên sâu, đồ thị kỹ thuật và khuyến nghị đầu tư!
-                </p>
-                <div className="flex flex-col sm:flex-row gap-2.5">
-                  <Link
-                    to={`/dang-nhap?redirect=/bai-viet/${post.id}`}
-                    className="btn-primary text-xs py-2.5 px-4 flex-1 flex items-center justify-center gap-1.5 font-bold"
-                  >
-                    <LogIn className="w-3.5 h-3.5" /> Đăng Nhập
-                  </Link>
-                  <Link
-                    to={`/dang-nhap?mode=register&redirect=/bai-viet/${post.id}`}
-                    className="btn-secondary text-xs py-2.5 px-4 flex-1 flex items-center justify-center gap-1.5 font-bold"
-                  >
-                    <UserPlus className="w-3.5 h-3.5" /> Tạo Tài Khoản
-                  </Link>
+            {/* Vùng nội dung tiếp theo bị làm mờ mạnh (Blur) kèm hộp kêu gọi đăng nhập */}
+            <div className="relative mt-2 rounded-2xl overflow-hidden border border-[var(--border-color)]">
+              {/* Nội dung phía sau bị blur rõ rệt */}
+              <div
+                className="ProseMirror select-none pointer-events-none max-h-[460px] overflow-hidden p-6"
+                style={{ filter: 'blur(7px)', opacity: 0.45 }}
+                dangerouslySetInnerHTML={{ __html: blurredHtml || htmlContent }}
+              />
+
+              {/* Lớp phủ chuyển màu & Hộp mở khóa bài viết */}
+              <div
+                className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 text-center z-10"
+                style={{
+                  background: 'linear-gradient(to bottom, transparent 0%, rgba(10, 11, 22, 0.85) 30%, var(--bg-card) 95%)'
+                }}
+              >
+                <div className="max-w-md w-full bg-[var(--bg-card)] border-2 border-primary-500/50 rounded-3xl p-6 sm:p-7 shadow-2xl backdrop-blur-xl animate-fade-in relative">
+                  <div className="w-12 h-12 rounded-2xl bg-primary-500/15 border border-primary-500/30 flex items-center justify-center mx-auto mb-3 text-primary-400">
+                    <Lock className="w-6 h-6" />
+                  </div>
+                  
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-500/10 text-primary-400 text-[11px] font-bold mb-2">
+                    <Sparkles className="w-3 h-3" />
+                    NỘI DUNG ĐỘC QUYỀN THÀNH VIÊN
+                  </div>
+
+                  <h3 className="text-lg sm:text-xl font-black text-[var(--text-main)] mb-2">
+                    Đăng Nhập Để Mở Khóa Toàn Bộ Bài Viết
+                  </h3>
+                  <p className="text-xs text-[var(--text-muted)] mb-5 leading-relaxed">
+                    Bạn đang xem bản đọc thử. Đăng nhập hoặc tạo tài khoản FinGreen hoàn toàn miễn phí để xem trọn vẹn biểu đồ phân tích kỹ thuật, báo cáo tài chính và khuyến nghị đầu tư!
+                  </p>
+
+                  <div className="bg-[var(--bg-subtle)]/80 rounded-xl p-3 mb-5 text-left border border-[var(--border-color)] space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs text-[var(--text-main)] font-medium">
+                      <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                      <span>Xem trọn vẹn 100% dữ liệu phân tích & đồ thị</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-[var(--text-main)] font-medium">
+                      <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                      <span>Nhận tín hiệu mua / bán realtime từ chuyên gia</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-[var(--text-main)] font-medium">
+                      <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                      <span>Miễn phí 100%, tạo tài khoản trong 30 giây</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-2.5">
+                    <Link
+                      to={`/dang-nhap?redirect=/bai-viet/${post.id}`}
+                      className="btn-primary text-xs py-3 px-4 flex-1 flex items-center justify-center gap-1.5 font-bold shadow-md shadow-primary-500/20"
+                    >
+                      <LogIn className="w-3.5 h-3.5" /> Đăng Nhập Ngay
+                    </Link>
+                    <Link
+                      to={`/dang-nhap?mode=register&redirect=/bai-viet/${post.id}`}
+                      className="btn-secondary text-xs py-3 px-4 flex-1 flex items-center justify-center gap-1.5 font-bold"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" /> Tạo Tài Khoản Miễn Phí
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
