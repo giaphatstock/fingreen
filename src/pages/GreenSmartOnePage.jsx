@@ -103,7 +103,14 @@ export default function GreenSmartOnePage() {
   });
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [disclaimerOpen, setDisclaimerOpen] = useState(true);
+  const [disclaimerOpen, setDisclaimerOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const accepted = sessionStorage.getItem('gs_disclaimer_session_accepted') === 'true' ||
+                       localStorage.getItem('gs_disclaimer_session_accepted') === 'true';
+      return !accepted;
+    }
+    return true;
+  });
 
   const isLicValid = useMemo(() => (!isExpired && validateLicense(config.licenseKey)), [isExpired, config.licenseKey]);
 
@@ -491,7 +498,16 @@ export default function GreenSmartOnePage() {
       {/* Modal Miễn Trừ Trách Nhiệm & Điều Khoản Sử Dụng */}
       <DisclaimerModal
         isOpen={disclaimerOpen}
-        onAccepted={() => setDisclaimerOpen(false)}
+        onAccepted={() => {
+          setDisclaimerOpen(false);
+          try {
+            sessionStorage.setItem('gs_disclaimer_session_accepted', 'true');
+            localStorage.setItem('gs_disclaimer_session_accepted', 'true');
+          } catch (_) {}
+          setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+          }, 80);
+        }}
         user={user}
         profile={profile}
       />

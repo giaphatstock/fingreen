@@ -120,9 +120,15 @@ export default function GreenSmartOneChart({
     const gridColor = isLight ? 'rgba(0,0,0,0.04)' : 'rgba(42, 46, 57, 0.5)';
     const borderColor = isLight ? '#e2e8f0' : '#2a2e39';
 
-    const chart = createChart(chartContainerRef.current, {
-      width: chartContainerRef.current.clientWidth,
-      height: chartContainerRef.current.clientHeight || 580,
+    const container = chartContainerRef.current;
+    const initialWidth = (container && container.clientWidth > 0)
+      ? container.clientWidth
+      : (container?.parentElement?.clientWidth || (typeof window !== 'undefined' ? window.innerWidth - 80 : 800));
+    const initialHeight = (container && container.clientHeight > 0) ? container.clientHeight : 580;
+
+    const chart = createChart(container, {
+      width: initialWidth,
+      height: initialHeight,
       layout: {
         background: { color: bg },
         textColor: textColor,
@@ -288,13 +294,12 @@ export default function GreenSmartOneChart({
         const h = chartContainerRef.current.clientHeight || 580;
         if (w > 0) {
           chartRef.current.applyOptions({ width: w, height: h });
-          chartRef.current.timeScale().fitContent();
         }
       }
     };
     window.addEventListener('resize', handleResize);
 
-    // Dùng ResizeObserver để bảo đảm khi container vừa hiển thị (width > 0) là chart tự vẽ ngay, không bao giờ bị trắng màn hình
+    // Dùng ResizeObserver để cập nhật kích thước khung vẽ mượt mà khi layout thay đổi
     let resizeObserver = null;
     if (typeof ResizeObserver !== 'undefined' && chartContainerRef.current) {
       resizeObserver = new ResizeObserver((entries) => {
@@ -305,7 +310,6 @@ export default function GreenSmartOneChart({
             width: width,
             height: height || 580,
           });
-          chartRef.current.timeScale().fitContent();
         }
       });
       resizeObserver.observe(chartContainerRef.current);
@@ -484,29 +488,39 @@ export default function GreenSmartOneChart({
       });
     }
 
-    // ⚡ TỰ ĐỘNG CĂN CHỈNH GIÁ & THỜI GIAN KHI ĐỔI MÃ (AUTO-ALIGN & AUTO-SCALE)
-    if (chartContainerRef.current) {
-      const curW = chartContainerRef.current.clientWidth;
-      const curH = chartContainerRef.current.clientHeight || 580;
-      if (curW > 0) {
-        chartRef.current.applyOptions({ width: curW, height: curH });
+    // ⚡ TỰ ĐỘNG CĂN CHỈNH KHUNG GIÁ & THỜI GIAN (AUTO-ALIGN & AUTO-SCALE)
+    const alignAndScale = () => {
+      if (!chartRef.current || !chartContainerRef.current) return;
+      const w = chartContainerRef.current.clientWidth;
+      const h = chartContainerRef.current.clientHeight || 580;
+      if (w > 0) {
+        chartRef.current.applyOptions({ width: w, height: h });
       }
-    }
 
-    const rightScale = chartRef.current.priceScale('right');
-    rightScale.applyOptions({ autoScale: true });
-    chartRef.current.timeScale().resetTimeScale();
-    chartRef.current.timeScale().fitContent();
-
-    // Nhịp thứ 2 sau 50ms để bảo đảm nến của mã mới luôn lấp đầy màn hình vừa vặn
-    const timer = setTimeout(() => {
-      if (chartRef.current) {
+      const totalBars = bars.length;
+      if (totalBars > 0) {
         chartRef.current.priceScale('right').applyOptions({ autoScale: true });
-        chartRef.current.timeScale().fitContent();
+        // Căn chỉnh 110 nến gần nhất với 8 nến khoảng thở bên phải (Chuẩn TradingView 100%)
+        chartRef.current.timeScale().setVisibleLogicalRange({
+          from: Math.max(0, totalBars - 110),
+          to: totalBars + 8,
+        });
       }
-    }, 50);
+    };
 
-    return () => clearTimeout(timer);
+    // Thực hiện đa nhịp để bảo đảm hiển thị nến tức thì ngay từ giây đầu tiên khi vừa vào trang
+    alignAndScale();
+    const rafId = requestAnimationFrame(alignAndScale);
+    const t1 = setTimeout(alignAndScale, 60);
+    const t2 = setTimeout(alignAndScale, 180);
+    const t3 = setTimeout(alignAndScale, 400);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
   }, [symbol, bars, indicators, toggles]);
 
   return (

@@ -106,9 +106,24 @@ export default function Layout({ children }) {
             </div>
           </div>
 
-          <div className="pt-8 border-t border-[var(--border-color)] flex flex-col sm:flex-row items-center justify-between text-xs text-[var(--text-muted)] gap-4">
-            <p>© {new Date().getFullYear()} FinGreen. Kiến Tạo Giá Trị Thực. Mọi quyền được bảo lưu.</p>
-            <p className="flex items-center gap-1">
+          <div className="pt-8 border-t border-[var(--border-color)] flex flex-col md:flex-row items-center justify-between text-xs text-[var(--text-muted)] gap-4">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+              <span>© {new Date().getFullYear()} FinGreen. Kiến Tạo Giá Trị Thực. Mọi quyền được bảo lưu.</span>
+              <a
+                href="//www.dmca.com/Protection/Status.aspx?ID=c6d8e8c8-1e5c-42a7-82a4-4fdc39266148"
+                title="DMCA.com Protection Status"
+                className="dmca-badge inline-flex items-center hover:opacity-85 transition-opacity"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  src="https://images.dmca.com/Badges/DMCA_logo-grn-btn180w.png?ID=c6d8e8c8-1e5c-42a7-82a4-4fdc39266148"
+                  alt="DMCA.com Protection Status"
+                  className="h-5 sm:h-5.5 w-auto object-contain"
+                />
+              </a>
+            </div>
+            <p className="flex items-center gap-1 text-center md:text-right">
               Phát triển với sự tận tâm dành cho nhà đầu tư Việt Nam
             </p>
           </div>
