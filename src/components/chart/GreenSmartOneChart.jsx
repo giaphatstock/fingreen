@@ -3,9 +3,86 @@ import {
   createChart,
   CandlestickSeries,
   LineSeries,
-  HistogramSeries,
-  createSeriesMarkers
+  HistogramSeries
 } from 'lightweight-charts';
+
+// Lớp Primitive vẽ trực tiếp Kim Cương Chuẩn TradingView 100%
+class DiamondMarkerPrimitive {
+  constructor() {
+    this._markers = [];
+    this._chart = null;
+    this._series = null;
+    this._requestUpdate = null;
+  }
+
+  setMarkers(markers) {
+    this._markers = markers;
+    if (this._requestUpdate) this._requestUpdate();
+  }
+
+  attached({ chart, series, requestUpdate }) {
+    this._chart = chart;
+    this._series = series;
+    this._requestUpdate = requestUpdate;
+  }
+
+  detached() {
+    this._chart = null;
+    this._series = null;
+    this._requestUpdate = null;
+  }
+
+  updateAllViews() {}
+
+  paneViews() {
+    return [{
+      renderer: () => ({
+        draw: (target) => {
+          target.useMediaCoordinateSpace(({ context: ctx }) => {
+            if (!this._chart || !this._series) return;
+            const timeScale = this._chart.timeScale();
+
+            for (const m of this._markers) {
+              const x = timeScale.timeToCoordinate(m.time);
+              if (x === null || x < -30 || x > ctx.canvas.width + 30) continue;
+              const yPrice = this._series.priceToCoordinate(m.price);
+              if (yPrice === null) continue;
+              const y = yPrice + (m.yOffset || 0);
+
+              if (m.type === 'diamond') {
+                // Kim Cương Cấp 1 Màu Xanh (#16f2f9) - Chuẩn hình thoi TradingView shape.diamond
+                const s = 6.0;
+                ctx.save();
+                ctx.fillStyle = '#16f2f9';
+                ctx.shadowColor = 'rgba(22, 242, 249, 0.85)';
+                ctx.shadowBlur = 6;
+                ctx.beginPath();
+                ctx.moveTo(x, y - s);
+                ctx.lineTo(x + s, y);
+                ctx.lineTo(x, y + s);
+                ctx.lineTo(x - s, y);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+              } else if (m.type === 'qqe') {
+                // Kim Cương Cấp 2 Màu Da (❖ #e7bea8) - Chuẩn TradingView text="❖"
+                ctx.save();
+                ctx.font = 'bold 15px "Segoe UI Symbol", "Apple Symbols", sans-serif';
+                ctx.fillStyle = '#e7bea8';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = 'rgba(231, 190, 168, 0.6)';
+                ctx.shadowBlur = 4;
+                ctx.fillText('❖', x, y);
+                ctx.restore();
+              }
+            }
+          });
+        }
+      })
+    }];
+  }
+}
 
 export default function GreenSmartOneChart({
   bars = [],
@@ -20,6 +97,7 @@ export default function GreenSmartOneChart({
   const candleSeriesRef = useRef(null);
   const volumeSeriesRef = useRef(null);
   const priceLinesRef = useRef([]);
+  const diamondPrimitiveRef = useRef(null);
 
   // Series chỉ báo (Cloud & Bands)
   const sma7SeriesRef = useRef(null);
@@ -119,6 +197,11 @@ export default function GreenSmartOneChart({
       },
     });
     candleSeriesRef.current = candleSeries;
+
+    // Gắn Diamond Primitive trực tiếp lên Candle Series
+    const diamondPrimitive = new DiamondMarkerPrimitive();
+    candleSeries.attachPrimitive(diamondPrimitive);
+    diamondPrimitiveRef.current = diamondPrimitive;
 
     // 2. Volume Series phụ ở đáy
     const volumeSeries = chart.addSeries(HistogramSeries, {
@@ -300,73 +383,62 @@ export default function GreenSmartOneChart({
       }
     }
 
-    // 5. Markers: Kim Cương Cyan (💎) và QQE (❖)
-    const markers = [];
+    // 5. Markers: Kim Cương Cấp 1 Màu Xanh (◆) và Kim Cương Cấp 2 Màu Da (❖)
+    const customMarkers = [];
 
     if (isLicActive) {
-      if (toggles.diamonds && diamonds) {
-        for (let i = 0; i < bars.length; i++) {
-          if (diamonds.up[i]) {
-            markers.push({
-              time: bars[i].time,
-              position: 'belowBar',
-              color: '#16f2f9',
-              shape: 'circle',
-              size: 1,
-            });
-          }
-          if (diamonds.down[i]) {
-            markers.push({
-              time: bars[i].time,
-              position: 'aboveBar',
-              color: '#16f2f9',
-              shape: 'circle',
-              size: 1,
-            });
-          }
-        }
-      }
+      for (let i = 0; i < bars.length; i++) {
+        const b = bars[i];
+        const hasDiamondUp = toggles.diamonds && diamonds && diamonds.up[i];
+        const hasDiamondDown = toggles.diamonds && diamonds && diamonds.down[i];
+        const hasQqeLong = toggles.qqe && qqe && qqe.long[i];
+        const hasQqeShort = toggles.qqe && qqe && qqe.short[i];
 
-      if (toggles.qqe && qqe) {
-        for (let i = 0; i < bars.length; i++) {
-          if (qqe.long[i]) {
-            markers.push({
-              time: bars[i].time,
-              position: 'belowBar',
-              color: '#e7bea8',
-              shape: 'arrowUp',
-              text: '❖',
-              size: 1,
-            });
-          }
-          if (qqe.short[i]) {
-            markers.push({
-              time: bars[i].time,
-              position: 'aboveBar',
-              color: '#e7bea8',
-              shape: 'arrowDown',
-              text: '❖',
-              size: 1,
-            });
-          }
+        // Kim Cương Cấp 1 Màu Xanh (◆ #16f2f9)
+        if (hasDiamondUp) {
+          customMarkers.push({
+            time: b.time,
+            price: b.low,
+            type: 'diamond',
+            color: '#16f2f9',
+            yOffset: 14,
+          });
         }
-      }
+        if (hasDiamondDown) {
+          customMarkers.push({
+            time: b.time,
+            price: b.high,
+            type: 'diamond',
+            color: '#16f2f9',
+            yOffset: -14,
+          });
+        }
 
-      if (bars.length > 0) {
-        const lastBar = bars[bars.length - 1];
-        markers.push({
-          time: lastBar.time,
-          position: 'aboveBar',
-          color: '#00c853',
-          shape: 'square',
-          text: `⚡ ADAPT Sens = ${finalEffSens.toFixed(1)}`,
-          size: 2,
-        });
+        // Kim Cương Cấp 2 Màu Da (❖ #e7bea8)
+        if (hasQqeLong) {
+          customMarkers.push({
+            time: b.time,
+            price: b.low,
+            type: 'qqe',
+            color: '#e7bea8',
+            yOffset: hasDiamondUp ? 28 : 15,
+          });
+        }
+        if (hasQqeShort) {
+          customMarkers.push({
+            time: b.time,
+            price: b.high,
+            type: 'qqe',
+            color: '#e7bea8',
+            yOffset: hasDiamondDown ? -28 : -15,
+          });
+        }
       }
     }
 
-    markers.sort((a, b) => (a.time > b.time ? 1 : -1));
-    createSeriesMarkers(candleSeriesRef.current, markers);
+    if (diamondPrimitiveRef.current) {
+      diamondPrimitiveRef.current.setMarkers(customMarkers);
+    }
 
     // 6. Support & Resistance: Dải màu mờ nằm ngang
     if (priceLinesRef.current && priceLinesRef.current.length > 0) {

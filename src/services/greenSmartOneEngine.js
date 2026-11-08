@@ -509,7 +509,7 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
   }
 
   // ---------------------------------------------------------------- //
-  // G. QQE Reversal Signals (❖)
+  // G. QQE Reversal Signals (❖ - Kim Cương Cấp 2 Màu Da)
   // ---------------------------------------------------------------- //
   const rsi = calculateRSI(closes, config.RSI_Period || 14);
   const rsiMa = calculateEMA(rsi, config.SF || 5);
@@ -527,64 +527,73 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
   const qqeLong = new Array(N).fill(false);
   const qqeShort = new Array(N).fill(false);
 
-  let longband = 0.0;
-  let shortband = 0.0;
-  let qqeTrend = 0;
-  let exlong = 0;
-  let exshort = 0;
+  const qqeLongbandArr = new Array(N).fill(0.0);
+  const qqeShortbandArr = new Array(N).fill(0.0);
+  const qqeTrendArr = new Array(N).fill(0);
+  const qqeExlong = new Array(N).fill(0);
+  const qqeExshort = new Array(N).fill(0);
 
   for (let i = 1; i < N; i++) {
     const rIdx = rsiMa[i];
     const prevRIdx = rsiMa[i - 1];
-    const curDar = dar[i] ? dar[i] * config.KQE : null;
+    if (rIdx === null || prevRIdx === null || dar[i] === null) continue;
 
-    if (rIdx === null || curDar === null || prevRIdx === null) continue;
-
-    const deltaFast = curDar;
+    const deltaFast = dar[i] * (config.KQE || 4.238);
     const newshortband = rIdx + deltaFast;
     const newlongband = rIdx - deltaFast;
 
-    const prevLongband = longband;
-    const prevShortband = shortband;
+    const pLong = qqeLongbandArr[i - 1];
+    const pShort = qqeShortbandArr[i - 1];
 
-    if (prevRIdx > prevLongband && rIdx > prevLongband) {
-      longband = Math.max(prevLongband, newlongband);
+    if (prevRIdx > pLong && rIdx > pLong) {
+      qqeLongbandArr[i] = Math.max(pLong, newlongband);
     } else {
-      longband = newlongband;
+      qqeLongbandArr[i] = newlongband;
     }
 
-    if (prevRIdx < prevShortband && rIdx < prevShortband) {
-      shortband = Math.min(prevShortband, newshortband);
+    if (prevRIdx < pShort && rIdx < pShort) {
+      qqeShortbandArr[i] = Math.min(pShort, newshortband);
     } else {
-      shortband = newshortband;
+      qqeShortbandArr[i] = newshortband;
     }
 
-    const cross_1 = (prevLongband - prevRIdx) * (longband - rIdx) <= 0;
-    const cross_short = (prevRIdx - prevShortband) * (rIdx - shortband) <= 0;
+    // cross_1 = ta.cross(longband[1], RSIndex)
+    const x_curr = qqeLongbandArr[i - 1];
+    const x_prev = i >= 2 ? qqeLongbandArr[i - 2] : x_curr;
+    const y_curr = rIdx;
+    const y_prev = prevRIdx;
+    const cross_1 = (x_prev <= y_prev && x_curr > y_curr) || (x_prev >= y_prev && x_curr < y_curr);
+
+    // cross(RSIndex, shortband[1])
+    const sx_curr = qqeShortbandArr[i - 1];
+    const sx_prev = i >= 2 ? qqeShortbandArr[i - 2] : sx_curr;
+    const cross_short = (y_prev <= sx_prev && y_curr > sx_curr) || (y_prev >= sx_prev && y_curr < sx_curr);
 
     if (cross_short) {
-      qqeTrend = 1;
+      qqeTrendArr[i] = 1;
     } else if (cross_1) {
-      qqeTrend = -1;
+      qqeTrendArr[i] = -1;
+    } else {
+      qqeTrendArr[i] = qqeTrendArr[i - 1] !== 0 ? qqeTrendArr[i - 1] : 1;
     }
 
-    const fastAtrRsiTL = qqeTrend === 1 ? longband : shortband;
+    const fastAtrRsiTL = qqeTrendArr[i] === 1 ? qqeLongbandArr[i] : qqeShortbandArr[i];
 
     if (fastAtrRsiTL < rIdx) {
-      exlong++;
-      exshort = 0;
+      qqeExlong[i] = qqeExlong[i - 1] + 1;
+      qqeExshort[i] = 0;
     } else if (fastAtrRsiTL > rIdx) {
-      exshort++;
-      exlong = 0;
+      qqeExshort[i] = qqeExshort[i - 1] + 1;
+      qqeExlong[i] = 0;
     } else {
-      exlong = 0;
-      exshort = 0;
+      qqeExlong[i] = 0;
+      qqeExshort[i] = 0;
     }
 
-    if (exlong === 1) {
+    if (qqeExlong[i] === 1) {
       qqeLong[i] = true;
     }
-    if (exshort === 1) {
+    if (qqeExshort[i] === 1) {
       qqeShort[i] = true;
     }
   }
@@ -710,21 +719,22 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
     const longReady = pendLongBar !== null && (i - pendLongBar) >= config.waitBars;
     const shortReady = pendShortBar !== null && (i - pendShortBar) >= config.waitBars;
 
-    const longTrigger = longReady && currentPosition === 0 && curClose > pendLongClose && prevClose <= pendLongClose;
-    const shortTrigger = shortReady && currentPosition === 0 && curClose < pendShortClose && prevClose >= pendShortClose;
+    // Vào lệnh khi nến sau đóng trên/dưới nến kim cương A và màu nến SuperTrend ủng hộ
+    const longTrigger = longReady && currentPosition === 0 && curClose > pendLongClose && isBullBar;
+    const shortTrigger = shortReady && currentPosition === 0 && curClose < pendShortClose && !isBullBar;
 
     // Thoát vị thế (Exit & SL)
     if (currentPosition > 0) {
-      // SL hit
-      if (config.useSL && activeSL_Long !== null && curLow <= activeSL_Long) {
+      // SL: Nếu giá chạm hoặc nến đóng dưới đáy nến kim cương A
+      if (config.useSL && activeSL_Long !== null && (curLow <= activeSL_Long || curClose < activeSL_Long)) {
         trades.push({
           type: 'Long',
           entryBar: currentEntryBar,
           entryPrice: currentEntryPrice,
           exitBar: i,
-          exitPrice: activeSL_Long,
+          exitPrice: Math.min(curClose, activeSL_Long),
           reason: 'SL',
-          pnlPct: ((activeSL_Long - currentEntryPrice) / currentEntryPrice) * 100,
+          pnlPct: ((Math.min(curClose, activeSL_Long) - currentEntryPrice) / currentEntryPrice) * 100,
           time: bars[i].time
         });
         currentPosition = 0;
@@ -745,16 +755,16 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
         activeSL_Long = null;
       }
     } else if (currentPosition < 0) {
-      // SL hit
-      if (config.useSL && activeSL_Short !== null && curHigh >= activeSL_Short) {
+      // SL: Nếu giá chạm hoặc nến đóng trên đỉnh nến kim cương A
+      if (config.useSL && activeSL_Short !== null && (curHigh >= activeSL_Short || curClose > activeSL_Short)) {
         trades.push({
           type: 'Short',
           entryBar: currentEntryBar,
           entryPrice: currentEntryPrice,
           exitBar: i,
-          exitPrice: activeSL_Short,
+          exitPrice: Math.max(curClose, activeSL_Short),
           reason: 'SL',
-          pnlPct: ((currentEntryPrice - activeSL_Short) / currentEntryPrice) * 100,
+          pnlPct: ((currentEntryPrice - Math.max(curClose, activeSL_Short)) / currentEntryPrice) * 100,
           time: bars[i].time
         });
         currentPosition = 0;
