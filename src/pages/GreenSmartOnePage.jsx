@@ -9,14 +9,26 @@ import GreenSmartOneChart from '../components/chart/GreenSmartOneChart';
 import SmartAdaptiveHUD from '../components/chart/SmartAdaptiveHUD';
 import BacktestPerformancePanel from '../components/chart/BacktestPerformancePanel';
 import IndicatorSettingsModal from '../components/chart/IndicatorSettingsModal';
+import ExpiredLicenseModal from '../components/chart/ExpiredLicenseModal';
 import TradingViewClassicWidget from '../components/chart/TradingViewClassicWidget';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { fetchStockCandles, POPULAR_STOCKS } from '../services/stockPriceService';
 import { computeGreenSmartOne, validateLicense } from '../services/greenSmartOneEngine';
 import ALL_LISTED_STOCKS from '../data/allStockCodes.json';
 
 export default function GreenSmartOnePage() {
   const { theme } = useTheme();
+  const { user, profile, isAdmin } = useAuth();
+
+  // Kiểm tra hạn sử dụng GreenSmartOne
+  const expiresAt = profile?.greensmartone_expires_at;
+  const isExpired = useMemo(() => {
+    if (isAdmin) return false; // Admin luôn có quyền vĩnh viễn
+    if (!user) return true; // Chưa đăng nhập
+    if (!expiresAt) return true; // Chưa được kích hoạt
+    return new Date(expiresAt).getTime() < Date.now();
+  }, [isAdmin, user, expiresAt]);
 
   // Trạng thái chọn mã & khung thời gian
   const [symbol, setSymbol] = useState('FPT');
@@ -74,7 +86,7 @@ export default function GreenSmartOnePage() {
 
   const [modalOpen, setModalOpen] = useState(false);
 
-  const isLicValid = useMemo(() => validateLicense(config.licenseKey), [config.licenseKey]);
+  const isLicValid = useMemo(() => (!isExpired && validateLicense(config.licenseKey)), [isExpired, config.licenseKey]);
 
   // Tải dữ liệu nến từ Entrade/DNSE
   const loadCandles = async (targetSymbol, tf) => {
@@ -352,9 +364,10 @@ export default function GreenSmartOnePage() {
               />
 
               {/* Canvas Chart */}
-              <div className="h-[600px] w-full">
+              <div className={`h-[600px] w-full transition-all duration-300 ${isExpired ? 'filter blur-md pointer-events-none select-none' : ''}`}>
                 <GreenSmartOneChart
                   bars={bars}
+                  symbol={symbol}
                   indicators={indicatorResults}
                   theme={theme}
                   toggles={toggles}
@@ -454,6 +467,14 @@ export default function GreenSmartOnePage() {
         onSaveConfig={setConfig}
         toggles={toggles}
         onToggleIndicator={handleToggleIndicator}
+        expiresAt={isAdmin ? '2099-12-31T23:59:59.000Z' : expiresAt}
+      />
+
+      {/* Modal Báo Hết Hạn / Yêu Cầu Kích Hoạt Bản Quyền */}
+      <ExpiredLicenseModal
+        isOpen={isExpired}
+        user={user}
+        expiresAt={expiresAt}
       />
     </div>
   );

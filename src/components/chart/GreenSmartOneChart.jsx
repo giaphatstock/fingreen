@@ -9,6 +9,7 @@ import {
 
 export default function GreenSmartOneChart({
   bars = [],
+  symbol = 'FPT',
   indicators = {},
   theme = 'dark',
   toggles = {},
@@ -133,7 +134,7 @@ export default function GreenSmartOneChart({
     });
     volumeSeriesRef.current = volumeSeries;
 
-    // 3. Volatility Bands (Keltner Channels) - Faint curves matching TradingView
+    // 3. Volatility Bands (Keltner Channels)
     kcUpper3Ref.current = chart.addSeries(LineSeries, {
       color: 'rgba(233, 62, 99, 0.15)',
       lineWidth: 1,
@@ -215,7 +216,7 @@ export default function GreenSmartOneChart({
     };
   }, [isLight]);
 
-  // Cập nhật Dữ liệu
+  // Cập nhật Dữ liệu & Tự động Căn Chỉnh Khung Giá (Auto-Align & Auto-Scale)
   useEffect(() => {
     if (!chartRef.current || !candleSeriesRef.current || !bars || bars.length === 0) return;
 
@@ -230,8 +231,7 @@ export default function GreenSmartOneChart({
       isLicActive
     } = indicators;
 
-    // 1. Gán Candlestick data: Mỗi cây nến có màu chuẩn xác theo SuperTrend Adaptive
-    // (Vàng chanh #e7dc3b khi tăng, Đỏ thắm #da1d15 khi giảm)
+    // 1. Gán Candlestick data
     const candleData = bars.map((b, idx) => {
       const col = (isLicActive && barColors && barColors[idx]) ? barColors[idx] : (b.close >= b.open ? '#e7dc3b' : '#da1d15');
       return {
@@ -300,11 +300,10 @@ export default function GreenSmartOneChart({
       }
     }
 
-    // 5. Markers: Kim Cương Cyan (💎) và QQE (❖) KHÔNG CÓ TEXT LẺ GÂY RỐI MẮT
+    // 5. Markers: Kim Cương Cyan (💎) và QQE (❖)
     const markers = [];
 
     if (isLicActive) {
-      // Kim Cương Mua / Bán
       if (toggles.diamonds && diamonds) {
         for (let i = 0; i < bars.length; i++) {
           if (diamonds.up[i]) {
@@ -313,7 +312,7 @@ export default function GreenSmartOneChart({
               position: 'belowBar',
               color: '#16f2f9',
               shape: 'circle',
-              size: 1, // Điểm kim cương tinh gọn chuẩn TradingView
+              size: 1,
             });
           }
           if (diamonds.down[i]) {
@@ -328,7 +327,6 @@ export default function GreenSmartOneChart({
         }
       }
 
-      // Tín hiệu đảo chiều QQE (❖)
       if (toggles.qqe && qqe) {
         for (let i = 0; i < bars.length; i++) {
           if (qqe.long[i]) {
@@ -354,7 +352,6 @@ export default function GreenSmartOneChart({
         }
       }
 
-      // Nhãn Sens tại cây nến hiện tại: ⚡ ADAPT Sens = 3.8
       if (bars.length > 0) {
         const lastBar = bars[bars.length - 1];
         markers.push({
@@ -371,7 +368,7 @@ export default function GreenSmartOneChart({
     markers.sort((a, b) => (a.time > b.time ? 1 : -1));
     createSeriesMarkers(candleSeriesRef.current, markers);
 
-    // 6. Support & Resistance: Dải màu mờ nằm ngang (linewidth 3), KHÔNG đè nhãn lên trục giá
+    // 6. Support & Resistance: Dải màu mờ nằm ngang
     if (priceLinesRef.current && priceLinesRef.current.length > 0) {
       priceLinesRef.current.forEach(pl => {
         try { candleSeriesRef.current.removePriceLine(pl); } catch (_) {}
@@ -385,8 +382,8 @@ export default function GreenSmartOneChart({
           const pLine = candleSeriesRef.current.createPriceLine({
             price: lvl.val,
             color: lvl.isBull ? 'rgba(0, 219, 255, 0.25)' : 'rgba(233, 62, 99, 0.25)',
-            lineWidth: 3, // Dải nằm ngang tương đương linewidth 13 trong Pine Script
-            lineStyle: 0, // Solid band
+            lineWidth: 3,
+            lineStyle: 0,
             axisLabelVisible: false,
             title: '',
           });
@@ -395,12 +392,26 @@ export default function GreenSmartOneChart({
       });
     }
 
+    // ⚡ TỰ ĐỘNG CĂN CHỈNH GIÁ & THỜI GIAN KHI ĐỔI MÃ (AUTO-ALIGN & AUTO-SCALE)
+    const rightScale = chartRef.current.priceScale('right');
+    rightScale.applyOptions({ autoScale: true });
+    chartRef.current.timeScale().resetTimeScale();
     chartRef.current.timeScale().fitContent();
-  }, [bars, indicators, toggles]);
+
+    // Nhịp thứ 2 sau 50ms để bảo đảm nến của mã mới luôn lấp đầy màn hình vừa vặn
+    const timer = setTimeout(() => {
+      if (chartRef.current) {
+        chartRef.current.priceScale('right').applyOptions({ autoScale: true });
+        chartRef.current.timeScale().fitContent();
+      }
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [symbol, bars, indicators, toggles]);
 
   return (
     <div className="relative w-full h-full flex flex-col min-h-[560px]">
-      {/* Badge Bản Quyền Góc Phải (Khớp 100% TradingView của bạn) */}
+      {/* Badge Bản Quyền Góc Phải */}
       <div className="absolute top-3 right-3 z-20 pointer-events-none">
         <span className="px-2.5 py-1 rounded-md bg-[#00c853] text-white font-bold text-[10px] shadow-lg tracking-wide flex items-center gap-1">
           ✅ LICENSE HỢP LỆ

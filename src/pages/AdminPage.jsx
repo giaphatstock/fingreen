@@ -6,7 +6,7 @@ import {
   Users, FileText, Shield, TrendingUp, CheckCircle, XCircle,
   Ban, Lock, Eye, Search, ChevronDown, AlertTriangle, Loader2,
   ClipboardList, UserCheck, UserX, Trash2, RefreshCw, Activity,
-  Bot, Key, Sparkles, Check, Globe
+  Bot, Key, Sparkles, Check, Globe, Zap, Calendar, Clock, X
 } from 'lucide-react'
 import {
   getGeminiApiKey, saveGeminiApiKey,
@@ -58,6 +58,44 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false)
   const [searchUser, setSearchUser] = useState('')
   const [stats, setStats] = useState({ users: 0, posts: 0, pending: 0, applications: 0 })
+
+  // Quản lý gia hạn GreenSmartOne
+  const [selectedUserForRenew, setSelectedUserForRenew] = useState(null)
+  const [customRenewDate, setCustomRenewDate] = useState('')
+  const [savingRenew, setSavingRenew] = useState(false)
+
+  const handleApplyRenewDuration = (days) => {
+    const base = (selectedUserForRenew?.greensmartone_expires_at && new Date(selectedUserForRenew.greensmartone_expires_at) > new Date())
+      ? new Date(selectedUserForRenew.greensmartone_expires_at)
+      : new Date()
+    base.setDate(base.getDate() + days)
+    setCustomRenewDate(base.toISOString().slice(0, 10))
+  }
+
+  const handleSetLifetime = () => {
+    setCustomRenewDate('2099-12-31')
+  }
+
+  const handleSaveRenew = async (expiryIsoString) => {
+    if (!selectedUserForRenew) return
+    setSavingRenew(true)
+    try {
+      const dateVal = expiryIsoString ? new Date(expiryIsoString).toISOString() : null
+      const { error } = await supabase
+        .from('profiles')
+        .update({ greensmartone_expires_at: dateVal })
+        .eq('id', selectedUserForRenew.id)
+
+      if (error) throw error
+      toast.success(`Đã cập nhật hạn GreenSmartOne cho ${selectedUserForRenew.full_name || selectedUserForRenew.email}!`)
+      setSelectedUserForRenew(null)
+      fetchUsers()
+    } catch (err) {
+      toast.error('Lỗi gia hạn: ' + err.message)
+    } finally {
+      setSavingRenew(false)
+    }
+  }
 
   // Cấu hình FinGreen AI & Google AI Studio (Chỉ Admin)
   const [aiApiKey, setAiApiKey] = useState(getGeminiApiKey())
@@ -349,6 +387,7 @@ export default function AdminPage() {
                     <th className="px-4 py-3">Thành Viên</th>
                     <th className="px-4 py-3">Vai Trò</th>
                     <th className="px-4 py-3">Trạng Thái</th>
+                    <th className="px-4 py-3">Hạn GreenSmartOne</th>
                     <th className="px-4 py-3">Ngày Đăng Ký</th>
                     <th className="px-4 py-3 text-right">Thao Tác</th>
                   </tr>
@@ -356,14 +395,14 @@ export default function AdminPage() {
                 <tbody className="divide-y divide-[var(--border-color)] text-xs">
                   {loading ? (
                     <tr>
-                      <td colSpan={5} className="text-center py-12 text-[var(--text-muted)]">
+                      <td colSpan={6} className="text-center py-12 text-[var(--text-muted)]">
                         <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary-400" />
                         <span>Đang tải danh sách thành viên...</span>
                       </td>
                     </tr>
                   ) : users.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="text-center py-10 text-[var(--text-muted)]">
+                      <td colSpan={6} className="text-center py-10 text-[var(--text-muted)]">
                         Không tìm thấy thành viên nào.
                       </td>
                     </tr>
@@ -406,12 +445,49 @@ export default function AdminPage() {
                         </div>
                       </td>
 
+                      <td className="px-4 py-3.5">
+                        {u.role === 'admin_fingreen' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold">
+                            <Zap className="w-3 h-3 text-emerald-400" /> Vĩnh Viễn
+                          </span>
+                        ) : u.greensmartone_expires_at ? (
+                          new Date(u.greensmartone_expires_at).getTime() >= Date.now() ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold font-mono">
+                              <Calendar className="w-3 h-3" />
+                              {new Date(u.greensmartone_expires_at).toLocaleDateString('vi-VN')}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[11px] font-bold font-mono">
+                              <AlertTriangle className="w-3 h-3" />
+                              Hết hạn ({new Date(u.greensmartone_expires_at).toLocaleDateString('vi-VN')})
+                            </span>
+                          )
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-500/15 text-[var(--text-muted)] border border-slate-500/20 text-[10px]">
+                            Chưa kích hoạt
+                          </span>
+                        )}
+                      </td>
+
                       <td className="px-4 py-3.5 text-[var(--text-muted)] font-medium">
                         {new Date(u.created_at).toLocaleDateString('vi-VN')}
                       </td>
 
                       <td className="px-4 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* Nút Gia Hạn GreenSmartOne */}
+                          <button
+                            onClick={() => {
+                              setSelectedUserForRenew(u);
+                              setCustomRenewDate(u.greensmartone_expires_at ? u.greensmartone_expires_at.slice(0, 10) : new Date(Date.now() + 30*86400000).toISOString().slice(0, 10));
+                            }}
+                            title="Gia hạn gói GreenSmartOne"
+                            className="p-1.5 rounded-lg border border-primary-500/40 text-primary-400 hover:bg-primary-500/15 transition-all flex items-center gap-1 text-[11px] font-bold"
+                          >
+                            <Zap className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Gia Hạn</span>
+                          </button>
+
                           {u.id !== profile.id ? (
                             <>
                               <button
@@ -448,6 +524,128 @@ export default function AdminPage() {
               </table>
             </div>
           </div>
+
+          {/* Modal Gia Hạn GreenSmartOne */}
+          {selectedUserForRenew && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+              <div className="card w-full max-w-lg p-6 border border-emerald-500/30 shadow-2xl relative space-y-5 bg-[var(--bg-card)]">
+                {/* Nút Đóng */}
+                <button
+                  onClick={() => setSelectedUserForRenew(null)}
+                  className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                {/* Tiêu Đề */}
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-[var(--text-main)]">Gia Hạn Gói GreenSmartOne</h3>
+                    <p className="text-xs text-[var(--text-muted)] font-mono">
+                      {selectedUserForRenew.full_name || 'Thành viên'} ({selectedUserForRenew.email})
+                    </p>
+                  </div>
+                </div>
+
+                {/* Trạng Thái Hiện Tại */}
+                <div className="p-3.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-color)] flex items-center justify-between text-xs">
+                  <span className="text-[var(--text-muted)]">Hạn sử dụng hiện tại:</span>
+                  <span className="font-bold font-mono text-emerald-400">
+                    {selectedUserForRenew.greensmartone_expires_at
+                      ? new Date(selectedUserForRenew.greensmartone_expires_at).toLocaleDateString('vi-VN')
+                      : 'Chưa cấp hạn'}
+                  </span>
+                </div>
+
+                {/* Phím Nhanh Chọn Thời Hạn */}
+                <div>
+                  <label className="block text-xs font-bold text-[var(--text-main)] mb-2">
+                    Chọn nhanh thời hạn cộng thêm:
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleApplyRenewDuration(30)}
+                      className="p-2.5 rounded-xl border border-[var(--border-color)] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-xs font-bold text-[var(--text-main)] transition-all"
+                    >
+                      +1 Tháng
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyRenewDuration(90)}
+                      className="p-2.5 rounded-xl border border-[var(--border-color)] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-xs font-bold text-[var(--text-main)] transition-all"
+                    >
+                      +3 Tháng
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyRenewDuration(180)}
+                      className="p-2.5 rounded-xl border border-[var(--border-color)] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-xs font-bold text-[var(--text-main)] transition-all"
+                    >
+                      +6 Tháng
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleApplyRenewDuration(365)}
+                      className="p-2.5 rounded-xl border border-[var(--border-color)] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-xs font-bold text-[var(--text-main)] transition-all"
+                    >
+                      +1 Năm
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSetLifetime}
+                      className="p-2.5 rounded-xl border border-cyan-500/40 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 text-xs font-extrabold transition-all"
+                    >
+                      ⚡ Vĩnh Viễn
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCustomRenewDate('')}
+                      className="p-2.5 rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs font-bold transition-all"
+                    >
+                      Khóa / Xóa
+                    </button>
+                  </div>
+                </div>
+
+                {/* Chọn Ngày Cụ Thể */}
+                <div>
+                  <label className="block text-xs font-bold text-[var(--text-main)] mb-1.5">
+                    Hoặc nhập ngày hết hạn chính xác:
+                  </label>
+                  <input
+                    type="date"
+                    value={customRenewDate}
+                    onChange={e => setCustomRenewDate(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-color)] text-xs font-mono font-bold text-[var(--text-main)] focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                {/* Nút Thao Tác */}
+                <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[var(--border-color)]">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedUserForRenew(null)}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-[var(--text-muted)] hover:bg-[var(--bg-subtle)] transition-colors"
+                  >
+                    Hủy Bỏ
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingRenew}
+                    onClick={() => handleSaveRenew(customRenewDate ? `${customRenewDate}T23:59:59.000Z` : null)}
+                    className="px-5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25 hover:brightness-110 transition-all flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {savingRenew && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>Lưu Kích Hoạt</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
