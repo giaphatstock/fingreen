@@ -5,11 +5,12 @@ import { useTheme } from '../../contexts/ThemeContext'
 import toast from 'react-hot-toast'
 import {
   FileText, Handshake, Shield, LogOut, Menu, X, ChevronDown,
-  User, Newspaper, Palette, LogIn, ExternalLink, Sparkles, Bot
+  User, Newspaper, Palette, LogIn, ExternalLink, Sparkles, Bot, Zap
 } from 'lucide-react'
 
 const NAV_ITEMS = [
   { path: '/', icon: Newspaper, label: 'Tin Tức & Phân Tích' },
+  { path: '/greensmartone', icon: Zap, label: 'GreenSmartOne', badge: 'PRO' },
   { path: '/hop-tac', icon: Handshake, label: 'Hợp Tác FinGreen' },
   { path: '/ai', icon: Bot, label: 'FinGreen AI', requireAuth: true },
 ]

@@ -13,6 +13,7 @@ import PartnerPage from './pages/PartnerPage'
 import PostDetailPage from './pages/PostDetailPage'
 import ProfilePage from './pages/ProfilePage'
 import AIAssistantPage from './pages/AIAssistantPage'
+import GreenSmartOnePage from './pages/GreenSmartOnePage'
 import './index.css'
 
 function ProtectedRoute({ children }) {
@@ -63,6 +64,8 @@ function AppRoutes() {
         <Layout>
           <Routes>
             <Route path="/" element={<NewsPage />} />
+            <Route path="/greensmartone" element={<GreenSmartOnePage />} />
+            <Route path="/green-smart-one" element={<GreenSmartOnePage />} />
             <Route path="/bai-viet/:id" element={<PostDetailPage />} />
             <Route path="/hop-tac" element={<PartnerPage />} />
             
