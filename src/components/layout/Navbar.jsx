@@ -95,7 +95,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Navigation Links */}
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-1 flex-shrink-0">
             {allNav.map(item => {
               const active = isActive(item.path)
               const handleClick = (e) => {
@@ -110,16 +110,16 @@ export default function Navbar() {
                   key={item.path}
                   to={item.path}
                   onClick={handleClick}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all duration-150 ${
+                  className={`flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap flex-shrink-0 transition-all duration-150 ${
                     active
                       ? 'bg-primary-500/15 text-primary-400 border border-primary-500/30 shadow-sm'
                       : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)]'
                   }`}
                 >
-                  <item.icon className={`w-4 h-4 ${active ? 'text-primary-400' : 'text-[var(--text-muted)]'}`} />
-                  <span>{item.label}</span>
+                  <item.icon className={`w-3.5 h-3.5 flex-shrink-0 ${active ? 'text-primary-400' : 'text-[var(--text-muted)]'}`} />
+                  <span className="whitespace-nowrap">{item.label}</span>
                   {item.badge && (
-                    <span className="px-1.5 py-0.2 text-[9px] font-extrabold rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    <span className="px-1.5 py-0.2 text-[9px] font-extrabold rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
                       {item.badge}
                     </span>
                   )}
