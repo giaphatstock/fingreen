@@ -246,8 +246,17 @@ export default function BacktestPerformancePanel({
                           {t.type}
                         </span>
                       </td>
-                      <td className="px-3 py-2.5 text-[var(--text-main)] font-sans text-[11px]">
-                        {t.time}
+                      <td className="px-3 py-2 text-[var(--text-main)] font-mono text-[11px]">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-emerald-400 font-bold flex items-center gap-1.5">
+                            <span className="text-[9px] uppercase px-1 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-sans font-bold">Vào</span>
+                            {t.entryTime || t.time}
+                          </span>
+                          <span className="text-[var(--text-muted)] text-[10px] flex items-center gap-1.5">
+                            <span className="text-[9px] uppercase px-1 rounded bg-white/5 text-[var(--text-muted)] border border-white/10 font-sans font-semibold">Thoát</span>
+                            {t.exitTime || t.time}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-3 py-2.5 text-right font-bold text-[var(--text-main)]">
                         {t.entryPrice.toFixed(2)}
@@ -256,8 +265,8 @@ export default function BacktestPerformancePanel({
                         {t.exitPrice.toFixed(2)}
                       </td>
                       <td className="px-3 py-2.5 font-sans text-[11px]">
-                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/5 text-[var(--text-muted)] border border-white/5">
-                          {t.reason === 'SL' ? 'Cắt Lỗ (SL)' : 'Đổi Màu Nến (ColorFlip)'}
+                        <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-white/5 text-[var(--text-muted)] border border-white/10">
+                          {t.reason}
                         </span>
                       </td>
                       <td className={`px-3 py-2.5 text-right font-bold ${isWin ? 'text-emerald-400' : 'text-rose-400'}`}>

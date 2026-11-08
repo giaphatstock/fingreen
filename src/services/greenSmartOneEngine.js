@@ -226,6 +226,8 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
 
   const cWins = new Array(nCand).fill(0);
   const cLosses = new Array(nCand).fill(0);
+  const cTotalWins = new Array(nCand).fill(0);
+  const cTotalLosses = new Array(nCand).fill(0);
   const cPendDir = new Array(nCand).fill(0);
   const cPendBar = new Array(nCand).fill(0);
   const cPendPrice = new Array(nCand).fill(0.0);
@@ -294,8 +296,10 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
             const isWin = (pdir === 1 && curClose > ep) || (pdir === -1 && curClose < ep);
             if (isWin) {
               cWins[i]++;
+              cTotalWins[i]++;
             } else {
               cLosses[i]++;
+              cTotalLosses[i]++;
             }
             cPendDir[i] = 0;
             cPendBar[i] = 0;
@@ -673,13 +677,19 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
   let pendLongClose = null;
   let pendLongLow = null;
   let pendLongBar = null;
+  let pendLongPassedVong1 = false;
 
   let pendShortClose = null;
   let pendShortHigh = null;
   let pendShortBar = null;
+  let pendShortPassedVong1 = false;
 
   let activeSL_Long = null;
   let activeSL_Short = null;
+
+  // Giám sát kim cương đối nghịch để chốt lời khi đang giữ vị thế
+  let activeExitDiamondDnClose = null;
+  let activeExitDiamondUpClose = null;
 
   let currentPosition = 0; // 1 = long, -1 = short, 0 = none
   let currentEntryPrice = 0;
@@ -690,135 +700,187 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
     const prevClose = i > 0 ? closes[i - 1] : curClose;
     const curLow = lows[i];
     const curHigh = highs[i];
-    const isBullBar = direction[i] === -1;
+    const isBullBar = direction[i] === -1; // Vàng chanh
+    const isBearBar = direction[i] === 1;  // Đỏ thắm
 
-    // Ghi nhớ nến kim cương
-    if (diamondUp[i]) {
+    // Tín hiệu kim cương đảo chiều (gồm cả Kim Cương Cấp 1 ◆ và Kim Cương Cấp 2 ❖)
+    const isDiamondUp = diamondUp[i] || qqeLong[i];
+    const isDiamondDn = diamondDown[i] || qqeShort[i];
+
+    // Ghi nhớ nến kim cương A
+    if (isDiamondUp) {
       pendLongClose = curClose;
       pendLongLow = curLow;
       pendLongBar = i;
+      pendLongPassedVong1 = false;
     }
-    if (diamondDown[i]) {
+    if (isDiamondDn) {
       pendShortClose = curClose;
       pendShortHigh = curHigh;
       pendShortBar = i;
+      pendShortPassedVong1 = false;
     }
 
-    // Hủy setup hết hạn
-    if (pendLongBar !== null && (i - pendLongBar) > config.validBars) {
+    // Khi đang giữ vị thế, ghi nhận kim cương ngược chiều
+    if (currentPosition > 0 && isDiamondDn) {
+      activeExitDiamondDnClose = curClose;
+    }
+    if (currentPosition < 0 && isDiamondUp) {
+      activeExitDiamondUpClose = curClose;
+    }
+
+    // Hủy setup hết hạn (quá 15 nến)
+    if (pendLongBar !== null && (i - pendLongBar) > (config.validBars || 15)) {
       pendLongBar = null;
       pendLongClose = null;
       pendLongLow = null;
+      pendLongPassedVong1 = false;
     }
-    if (pendShortBar !== null && (i - pendShortBar) > config.validBars) {
+    if (pendShortBar !== null && (i - pendShortBar) > (config.validBars || 15)) {
       pendShortBar = null;
       pendShortClose = null;
       pendShortHigh = null;
+      pendShortPassedVong1 = false;
     }
 
-    const longReady = pendLongBar !== null && (i - pendLongBar) >= config.waitBars;
-    const shortReady = pendShortBar !== null && (i - pendShortBar) >= config.waitBars;
-
-    // Vào lệnh khi nến sau đóng trên/dưới nến kim cương A và màu nến SuperTrend ủng hộ
-    const longTrigger = longReady && currentPosition === 0 && curClose > pendLongClose && isBullBar;
-    const shortTrigger = shortReady && currentPosition === 0 && curClose < pendShortClose && !isBullBar;
-
-    // Thoát vị thế (Exit & SL)
+    // 1. Quản trị vị thế đang mở (Cắt lỗ & Chốt lời)
     if (currentPosition > 0) {
-      // SL: Nếu giá chạm hoặc nến đóng dưới đáy nến kim cương A
-      if (config.useSL && activeSL_Long !== null && (curLow <= activeSL_Long || curClose < activeSL_Long)) {
+      // Cắt lỗ: nếu nến sau đóng dưới nến kim cương (giá thấp nhất nến kim cương nãy)
+      if (curClose < activeSL_Long || curLow <= activeSL_Long) {
+        const exitPr = curClose < activeSL_Long ? curClose : activeSL_Long;
         trades.push({
           type: 'Long',
           entryBar: currentEntryBar,
+          entryTime: bars[currentEntryBar]?.time || bars[i].time,
           entryPrice: currentEntryPrice,
           exitBar: i,
-          exitPrice: Math.min(curClose, activeSL_Long),
-          reason: 'SL',
-          pnlPct: ((Math.min(curClose, activeSL_Long) - currentEntryPrice) / currentEntryPrice) * 100,
+          exitTime: bars[i].time,
+          exitPrice: exitPr,
+          reason: 'Cắt Lỗ (SL)',
+          pnlPct: ((exitPr - currentEntryPrice) / currentEntryPrice) * 100,
           time: bars[i].time
         });
         currentPosition = 0;
         activeSL_Long = null;
-      } else if (!isBullBar) {
-        // ColorFlip
+        activeExitDiamondDnClose = null;
+      }
+      // Chốt lời: khi nến chuyển màu đỏ HOẶC có kim cương đảo chiều xuống rồi đóng dưới kim cương đảo chiều luôn
+      else if (isBearBar || (activeExitDiamondDnClose !== null && curClose < activeExitDiamondDnClose)) {
+        const reason = isBearBar ? 'Đổi Màu Nến (ColorFlip)' : 'Đảo Chiều Kim Cương';
         trades.push({
           type: 'Long',
           entryBar: currentEntryBar,
+          entryTime: bars[currentEntryBar]?.time || bars[i].time,
           entryPrice: currentEntryPrice,
           exitBar: i,
+          exitTime: bars[i].time,
           exitPrice: curClose,
-          reason: 'ColorFlip',
+          reason: reason,
           pnlPct: ((curClose - currentEntryPrice) / currentEntryPrice) * 100,
           time: bars[i].time
         });
         currentPosition = 0;
         activeSL_Long = null;
+        activeExitDiamondDnClose = null;
       }
     } else if (currentPosition < 0) {
-      // SL: Nếu giá chạm hoặc nến đóng trên đỉnh nến kim cương A
-      if (config.useSL && activeSL_Short !== null && (curHigh >= activeSL_Short || curClose > activeSL_Short)) {
+      // Cắt lỗ: nếu nến sau đóng trên nến kim cương (giá cao nhất nến kim cương nãy)
+      if (curClose > activeSL_Short || curHigh >= activeSL_Short) {
+        const exitPr = curClose > activeSL_Short ? curClose : activeSL_Short;
         trades.push({
           type: 'Short',
           entryBar: currentEntryBar,
+          entryTime: bars[currentEntryBar]?.time || bars[i].time,
           entryPrice: currentEntryPrice,
           exitBar: i,
-          exitPrice: Math.max(curClose, activeSL_Short),
-          reason: 'SL',
-          pnlPct: ((currentEntryPrice - Math.max(curClose, activeSL_Short)) / currentEntryPrice) * 100,
+          exitTime: bars[i].time,
+          exitPrice: exitPr,
+          reason: 'Cắt Lỗ (SL)',
+          pnlPct: ((currentEntryPrice - exitPr) / currentEntryPrice) * 100,
           time: bars[i].time
         });
         currentPosition = 0;
         activeSL_Short = null;
-      } else if (isBullBar) {
-        // ColorFlip
+        activeExitDiamondUpClose = null;
+      }
+      // Chốt lời: khi nến chuyển màu vàng HOẶC có kim cương đảo chiều lên rồi đóng trên kim cương đảo chiều luôn
+      else if (isBullBar || (activeExitDiamondUpClose !== null && curClose > activeExitDiamondUpClose)) {
+        const reason = isBullBar ? 'Đổi Màu Nến (ColorFlip)' : 'Đảo Chiều Kim Cương';
         trades.push({
           type: 'Short',
           entryBar: currentEntryBar,
+          entryTime: bars[currentEntryBar]?.time || bars[i].time,
           entryPrice: currentEntryPrice,
           exitBar: i,
+          exitTime: bars[i].time,
           exitPrice: curClose,
-          reason: 'ColorFlip',
+          reason: reason,
           pnlPct: ((currentEntryPrice - curClose) / currentEntryPrice) * 100,
           time: bars[i].time
         });
         currentPosition = 0;
         activeSL_Short = null;
+        activeExitDiamondUpClose = null;
       }
     }
 
-    // Vào lệnh
-    if (isLicActive && config.enLong && longTrigger) {
-      currentPosition = 1;
-      currentEntryPrice = curClose;
-      currentEntryBar = i;
-      activeSL_Long = pendLongLow;
-      signals.push({
-        barIndex: i,
-        time: bars[i].time,
-        type: 'BUY',
-        text: 'MUA (Diamond L)',
-        price: curClose,
-        sl: pendLongLow
-      });
-      pendLongBar = null;
-      pendLongClose = null;
-      pendLongLow = null;
-    } else if (isLicActive && config.enShort && shortTrigger) {
-      currentPosition = -1;
-      currentEntryPrice = curClose;
-      currentEntryBar = i;
-      activeSL_Short = pendShortHigh;
-      signals.push({
-        barIndex: i,
-        time: bars[i].time,
-        type: 'SELL',
-        text: 'BÁN (Diamond S)',
-        price: curClose,
-        sl: pendShortHigh
-      });
-      pendShortBar = null;
-      pendShortClose = null;
-      pendShortHigh = null;
+    // 2. Xét điều kiện Vào Lệnh (Entry) nếu đang không giữ lệnh
+    if (isLicActive && currentPosition === 0) {
+      // CHECK LONG (Kim Cương Đảo Chiều Lên)
+      if (config.enLong && pendLongBar !== null && i > pendLongBar) {
+        // Vòng 1: xem coi mấy cây sau có đóng cao hơn nến kim cương không
+        if (curClose > pendLongClose) {
+          pendLongPassedVong1 = true;
+        }
+        // Vòng 2: xem coi nến có đang vàng không nếu có mới entry
+        if (pendLongPassedVong1 && isBullBar) {
+          currentPosition = 1;
+          currentEntryPrice = curClose;
+          currentEntryBar = i;
+          activeSL_Long = pendLongLow;
+          activeExitDiamondDnClose = null;
+          signals.push({
+            barIndex: i,
+            time: bars[i].time,
+            type: 'BUY',
+            text: 'MUA (Long)',
+            price: curClose,
+            sl: pendLongLow
+          });
+          pendLongBar = null;
+          pendLongClose = null;
+          pendLongLow = null;
+          pendLongPassedVong1 = false;
+        }
+      }
+
+      // CHECK SHORT (Kim Cương Đảo Chiều Xuống)
+      if (config.enShort && pendShortBar !== null && i > pendShortBar && currentPosition === 0) {
+        // Vòng 1: xem coi mấy cây sau có đóng dưới hơn nến kim cương không
+        if (curClose < pendShortClose) {
+          pendShortPassedVong1 = true;
+        }
+        // Vòng 2: xem coi nến có đang đỏ không nếu có mới entry
+        if (pendShortPassedVong1 && isBearBar) {
+          currentPosition = -1;
+          currentEntryPrice = curClose;
+          currentEntryBar = i;
+          activeSL_Short = pendShortHigh;
+          activeExitDiamondUpClose = null;
+          signals.push({
+            barIndex: i,
+            time: bars[i].time,
+            type: 'SELL',
+            text: 'BÁN (Short)',
+            price: curClose,
+            sl: pendShortHigh
+          });
+          pendShortBar = null;
+          pendShortClose = null;
+          pendShortHigh = null;
+          pendShortPassedVong1 = false;
+        }
+      }
     }
   }
 
@@ -836,8 +898,8 @@ export function computeGreenSmartOne(bars, userConfig = {}) {
 
   // Bảng Candidate Sensitivities cho HUD table
   const candSensTable = candSens.map((sens, idx) => {
-    const w = cWins[idx];
-    const l = cLosses[idx];
+    const w = (cTotalWins[idx] > 0 || cTotalLosses[idx] > 0) ? cTotalWins[idx] : cWins[idx];
+    const l = (cTotalWins[idx] > 0 || cTotalLosses[idx] > 0) ? cTotalLosses[idx] : cLosses[idx];
     const tot = w + l;
     const wr = tot > 0 ? (w / tot) * 100 : 0;
     const sc = tot > 0 ? (w / tot) * Math.sqrt(tot) : 0;
