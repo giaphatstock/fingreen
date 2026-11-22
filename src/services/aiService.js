@@ -404,7 +404,7 @@ ${s.bctc ? `- Số liệu BCTC chi tiết: ${s.bctc}\n` : ''}- Lãnh đạo ch�
     }
   }
 
-  const marketContext = getDNSEContextForPrompt(prompt)
+  const marketContext = await getDNSEContextForPrompt(prompt)
   const systemPrompt = buildSystemPrompt(stockContext, marketContext, intent)
 
   return { stockContext, marketContext, systemPrompt, targetSymbol, intent }
@@ -492,29 +492,43 @@ export async function sendChatMessage({ messages, prompt, mode }) {
 
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      
+      const requestPayload = {
+        system_instruction: {
+          parts: [{ text: systemPrompt }]
         },
-        body: JSON.stringify({
-          system_instruction: {
-            parts: [{ text: systemPrompt }]
-          },
-          contents,
-          generationConfig: {
-            temperature: currentMode === 'turbo' ? 0.6 : 0.3,
-            maxOutputTokens: 2500,
-          }
-        }),
+        contents,
+        tools: [{ google_search: {} }],
+        generationConfig: {
+          temperature: currentMode === 'turbo' ? 0.6 : 0.3,
+          maxOutputTokens: 2500,
+        }
+      }
+
+      let response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestPayload),
         signal: controller.signal
       })
+
+      // Nếu model không hỗ trợ google_search (400), tự động fallback gọi không kèm tools
+      if (!response.ok && response.status === 400) {
+        delete requestPayload.tools
+        response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestPayload),
+          signal: controller.signal
+        })
+      }
 
       clearTimeout(timeoutId)
 
       if (response.ok) {
         const data = await response.json()
-        const rawContent = data?.candidates?.[0]?.content?.parts?.[0]?.text
+        const parts = data?.candidates?.[0]?.content?.parts || []
+        const rawContent = parts.map(p => p.text || '').join('')
         if (rawContent && rawContent.trim()) {
           const cleaned = cleanAIOutput(rawContent)
           if (cleaned.length > 30) return cleaned
@@ -554,23 +568,36 @@ export async function streamChatMessage({ messages, prompt, mode, onChunk, onCom
 
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?key=${apiKey}&alt=sse`
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      
+      const streamPayload = {
+        system_instruction: {
+          parts: [{ text: systemPrompt }]
         },
-        body: JSON.stringify({
-          system_instruction: {
-            parts: [{ text: systemPrompt }]
-          },
-          contents,
-          generationConfig: {
-            temperature: currentMode === 'turbo' ? 0.6 : 0.3,
-            maxOutputTokens: 2500,
-          }
-        }),
+        contents,
+        tools: [{ google_search: {} }],
+        generationConfig: {
+          temperature: currentMode === 'turbo' ? 0.6 : 0.3,
+          maxOutputTokens: 2500,
+        }
+      }
+
+      let response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(streamPayload),
         signal: controller.signal
       })
+
+      // Fallback không dùng tools nếu model trả lỗi 400
+      if (!response.ok && response.status === 400) {
+        delete streamPayload.tools
+        response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(streamPayload),
+          signal: controller.signal
+        })
+      }
 
       clearTimeout(timeoutId)
 
@@ -602,10 +629,12 @@ export async function streamChatMessage({ messages, prompt, mode, onChunk, onCom
             }
             try {
               const parsed = JSON.parse(dataStr)
-              const chunkText = parsed?.candidates?.[0]?.content?.parts?.[0]?.text
-              if (chunkText) {
-                accumulated += chunkText
-                if (onChunk) onChunk(accumulated)
+              const parts = parsed?.candidates?.[0]?.content?.parts || []
+              for (const p of parts) {
+                if (p.text) {
+                  accumulated += p.text
+                  if (onChunk) onChunk(accumulated)
+                }
               }
             } catch (e) {}
           }

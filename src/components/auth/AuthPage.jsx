@@ -29,9 +29,9 @@ export default function AuthPage() {
   const [captchaInput, setCaptchaInput] = useState('')
   const [isCaptchaValid, setIsCaptchaValid] = useState(false)
 
-  // State cho xác thực mã OTP 6 số
+  // State cho xác thực mã OTP 6-8 số
   const [pendingEmail, setPendingEmail] = useState('')
-  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', ''])
+  const [otpDigits, setOtpDigits] = useState(['', '', '', '', '', '', '', ''])
   const [otpCooldown, setOtpCooldown] = useState(0)
   const [resendLoading, setResendLoading] = useState(false)
   const [verifyLoading, setVerifyLoading] = useState(false)
@@ -41,7 +41,24 @@ export default function AuthPage() {
     if (searchParams.get('mode') === 'register') {
       setMode('register')
     }
-  }, [searchParams])
+    // Xử lý tự động khi người dùng bấm vào link xác thực trong email
+    const tokenHash = searchParams.get('token_hash')
+    const type = searchParams.get('type') || 'signup'
+    if (tokenHash) {
+      setLoading(true)
+      supabase.auth.verifyOtp({ token_hash: tokenHash, type })
+        .then(({ data, error }) => {
+          setLoading(false)
+          if (!error) {
+            toast.success('Xác thực tài khoản thành công!')
+            navigate(redirectPath)
+          } else {
+            toast.error(error.message || 'Liên kết xác thực đã hết hạn hoặc không hợp lệ')
+          }
+        })
+        .catch(() => setLoading(false))
+    }
+  }, [searchParams, navigate, redirectPath])
 
   // Lắng nghe sự kiện đăng nhập tự động khi người dùng bấm vào link trong email
   useEffect(() => {
@@ -178,10 +195,10 @@ export default function AuthPage() {
         // Nếu dự án đã bật Email Confirmation (yêu cầu xác thực OTP):
         if (!data?.session) {
           setPendingEmail(targetEmail)
-          setOtpDigits(['', '', '', '', '', ''])
+          setOtpDigits(['', '', '', '', '', '', '', ''])
           setMode('otp')
           startOtpCooldown()
-          toast.success('Mã xác thực 6 số đã được gửi đến email của bạn!')
+          toast.success('Mã xác thực đã được gửi đến email của bạn!')
         } else {
           // Trường hợp Supabase chưa bật xác thực bắt buộc
           toast.success('Đăng ký và kích hoạt tài khoản thành công!')
@@ -194,7 +211,7 @@ export default function AuthPage() {
     }
   }
 
-  // Xử lý thay đổi từng ô số OTP
+  // Xử lý thay đổi từng ô số OTP (Hỗ trợ 6 đến 8 ký tự)
   const handleOtpChange = (index, value) => {
     // Chỉ chấp nhận số hoặc chữ cái
     const cleaned = value.replace(/[^a-zA-Z0-9]/g, '')
@@ -205,7 +222,7 @@ export default function AuthPage() {
     setOtpDigits(newDigits)
 
     // Tự động nhảy sang ô tiếp theo nếu đã nhập
-    if (cleaned && index < 5) {
+    if (cleaned && index < otpDigits.length - 1) {
       otpRefs.current[index + 1]?.focus()
     }
   }
@@ -217,20 +234,20 @@ export default function AuthPage() {
     }
   }
 
-  // Xử lý khi người dùng dán (Paste) cả chuỗi 6 ký tự
+  // Xử lý khi người dùng dán (Paste) cả chuỗi mã (từ 6 đến 8 ký tự)
   const handleOtpPaste = (e) => {
     e.preventDefault()
     const pasted = e.clipboardData.getData('text').trim().replace(/[^a-zA-Z0-9]/g, '')
     if (!pasted) return
 
-    const newDigits = [...otpDigits]
-    for (let i = 0; i < 6; i++) {
+    const newDigits = Array(8).fill('')
+    for (let i = 0; i < Math.min(pasted.length, 8); i++) {
       newDigits[i] = pasted[i] || ''
     }
     setOtpDigits(newDigits)
 
     // Focus vào ô cuối cùng hoặc ô trống tiếp theo
-    const nextIdx = Math.min(pasted.length, 5)
+    const nextIdx = Math.min(pasted.length, 7)
     otpRefs.current[nextIdx]?.focus()
   }
 
@@ -239,7 +256,7 @@ export default function AuthPage() {
     e?.preventDefault()
     const token = otpDigits.join('').trim()
     if (token.length < 6) {
-      toast.error('Vui lòng nhập đủ 6 ký tự mã xác thực')
+      toast.error('Vui lòng nhập mã xác thực (từ 6 đến 8 ký tự)')
       return
     }
 
@@ -507,14 +524,14 @@ export default function AuthPage() {
               )}
             </>
           ) : (
-            /* Màn hình Nhập Mã Xác Thực OTP 6 Số */
+            /* Màn hình Nhập Mã Xác Thực OTP (Hỗ trợ 6 đến 8 ký tự) */
             <div className="space-y-5 animate-fade-in">
               <div className="text-center space-y-2">
                 <div className="w-12 h-12 rounded-2xl bg-primary-500/20 border border-primary-500/40 text-primary-400 mx-auto flex items-center justify-center shadow-inner">
                   <KeyRound className="w-6 h-6 animate-pulse" />
                 </div>
                 <h3 className="text-base sm:text-lg font-extrabold text-[var(--text-main)]">
-                  Nhập Mã Xác Thực 6 Số
+                  Nhập Mã Xác Thực (6 - 8 Ký Tự)
                 </h3>
                 <p className="text-xs text-[var(--text-muted)] leading-relaxed">
                   Mã OTP kích hoạt tài khoản đã được gửi đến:
@@ -523,13 +540,13 @@ export default function AuthPage() {
                   {pendingEmail}
                 </div>
                 <p className="text-[11px] text-[var(--text-muted)]/80 italic">
-                  (Vui lòng kiểm tra kỹ cả mục Hộp thư đến và mục Thư rác / Spam)
+                  (Nhập hoặc dán mã xác thực 6 - 8 ký tự gửi về email, kiểm tra cả mục Thư rác / Spam)
                 </p>
               </div>
 
-              {/* 6 Ô Nhập Mã OTP */}
+              {/* 8 Ô Nhập Mã OTP (Hỗ trợ cả mã 6 số và 8 ký tự) */}
               <form onSubmit={handleVerifyOtp} className="space-y-5">
-                <div className="flex items-center justify-center gap-1.5 sm:gap-2.5" onPaste={handleOtpPaste}>
+                <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap" onPaste={handleOtpPaste}>
                   {otpDigits.map((digit, idx) => (
                     <input
                       key={idx}
@@ -541,7 +558,7 @@ export default function AuthPage() {
                       onChange={e => handleOtpChange(idx, e.target.value)}
                       onKeyDown={e => handleOtpKeyDown(idx, e)}
                       autoFocus={idx === 0}
-                      className="w-10 sm:w-12 h-12 sm:h-14 text-center text-lg sm:text-xl font-extrabold font-mono rounded-xl sm:rounded-2xl bg-[var(--bg-subtle)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 transition-all shadow-inner uppercase"
+                      className="w-8 sm:w-10 h-11 sm:h-13 text-center text-base sm:text-lg font-extrabold font-mono rounded-lg sm:rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-color)] text-[var(--text-main)] focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20 transition-all shadow-inner uppercase"
                     />
                   ))}
                 </div>
@@ -549,7 +566,7 @@ export default function AuthPage() {
                 {/* Nút Xác Nhận Kích Hoạt */}
                 <button
                   type="submit"
-                  disabled={verifyLoading || otpDigits.join('').length < 6}
+                  disabled={verifyLoading || otpDigits.join('').trim().length < 6}
                   className="btn-primary w-full flex items-center justify-center gap-2 text-xs sm:text-sm py-3 font-bold shadow-lg shadow-primary-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {verifyLoading ? (
@@ -577,7 +594,7 @@ export default function AuthPage() {
                     type="button"
                     onClick={() => {
                       setMode('register')
-                      setOtpDigits(['', '', '', '', '', ''])
+                      setOtpDigits(['', '', '', '', '', '', '', ''])
                     }}
                     className="text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
                   >

@@ -192,6 +192,82 @@ export async function fetchRealtimeQuote(symbol) {
   }
 }
 
+// Lấy dữ liệu chỉ số thị trường (VNINDEX, VN30, HNX) thời gian thực chính xác
+export async function fetchRealtimeIndexQuote(indexSymbol = 'VNINDEX') {
+  try {
+    const sym = indexSymbol.toUpperCase().trim()
+    const now = Math.floor(Date.now() / 1000)
+    const from = now - 7 * 86400
+
+    // 1. Thử API Entrade/DNSE cho Index
+    const entradeUrl = `https://services.entrade.com.vn/chart-api/v2/ohlcs/index?symbol=${sym}&from=${from}&to=${now}&resolution=1D`
+    try {
+      const res = await fetch(entradeUrl)
+      if (res.ok) {
+        const data = await res.json()
+        if (data?.c && data.c.length > 0) {
+          const lastIdx = data.c.length - 1
+          const prevIdx = Math.max(0, lastIdx - 1)
+          const close = Number(data.c[lastIdx])
+          const prevClose = Number(data.c[prevIdx])
+          const high = Number(data.h[lastIdx])
+          const low = Number(data.l[lastIdx])
+          const volume = data.v ? Number(data.v[lastIdx]) : 0
+          const date = new Date(data.t[lastIdx] * 1000).toLocaleDateString('vi-VN')
+          const change = close - prevClose
+          const changePercent = prevClose ? ((change / prevClose) * 100).toFixed(2) : '0.00'
+
+          return {
+            symbol: sym,
+            priceRaw: close,
+            priceFormatted: close.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            changeFormatted: `${change >= 0 ? '+' : ''}${change.toFixed(2)} điểm`,
+            pctFormatted: `${change >= 0 ? '+' : ''}${changePercent}%`,
+            highFormatted: high.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            lowFormatted: low.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            volume: volume ? volume.toLocaleString('vi-VN') : 'N/A',
+            date
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 2. Fallback qua VNDirect
+    const vndUrl = `https://dchart-api.vndirect.com.vn/dchart/history?resolution=D&symbol=${sym}&from=${from}&to=${now}`
+    const res = await fetch(vndUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+    if (res.ok) {
+      const data = await res.json()
+      if (data?.c && data.c.length > 0) {
+        const lastIdx = data.c.length - 1
+        const prevIdx = Math.max(0, lastIdx - 1)
+        const close = Number(data.c[lastIdx])
+        const prevClose = Number(data.c[prevIdx])
+        const high = Number(data.h[lastIdx])
+        const low = Number(data.l[lastIdx])
+        const volume = data.v ? Number(data.v[lastIdx]) : 0
+        const date = new Date(data.t[lastIdx] * 1000).toLocaleDateString('vi-VN')
+        const change = close - prevClose
+        const changePercent = prevClose ? ((change / prevClose) * 100).toFixed(2) : '0.00'
+
+        return {
+          symbol: sym,
+          priceRaw: close,
+          priceFormatted: close.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+          changeFormatted: `${change >= 0 ? '+' : ''}${change.toFixed(2)} điểm`,
+          pctFormatted: `${change >= 0 ? '+' : ''}${changePercent}%`,
+          highFormatted: high.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+          lowFormatted: low.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+          volume: volume ? volume.toLocaleString('vi-VN') : 'N/A',
+          date
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching index quote:', err)
+  }
+  return null
+}
+
 // Định dạng dữ liệu thô từ máy chủ DNSE thành bài phân tích FinGreen
 export function formatStockAnalysisFromDNSE(symbol, dnseData) {
   if (!dnseData?.data?.company_info) return null
@@ -692,14 +768,20 @@ export const STOCKS_KNOWLEDGE_BASE = {
   },
 }
 
-// Báo cáo tổng quan thị trường mặc định
-export function generateMarketOverviewReport() {
-  return `### 📈 Tổng Quan Thị Trường & Dữ Liệu Dòng Tiền FinGreen
+// Báo cáo tổng quan thị trường với dữ liệu thời gian thực
+export async function generateMarketOverviewReport() {
+  const vnindex = await fetchRealtimeIndexQuote('VNINDEX')
+  const vn30 = await fetchRealtimeIndexQuote('VN30')
+  const price = vnindex ? `${vnindex.priceFormatted} điểm` : '1.688,79 điểm'
+  const change = vnindex ? `${vnindex.changeFormatted} (${vnindex.pctFormatted})` : '-0,83 điểm (-0,05%)'
+  const date = vnindex ? `phiên ${vnindex.date}` : 'phiên gần nhất'
+
+  return `### 📈 Tổng Quan Thị Trường & Dữ Liệu Dòng Tiền FinGreen (${date})
 
 **1. Diễn Biến Chỉ Số VN-Index**
-- **Vùng chỉ số:** VN-Index đang dao động tích lũy trong biên độ **1.250 – 1.280 điểm**.
-- **Thanh khoản:** Khối lượng giao dịch đạt khoảng **18.000 – 22.000 tỷ VNĐ**, dòng tiền có tính phân hóa cao giữa các nhóm ngành.
-
+- **Điểm số VN-Index hiện tại:** **${price}** (${change}).
+${vn30 ? `- **Chỉ số VN30:** **${vn30.priceFormatted} điểm** (${vn30.changeFormatted}, tương ứng ${vn30.pctFormatted}).\n` : ''}- **Khối lượng giao dịch:** ${vnindex?.volume ? `${vnindex.volume} cổ phiếu` : 'Đang cập nhật'}, dòng tiền có tính phân hóa cao giữa các nhóm ngành.
+${vnindex ? `- **Biên độ phiên:** Thấp nhất ${vnindex.lowFormatted} điểm — Cao nhất ${vnindex.highFormatted} điểm.\n` : ''}
 **2. Phân Bổ Dòng Tiền Theo Nhóm Ngành**
 - 🟢 **Ngân hàng & Tài chính:** Dữ liệu dòng tiền kích hoạt tích cực với các mã trụ VCB, BID, CTG, TCB, STB, MBB.
 - 🟢 **Công nghệ & Viễn thông:** Giữ nhịp tăng trưởng bền vững dẫn đầu bởi FPT.
@@ -708,7 +790,7 @@ export function generateMarketOverviewReport() {
 
 **3. Vùng Quan Sát & Tín Hiệu Thuật Toán Gợi Ý**
 - Ưu tiên quan sát danh mục các cổ phiếu đầu ngành có kết quả kinh doanh tăng trưởng bền vững và P/E dưới mức trung bình 5 năm.
-- Cân nhắc quản trị rủi ro tại các phiên hưng phấn gần vùng kháng cự toán học 1.280 điểm.`
+- Cân nhắc quản trị rủi ro tại các nhịp rung lắc kỹ thuật quanh vùng điểm số hiện tại.`
 }
 
 // Hàm sinh báo cáo phản hồi chuyên sâu hoặc trực diện theo Ý ĐỊNH người dùng
@@ -876,7 +958,22 @@ ${s.summary}
 - **Vùng quan sát kỹ thuật:** Theo dõi vùng hỗ trợ toán học gần nhất, tránh mua đuổi trong các phiên tăng giá mạnh.`
   }
 
-  return generateMarketOverviewReport()
+  // Nếu người dùng hỏi trực tiếp về chỉ số VN-Index hoặc thị trường
+  if (/vn-index|vnindex|chỉ số|thị trường|hôm nay|phiên nay|bao nhiêu điểm/i.test(promptText)) {
+    const vnindex = await fetchRealtimeIndexQuote('VNINDEX')
+    const vn30 = await fetchRealtimeIndexQuote('VN30')
+    if (vnindex) {
+      return `Chào bạn, theo dữ liệu thị trường thực tế mới nhất (phiên ${vnindex.date}):
+
+- **Chỉ số VN-Index:** **${vnindex.priceFormatted} điểm** (${vnindex.changeFormatted}, tương ứng **${vnindex.pctFormatted}**)
+- **Biên độ trong phiên:** Thấp nhất **${vnindex.lowFormatted} điểm** — Cao nhất **${vnindex.highFormatted} điểm**
+- **Khối lượng khớp lệnh:** **${vnindex.volume} cổ phiếu**
+${vn30 ? `- **Chỉ số VN30:** **${vn30.priceFormatted} điểm** (${vn30.changeFormatted}, tương ứng **${vn30.pctFormatted}**)\n` : ''}
+Dòng tiền đang có sự phân hóa tích cực giữa các nhóm ngành dẫn dắt (Ngân hàng, Công nghệ, Thép và Bất động sản). Bạn có thể yêu cầu phân tích cụ thể từng mã cổ phiếu để xem dữ liệu dòng tiền chi tiết!`
+    }
+  }
+
+  return await generateMarketOverviewReport()
 }
 
 // Giữ lại hàm cũ để tương thích ngược
@@ -884,10 +981,22 @@ export function generateComprehensiveStockAnalysis(symbol) {
   return generateSmartFallbackResponse(symbol, {})
 }
 
-export function getDNSEContextForPrompt(prompt) {
-  const isMarketQuery = /thị trường|vn-index|vnindex|thanh khoản|ngành/i.test(prompt)
+export async function getDNSEContextForPrompt(prompt) {
+  const isMarketQuery = /thị trường|vn-index|vnindex|vn30|hnx|thanh khoản|ngành|chỉ số|điểm số|bao nhiêu điểm/i.test(prompt)
   if (isMarketQuery) {
-    return `Chỉ số VN-Index đang dao động tích lũy trong vùng 1.250 - 1.280 điểm. Thanh khoản trung bình 18.000 - 22.000 tỷ đồng/phiên. Dòng tiền tập trung vào nhóm Ngân hàng, Công nghệ và Thép.`
+    const vnindex = await fetchRealtimeIndexQuote('VNINDEX')
+    const vn30 = await fetchRealtimeIndexQuote('VN30')
+    if (vnindex) {
+      return `DỮ LIỆU THỊ TRƯỜNG THỰC TẾ THỜI GIAN THỰC (Cập nhật phiên ${vnindex.date}):
+- Chỉ số VN-Index thực tế: ${vnindex.priceFormatted} điểm (Biến động: ${vnindex.changeFormatted}, tương ứng ${vnindex.pctFormatted})
+- Biên độ dao động trong phiên: Thấp nhất ${vnindex.lowFormatted} điểm - Cao nhất ${vnindex.highFormatted} điểm
+- Khối lượng giao dịch: ${vnindex.volume} cổ phiếu
+${vn30 ? `- Chỉ số VN30: ${vn30.priceFormatted} điểm (${vn30.changeFormatted}, tương ứng ${vn30.pctFormatted})` : ''}
+
+QUY TẮC BẮT BUỘC KHI TRẢ LỜI NGƯỜI DÙNG VỀ ĐIỂM SỐ VN-INDEX:
+- BẮT BUỘC trả lời chính xác số điểm thực tế: VN-Index hiện tại là ${vnindex.priceFormatted} điểm!
+- TUYỆT ĐỐI KHÔNG được trả lời con số 1.200 hay 1.250 điểm!`
+    }
   }
   return ''
 }

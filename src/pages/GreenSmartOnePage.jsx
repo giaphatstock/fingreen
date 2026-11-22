@@ -132,6 +132,33 @@ export default function GreenSmartOnePage() {
     loadCandles(symbol, timeframe);
   }, [symbol, timeframe]);
 
+  // Cập nhật nến và giá khớp lệnh liên tục thời gian thực (Realtime Live Polling)
+  useEffect(() => {
+    let timer = null;
+    let isFetching = false;
+
+    const pollRealtime = async () => {
+      if (isFetching || !symbol) return;
+      isFetching = true;
+      try {
+        const data = await fetchStockCandles(symbol, timeframe, timeframe === '1D' ? 1500 : 120);
+        if (data && data.length > 0) {
+          setBars(data);
+          setLastRefreshed(new Date());
+        }
+      } catch (_) {
+      } finally {
+        isFetching = false;
+      }
+    };
+
+    // Chu kỳ cập nhật thời gian thực mỗi 8 giây liên tục
+    timer = setInterval(pollRealtime, 8000);
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [symbol, timeframe]);
+
   // Tính toán toán học toàn bộ chỉ báo Pine Script
   const indicatorResults = useMemo(() => {
     if (!bars || bars.length === 0) return {};
@@ -301,6 +328,12 @@ export default function GreenSmartOnePage() {
 
             {/* Cụm Bên Phải: Chế Độ Xem, Nút Cài Đặt, License, Làm Mới */}
             <div className="flex flex-wrap items-center gap-2">
+              {/* Badge Realtime Live */}
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold" title="Dữ liệu nến và khớp lệnh đang cập nhật trực tiếp liên tục mỗi 8 giây">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+                <span className="hidden sm:inline">LIVE REALTIME</span>
+              </div>
+
               {/* Chuyển Chế Độ Xem */}
               <div className="flex items-center p-1 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-color)] text-xs">
                 <button
