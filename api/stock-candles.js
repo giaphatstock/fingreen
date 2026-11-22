@@ -1,11 +1,10 @@
 /**
  * Vercel Serverless Function Proxy
- * Nạp dữ liệu nến OHLCV thời gian thực từ Entrade/DNSE cho toàn bộ cổ phiếu VN
- * Giải quyết 100% triệt để lỗi CORS phía trình duyệt
+ * Nạp dữ liệu nến OHLCV thời gian thực từ Entrade/DNSE & VNDirect cho toàn bộ cổ phiếu VN
+ * Giải quyết triệt để lỗi CORS và độ trễ trên mọi thiết bị
  */
 
 export default async function handler(req, res) {
-  // Cho phép mọi Origin gọi API (CORS headers)
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -25,27 +24,38 @@ export default async function handler(req, res) {
   const fromSec = from ? parseInt(from, 10) : toSec - (365 * 86400);
 
   const resParam = resolution === '1H' ? '1H' : resolution === '15' ? '15' : '1D';
+  const vndRes = resolution === '1H' ? '60' : resolution === '15' ? '15' : '1D';
 
-  const targetUrl = `https://services.entrade.com.vn/chart-api/v2/ohlcs/stock?symbol=${cleanSymbol}&from=${fromSec}&to=${toSec}&resolution=${resParam}`;
+  const urls = [
+    `https://services.entrade.com.vn/chart-api/v2/ohlcs/stock?symbol=${cleanSymbol}&from=${fromSec}&to=${toSec}&resolution=${resParam}`,
+    `https://dchart-api.vndirect.com.vn/dchart/history?resolution=${vndRes}&symbol=${cleanSymbol}&from=${fromSec}&to=${toSec}`
+  ];
 
-  try {
-    const upstreamRes = await fetch(targetUrl, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+  for (const targetUrl of urls) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+      const upstreamRes = await fetch(targetUrl, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
+      clearTimeout(timeoutId);
+
+      if (upstreamRes.ok) {
+        const data = await upstreamRes.json();
+        if (data && data.t && Array.isArray(data.t) && data.t.length > 0) {
+          res.setHeader('Cache-Control', 'public, max-age=15, s-maxage=30, stale-while-revalidate=60');
+          return res.status(200).json(data);
+        }
       }
-    });
-
-    if (!upstreamRes.ok) {
-      return res.status(upstreamRes.status).json({ error: `Upstream error ${upstreamRes.status}` });
+    } catch (_) {
+      // Thử nguồn tiếp theo
     }
-
-    const data = await upstreamRes.json();
-    // Cache 60s trên edge
-    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
-    return res.status(200).json(data);
-  } catch (error) {
-    console.error('Error fetching stock data:', error);
-    return res.status(500).json({ error: error.message || 'Internal Server Error' });
   }
+
+  return res.status(500).json({ error: 'Failed to fetch candles from all upstream sources' });
 }

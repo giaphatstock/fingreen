@@ -114,11 +114,11 @@ export default function GreenSmartOnePage() {
 
   const isLicValid = useMemo(() => (!isExpired && validateLicense(config.licenseKey)), [isExpired, config.licenseKey]);
 
-  // Tải dữ liệu nến từ Entrade/DNSE (toàn bộ lịch sử 1500 ngày cho 1D)
+  // Tải dữ liệu nến siêu tốc từ VNDirect & Entrade (chuẩn 365 ngày cho 1D)
   const loadCandles = async (targetSymbol, tf) => {
     setLoading(true);
     try {
-      const data = await fetchStockCandles(targetSymbol, tf, tf === '1D' ? 1500 : 120);
+      const data = await fetchStockCandles(targetSymbol, tf, tf === '1D' ? 365 : 120);
       setBars(data);
       setLastRefreshed(new Date());
     } catch (err) {
@@ -141,9 +141,18 @@ export default function GreenSmartOnePage() {
       if (isFetching || !symbol) return;
       isFetching = true;
       try {
-        const data = await fetchStockCandles(symbol, timeframe, timeframe === '1D' ? 1500 : 120);
+        const data = await fetchStockCandles(symbol, timeframe, timeframe === '1D' ? 365 : 120);
         if (data && data.length > 0) {
-          setBars(data);
+          setBars(prev => {
+            if (!prev || prev.length === 0) return data;
+            const lastOld = prev[prev.length - 1];
+            const lastNew = data[data.length - 1];
+            // Chỉ cập nhật state nếu giá đóng cửa hoặc khối lượng có biến động thực sự
+            if (prev.length === data.length && lastOld.close === lastNew.close && lastOld.volume === lastNew.volume) {
+              return prev;
+            }
+            return data;
+          });
           setLastRefreshed(new Date());
         }
       } catch (_) {

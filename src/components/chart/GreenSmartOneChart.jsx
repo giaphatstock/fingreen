@@ -164,11 +164,11 @@ export default function GreenSmartOneChart({
       },
       timeScale: {
         borderColor: borderColor,
-        timeVisible: true,
+        timeVisible: false, // Dành cho nến ngày (1D) chuẩn xác
         secondsVisible: false,
-        rightOffset: 12,
+        rightOffset: 8,
         barSpacing: 9,
-        minBarSpacing: 3,
+        minBarSpacing: 2,
       },
       watermark: {
         visible: false,
@@ -505,33 +505,26 @@ export default function GreenSmartOneChart({
       if (totalBars > 0) {
         chartRef.current.priceScale('right').applyOptions({ autoScale: true });
         try {
-          // Fit content trước để layout toàn bộ trục thời gian
-          chartRef.current.timeScale().fitContent();
-          // Sau đó căn chỉnh 110 nến gần nhất với 8 nến khoảng thở bên phải
-          chartRef.current.timeScale().setVisibleLogicalRange({
-            from: Math.max(0, totalBars - 110),
-            to: totalBars + 8,
-          });
+          if (totalBars <= 90) {
+            chartRef.current.timeScale().fitContent();
+          } else {
+            chartRef.current.timeScale().setVisibleLogicalRange({
+              from: totalBars - 90,
+              to: totalBars + 6,
+            });
+          }
         } catch (_) {}
       }
     };
 
-    // Thực hiện đa nhịp để bảo đảm hiển thị nến tức thì ngay từ giây đầu tiên khi vừa vào trang
+    // Gọi căn chỉnh ngay lập tức và 1 nhịp sau khi render để nến hiển thị lập tức
     alignAndScale();
     const rafId = requestAnimationFrame(alignAndScale);
-    const t1 = setTimeout(alignAndScale, 50);
-    const t2 = setTimeout(alignAndScale, 150);
-    const t3 = setTimeout(alignAndScale, 300);
-    const t4 = setTimeout(alignAndScale, 600);
-    const t5 = setTimeout(alignAndScale, 1200);
+    const t1 = setTimeout(alignAndScale, 60);
 
     return () => {
       cancelAnimationFrame(rafId);
       clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      clearTimeout(t4);
-      clearTimeout(t5);
     };
   }, [symbol, bars, indicators, toggles]);
 
