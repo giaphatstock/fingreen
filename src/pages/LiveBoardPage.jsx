@@ -123,24 +123,7 @@ export default function LiveBoardPage() {
   const [activeTab, setActiveTab] = useState('VN30');
   const [selectedSectorId, setSelectedSectorId] = useState('bank');
 
-  // Thống kê số lượng mã Trần, Tăng, TC, Giảm, Sàn phục vụ hiển thị và bộ lọc
-  const marketCounts = useMemo(() => {
-    let ceiling = 0;
-    let up = 0;
-    let ref = 0;
-    let down = 0;
-    let floor = 0;
 
-    stocks.forEach(s => {
-      if (s.statusColor === 'ceiling') ceiling++;
-      else if (s.statusColor === 'floor') floor++;
-      else if (s.change > 0) up++;
-      else if (s.change < 0) down++;
-      else ref++;
-    });
-
-    return { ceiling, up, ref, down, floor, total: stocks.length };
-  }, [stocks]);
 
   // Layout Variant để người dùng duyệt: 'STRIP' (Mẫu 1: Ticker ngang siêu mỏng) vs 'SPLIT_LEFT' (Mẫu 2: Gom sang góc trái cùng hàng Bò Gấu)
   const [indexLayoutVariant, setIndexLayoutVariant] = useState('SPLIT_LEFT');
@@ -166,6 +149,25 @@ export default function LiveBoardPage() {
   // Dữ liệu cổ phiếu hiển thị
   const [stocks, setStocks] = useState([]);
   const [stocksLoading, setStocksLoading] = useState(true);
+
+  // Thống kê số lượng mã Trần, Tăng, TC, Giảm, Sàn phục vụ hiển thị và bộ lọc
+  const marketCounts = useMemo(() => {
+    let ceiling = 0;
+    let up = 0;
+    let ref = 0;
+    let down = 0;
+    let floor = 0;
+
+    stocks.forEach(s => {
+      if (s.statusColor === 'ceiling') ceiling++;
+      else if (s.statusColor === 'floor') floor++;
+      else if (s.change > 0) up++;
+      else if (s.change < 0) down++;
+      else ref++;
+    });
+
+    return { ceiling, up, ref, down, floor, total: stocks.length };
+  }, [stocks]);
 
   // Tìm kiếm & Bộ lọc
   const [searchQuery, setSearchQuery] = useState('');
@@ -332,7 +334,7 @@ export default function LiveBoardPage() {
     const interval = setInterval(() => {
       loadStocks(true);
       loadIndices();
-    }, 1200);
+    }, 350);
 
     return () => clearInterval(interval);
   }, [isLiveActive, currentSymbolList]);
@@ -896,12 +898,12 @@ export default function LiveBoardPage() {
                     ) : (
                       <>
                         <PriceCell price={stock.bid1.price} refPrice={stock.ref} ceiling={stock.ceiling} floor={stock.floor} boardTheme={boardTheme} isBold className="bg-emerald-500/5" />
-                        <VolumeCell volume={stock.bid1.volume} price={stock.bid1.price} refPrice={stock.ref} ceiling={stock.ceiling} floor={stock.floor} boardTheme={boardTheme} className="bg-emerald-500/5 font-bold" />
+                        <VolumeCell volume={stock.bid1.volume} price={stock.bid1.price} refPrice={stock.ref} ceiling={stock.ceiling} floor={stock.floor} boardTheme={boardTheme} isBuySide={true} className="bg-emerald-500/5 font-bold" />
                       </>
                     )}
 
                     {/* Khớp Lệnh Realtime: KHỚP GIÁ TO NHẤT 15px & ĐẬM NHẤT */}
-                    <PriceCell price={stock.matchedPrice} refPrice={stock.ref} ceiling={stock.ceiling} floor={stock.floor} boardTheme={boardTheme} isBold className="border-l border-primary-500/30 bg-primary-500/10 !font-black !text-[15px]" />
+                    <PriceCell price={stock.matchedPrice} refPrice={stock.ref} ceiling={stock.ceiling} floor={stock.floor} boardTheme={boardTheme} isBold triggerVol={stock.matchedVolume || stock.totalVolume} className="border-l border-primary-500/30 bg-primary-500/10 !font-black !text-[15px]" />
                     <VolumeCell volume={stock.matchedVolume} price={stock.matchedPrice} refPrice={stock.ref} ceiling={stock.ceiling} floor={stock.floor} boardTheme={boardTheme} className="bg-primary-500/5 !font-bold" />
                     <ChangeCell change={stock.change} changePercent={stock.changePercent} boardTheme={boardTheme} type="change" />
                     <ChangeCell change={stock.change} changePercent={stock.changePercent} boardTheme={boardTheme} type="percent" />
@@ -919,7 +921,7 @@ export default function LiveBoardPage() {
                     ) : (
                       <>
                         <PriceCell price={stock.ask1.price} refPrice={stock.ref} ceiling={stock.ceiling} floor={stock.floor} boardTheme={boardTheme} isBold className="bg-rose-500/5" />
-                        <VolumeCell volume={stock.ask1.volume} price={stock.ask1.price} refPrice={stock.ref} ceiling={stock.ceiling} floor={stock.floor} boardTheme={boardTheme} className="bg-rose-500/5 font-bold" />
+                        <VolumeCell volume={stock.ask1.volume} price={stock.ask1.price} refPrice={stock.ref} ceiling={stock.ceiling} floor={stock.floor} boardTheme={boardTheme} isBuySide={false} className="bg-rose-500/5 font-bold" />
                       </>
                     )}
 
