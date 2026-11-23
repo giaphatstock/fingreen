@@ -104,7 +104,7 @@ export const SECTORS = [
 ];
 
 // Toàn bộ mã HOSE quét toàn diện số mã Trần & Sàn thị trường
-const ALL_HOSE_SYMBOLS = [
+export const ALL_HOSE_SYMBOLS = [
   'AAA','AAM','AAT','ABR','ABS','ABT','ACB','ACC','ACG','ACL','ADG','ADS','AGG','AGM','AGR','AMD','ANV','APC','APG','APH','ASG','ASM','ASP','AST',
   'BAF','BBC','BCE','BCG','BCM','BFC','BIC','BID','BKG','BMC','BMI','BMP','BRC','BSI','BTP','BTT','BVH','BWE',
   'C32','C47','CAV','CCL','CDC','CHP','CIG','CII','CKG','CLC','CLL','CLW','CMG','CMV','CNG','COM','CRC','CRE','CSM','CSV','CTD','CTF','CTG','CTI','CTR','CTS','CVT',
@@ -120,7 +120,7 @@ const ALL_HOSE_SYMBOLS = [
 ];
 
 // Toàn bộ mã HNX quét toàn diện số mã Trần & Sàn thị trường
-const ALL_HNX_SYMBOLS = [
+export const ALL_HNX_SYMBOLS = [
   'AAV','AMV','API','APS','BAB','BAX','BBS','BCC','BCF','BPC','BSC','BST','BTS','BVS','BXH',
   'C69','CAG','CAN','CAP','CC4','CDN','CEO','CET','CIA','CJC','CKV','CLH','CMC','CMS','CPC','CSC','CTC','CTP','CTS','CTX',
   'D11','DAD','DAE','DAR','DAS','DBT','DC2','DDG','DGC','DGL','DHT','DIH','DL1','DNC','DNM','DP3','DPC','DPS','DTD','DVG','DXP',
@@ -430,12 +430,23 @@ export function formatStockData(raw) {
 export async function fetchStockBatch(symbolArray) {
   if (!symbolArray || symbolArray.length === 0) return [];
   const cleanSymbols = [...new Set(symbolArray.map(s => s.toUpperCase().trim()))].filter(Boolean);
+
+  // Tự động chia nhỏ chunk <= 150 mã để API không bị vượt quá độ dài URL
+  if (cleanSymbols.length > 150) {
+    const chunks = [];
+    for (let i = 0; i < cleanSymbols.length; i += 150) {
+      chunks.push(cleanSymbols.slice(i, i + 150));
+    }
+    const results = await Promise.all(chunks.map(chunk => fetchStockBatch(chunk)));
+    return results.flat();
+  }
+
   const url = `${DATA_API_BASE}/getliststockdata/${cleanSymbols.join(',')}`;
 
   try {
     const res = await fetch(url, {
       headers: { 'Accept': 'application/json' },
-      signal: AbortSignal.timeout(4000)
+      signal: AbortSignal.timeout(4500)
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();

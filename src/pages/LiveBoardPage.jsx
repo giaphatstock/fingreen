@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import {
   TrendingUp, TrendingDown, Star, Search, RefreshCw, Zap,
   Activity, ArrowUpRight, ArrowDownRight, Layers, LayoutGrid,
-  Table, Sparkles, Filter, ChevronRight, SlidersHorizontal,
+  Table, Sparkles, Filter, ChevronRight, ChevronDown, SlidersHorizontal,
   Flame, Radio, Info, Eye, Check, Palette, Clock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
   fetchMarketIndices, fetchStockBatch, formatNumber, formatPrice,
   getPriceTextColor, getThemePriceStyle, VN30_STOCKS, HOSE_POPULAR,
-  HNX_POPULAR, UPCOM_POPULAR, SECTORS, COMPANY_NAMES
+  HNX_POPULAR, UPCOM_POPULAR, ALL_HOSE_SYMBOLS, ALL_HNX_SYMBOLS, SECTORS, COMPANY_NAMES
 } from '../services/liveBoardService';
 import StockDetailDrawer from '../components/board/StockDetailDrawer';
 import BullBearBattleBar from '../components/board/BullBearBattleBar';
@@ -122,6 +122,19 @@ export default function LiveBoardPage() {
   // Tab hiện tại: 'VN30' | 'HOSE' | 'HNX' | 'UPCOM' | 'WATCHLIST' | 'SECTOR'
   const [activeTab, setActiveTab] = useState('VN30');
   const [selectedSectorId, setSelectedSectorId] = useState('bank');
+  const [isSectorMenuOpen, setIsSectorMenuOpen] = useState(false);
+  const sectorMenuRef = useRef(null);
+
+  // Đóng dropdown ngành khi click ra ngoài
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (sectorMenuRef.current && !sectorMenuRef.current.contains(event.target)) {
+        setIsSectorMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
 
 
@@ -269,8 +282,8 @@ export default function LiveBoardPage() {
   const currentSymbolList = useMemo(() => {
     if (activeTab === 'WATCHLIST') return watchlist;
     if (activeTab === 'VN30') return VN30_STOCKS;
-    if (activeTab === 'HOSE') return HOSE_POPULAR;
-    if (activeTab === 'HNX') return HNX_POPULAR;
+    if (activeTab === 'HOSE') return ALL_HOSE_SYMBOLS;
+    if (activeTab === 'HNX') return ALL_HNX_SYMBOLS;
     if (activeTab === 'UPCOM') return UPCOM_POPULAR;
     if (activeTab === 'SECTOR') {
       const sector = SECTORS.find(s => s.id === selectedSectorId);
@@ -687,17 +700,53 @@ export default function LiveBoardPage() {
               </button>
             ))}
 
-            <button
-              onClick={() => setActiveTab('SECTOR')}
-              className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all flex items-center gap-1 ${
-                activeTab === 'SECTOR' 
-                  ? 'bg-primary-600 text-white shadow-sm' 
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Layers className="w-3 h-3" />
-              Ngành
-            </button>
+            {/* Dropdown Chọn Ngành */}
+            <div className="relative" ref={sectorMenuRef}>
+              <button
+                onClick={() => {
+                  setActiveTab('SECTOR');
+                  setIsSectorMenuOpen(prev => !prev);
+                }}
+                className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all flex items-center gap-1 ${
+                  activeTab === 'SECTOR' 
+                    ? 'bg-primary-600 text-white shadow-sm' 
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Chọn nhóm ngành cổ phiếu"
+              >
+                <Layers className="w-3 h-3" />
+                <span>{activeTab === 'SECTOR' ? (SECTORS.find(s => s.id === selectedSectorId)?.name || 'Ngành') : 'Ngành'}</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${isSectorMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isSectorMenuOpen && (
+                <div className="absolute left-0 top-full mt-1.5 w-56 py-1 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl z-50 divide-y divide-slate-800/60 max-h-80 overflow-y-auto">
+                  <div className="px-3 py-1.5 text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                    Chọn nhóm ngành ({SECTORS.length})
+                  </div>
+                  <div className="py-1">
+                    {SECTORS.map(sec => (
+                      <button
+                        key={sec.id}
+                        onClick={() => {
+                          setSelectedSectorId(sec.id);
+                          setActiveTab('SECTOR');
+                          setIsSectorMenuOpen(false);
+                        }}
+                        className={`w-full px-3 py-1.5 text-left text-xs flex items-center justify-between hover:bg-slate-800/80 transition-colors ${
+                          activeTab === 'SECTOR' && selectedSectorId === sec.id
+                            ? 'text-primary-400 font-bold bg-primary-500/10'
+                            : 'text-slate-200'
+                        }`}
+                      >
+                        <span>{sec.name}</span>
+                        <span className="text-[10px] text-slate-500 font-mono">({sec.stocks.length} mã)</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Ô Tìm Kiếm đặt sát ô Ngành */}
