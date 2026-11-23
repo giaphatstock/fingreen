@@ -125,11 +125,8 @@ export default function LiveBoardPage() {
 
 
 
-  // Layout Variant để người dùng duyệt: 'STRIP' (Mẫu 1: Ticker ngang siêu mỏng) vs 'SPLIT_LEFT' (Mẫu 2: Gom sang góc trái cùng hàng Bò Gấu)
-  const [indexLayoutVariant, setIndexLayoutVariant] = useState('SPLIT_LEFT');
-
-  // Chế độ hiển thị cột: 'SMART' (Gọn gàng, font 14px thoáng đãng) vs 'PRO' (Đầy đủ 3 bước giá)
-  const [columnMode, setColumnMode] = useState('SMART');
+  // Chế độ hiển thị cột: 'PRO' (Đầy đủ 3 bước giá chuẩn sàn) vs 'SMART' (Gọn gàng to rõ)
+  const [columnMode, setColumnMode] = useState('PRO');
 
   // Giao diện bảng giá: 'MODERN' (Mặc định) vs 'TRADITIONAL' (Chuẩn SSI)
   const [boardTheme, setBoardTheme] = useState(() => {
@@ -190,6 +187,7 @@ export default function LiveBoardPage() {
   // Đồng hồ Giờ Hà Nội time.is chạy từng giây (tick realtime liên tục kể cả đóng cửa)
   const [hanoiTime, setHanoiTime] = useState(getHanoiTimeNow);
   const [sessionInfo, setSessionInfo] = useState(getMarketSessionInfo);
+  const [lastUpdatedTime, setLastUpdatedTime] = useState(() => new Date().toLocaleTimeString('vi-VN'));
 
   useEffect(() => {
     // Tick từng giây liên tục 1000ms chuẩn xác múi giờ Hà Nội (time.is)
@@ -430,34 +428,8 @@ export default function LiveBoardPage() {
             </span>
           </div>
 
-          {/* Công cụ điều khiển: Chọn Mẫu 1 / 2, Smart / Pro, Theme, Giờ HN */}
+          {/* Công cụ điều khiển: Smart / Pro, Theme, Giờ HN */}
           <div className="flex items-center gap-2 flex-wrap text-xs">
-            {/* Toggle Mẫu 1 (Dải Ngang) vs Mẫu 2 (Góc Trái Cùng Hàng Bò Gấu) */}
-            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-900 border border-slate-700/80 shadow-sm">
-              <button
-                onClick={() => setIndexLayoutVariant('STRIP')}
-                className={`px-2 py-1 rounded text-[11px] font-bold transition-all ${
-                  indexLayoutVariant === 'STRIP'
-                    ? 'bg-indigo-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-                title="Mẫu 1: Dải chỉ số ngang siêu mảnh trên đỉnh"
-              >
-                Mẫu 1: Dải ngang
-              </button>
-              <button
-                onClick={() => setIndexLayoutVariant('SPLIT_LEFT')}
-                className={`px-2 py-1 rounded text-[11px] font-bold transition-all ${
-                  indexLayoutVariant === 'SPLIT_LEFT'
-                    ? 'bg-indigo-600 text-white shadow'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-                title="Mẫu 2: Gom 4 chỉ số sang góc trái cùng hàng Bò Gấu"
-              >
-                Mẫu 2: Gom góc trái
-              </button>
-            </div>
-
             {/* Toggle Chế độ cột: Smart (Thoáng 14px) vs Pro (3 Bước Giá) */}
             <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-900 border border-slate-700/80 shadow-sm">
               <button
@@ -552,89 +524,82 @@ export default function LiveBoardPage() {
         </div>
 
         {/* ========================================================================= */}
-        {/* PHẦN HIỂN THỊ CHỈ SỐ VNINDEX & BÒ GẤU THEO 2 MẪU LỰA CHỌN                 */}
+        {/* 4 THẺ CHỈ SỐ VNINDEX DÀI NGANG NHỎ GỌN TRÊN ĐỈNH (TIẾT KIỆM DIỆN TÍCH)   */}
         {/* ========================================================================= */}
-        {indexLayoutVariant === 'STRIP' ? (
-          /* MẪU 1: DẢI CHỈ SỐ NGANG SIÊU MẢNH TRÊN ĐỈNH + THANH BÒ GẤU FULL-WIDTH */
-          <div className="space-y-1.5">
-            {/* Dải Ticker Ngang Siêu Mảnh (Cao chỉ 36px) */}
-            <div className="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-4 overflow-x-auto shadow-sm">
-              {indices.map(idx => {
-                const isUp = idx.pointChange > 0;
-                const isDown = idx.pointChange < 0;
-                const sign = isUp ? '+' : '';
-                return (
-                  <div key={idx.code} className="flex items-center gap-2 text-xs font-mono tabular-nums whitespace-nowrap">
-                    <span className="font-bold text-slate-300 text-[11px]">{idx.name}:</span>
-                    <span className={`font-black text-xs ${isUp ? 'text-emerald-400' : isDown ? 'text-rose-400' : 'text-amber-300'}`}>
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+            {indices.map(idx => {
+              const isUp = idx.pointChange > 0;
+              const isDown = idx.pointChange < 0;
+              const changeSign = isUp ? '+' : '';
+
+              const totalStocks = (idx.countIncrease + idx.countDecrease + idx.countUnchanged) || 1;
+              const upPercent = Math.round((idx.countIncrease / totalStocks) * 100);
+              const downPercent = Math.round((idx.countDecrease / totalStocks) * 100);
+              const refPercent = 100 - upPercent - downPercent;
+
+              const colorBadgeClass = isUp 
+                ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' 
+                : isDown 
+                  ? 'text-rose-400 bg-rose-500/10 border-rose-500/30' 
+                  : 'text-amber-300 bg-amber-500/10 border-amber-500/30';
+
+              const pointColor = isUp ? 'text-emerald-400' : isDown ? 'text-rose-400' : 'text-amber-300';
+
+              return (
+                <div 
+                  key={idx.code}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 shadow-sm hover:border-slate-700 transition-all flex flex-col justify-between"
+                >
+                  {/* Hàng 1: Tên + Sàn & Biến động % */}
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-black text-xs text-slate-200">
+                        {idx.name}
+                      </span>
+                      <span className="text-[9px] px-1 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700/60 font-mono">
+                        {idx.floor}
+                      </span>
+                    </div>
+
+                    <span className={`text-[10px] font-black font-mono tabular-nums px-1.5 py-0.5 rounded border ${colorBadgeClass}`}>
+                      {changeSign}{idx.pointChange.toFixed(2)} ({changeSign}{idx.percentChange.toFixed(2)}%)
+                    </span>
+                  </div>
+
+                  {/* Hàng 2: Điểm số & Giá trị / Khối lượng */}
+                  <div className="flex items-baseline justify-between mt-0.5">
+                    <div className={`text-base font-black font-mono tabular-nums tracking-tight ${pointColor}`}>
                       {idx.currentPoint.toFixed(2)}
-                    </span>
-                    <span className={`text-[11px] font-bold ${isUp ? 'text-emerald-400' : isDown ? 'text-rose-400' : 'text-amber-300'}`}>
-                      {sign}{idx.pointChange.toFixed(2)} ({sign}{idx.percentChange.toFixed(2)}%)
-                    </span>
-                    <div className="hidden sm:flex items-center gap-1 text-[10px] text-slate-400 border-l border-slate-800 pl-2">
-                      <span className="text-purple-400 font-bold">Trần: {marketCounts.ceiling}</span>
-                      <span className="text-emerald-400">▲{idx.countIncrease}</span>
-                      <span className="text-amber-300">■{idx.countUnchanged}</span>
-                      <span className="text-rose-400">▼{idx.countDecrease}</span>
-                      <span className="text-cyan-400 font-bold">Sàn: {marketCounts.floor}</span>
-                      <span className="text-primary-300 ml-1">GT: {formatNumber(idx.totalValueBillion)}T</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-mono tabular-nums">
+                      <span className="text-slate-300 font-semibold">{formatNumber(idx.totalValueBillion)} tỷ</span>
+                      <span className="mx-1 opacity-40">•</span>
+                      <span>{formatNumber(Math.round(idx.totalVolume / 1000000), 1)}M</span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
 
-            {/* Thanh Bò Gấu Full Width */}
-            <BullBearBattleBar stats={bullBearStats} />
-          </div>
-        ) : (
-          /* MẪU 2: GOM 4 CHỈ SỐ SANG GÓC TRÁI CÙNG HÀNG VỚI THANH BÒ GẤU (TIẾT KIỆM TỐI ĐA CHIỀU CAO) */
-          <div className="flex flex-col lg:flex-row items-stretch gap-2">
-            {/* Khối 4 Chỉ Số Thu Nhỏ Ở Góc Trái (Chiếm ~35% chiều ngang) */}
-            <div className="lg:w-[35%] flex-shrink-0 grid grid-cols-2 gap-1.5 p-1.5 rounded-xl bg-slate-900/90 border border-slate-800 shadow-sm">
-              {indices.map(idx => {
-                const isUp = idx.pointChange > 0;
-                const isDown = idx.pointChange < 0;
-                const sign = isUp ? '+' : '';
-                const total = (idx.countIncrease + idx.countDecrease + idx.countUnchanged) || 1;
-                const upP = Math.round((idx.countIncrease / total) * 100);
-                const downP = Math.round((idx.countDecrease / total) * 100);
-                const refP = 100 - upP - downP;
-
-                return (
-                  <div key={idx.code} className="px-2 py-1 rounded-lg bg-slate-950/70 border border-slate-800/80 flex flex-col justify-between">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-[11px] text-slate-200">{idx.name}</span>
-                      <span className={`text-[10px] font-mono tabular-nums font-bold ${isUp ? 'text-emerald-400' : isDown ? 'text-rose-400' : 'text-amber-300'}`}>
-                        {sign}{idx.pointChange.toFixed(2)}
-                      </span>
+                  {/* Hàng 3: Mini Bar phân bổ Tăng / TC / Giảm + Số lượng mã */}
+                  <div className="mt-1">
+                    <div className="w-full h-1 rounded-full bg-slate-800 overflow-hidden flex mb-0.5">
+                      <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${upPercent}%` }} />
+                      <div className="h-full bg-amber-400 transition-all duration-300" style={{ width: `${refPercent}%` }} />
+                      <div className="h-full bg-rose-500 transition-all duration-300" style={{ width: `${downPercent}%` }} />
                     </div>
-                    <div className="flex items-baseline justify-between mt-0.5">
-                      <span className={`font-black font-mono text-xs tabular-nums ${isUp ? 'text-emerald-400' : isDown ? 'text-rose-400' : 'text-amber-300'}`}>
-                        {idx.currentPoint.toFixed(2)}
-                      </span>
-                      <span className="text-[9px] text-slate-400 font-mono">
-                        {formatNumber(idx.totalValueBillion)}T
-                      </span>
-                    </div>
-                    {/* Mini bar */}
-                    <div className="w-full h-1 rounded-full bg-slate-800 overflow-hidden flex mt-1">
-                      <div className="h-full bg-emerald-500" style={{ width: `${upP}%` }} />
-                      <div className="h-full bg-amber-400" style={{ width: `${refP}%` }} />
-                      <div className="h-full bg-rose-500" style={{ width: `${downP}%` }} />
+                    <div className="flex justify-between text-[9.5px] font-semibold text-slate-400 font-mono tabular-nums">
+                      <span className="text-emerald-400">▲ {idx.countIncrease}</span>
+                      <span className="text-amber-300">■ {idx.countUnchanged}</span>
+                      <span className="text-rose-400">▼ {idx.countDecrease}</span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-
-            {/* Thanh Bò vs Gấu Ở Góc Phải Cùng Hàng (Chiếm ~65% chiều ngang) */}
-            <div className="lg:w-[65%] flex-1">
-              <BullBearBattleBar stats={bullBearStats} />
-            </div>
+                </div>
+              );
+            })}
           </div>
-        )}
+
+          {/* THANH CHIẾN ĐẤU BÒ VS GẤU NẰM NGANG DƯỚI VNINDEX VÀ TRÊN BẢNG ĐIỆN */}
+          <BullBearBattleBar stats={bullBearStats} />
+        </div>
       </div>
 
       {/* 2. THANH ĐIỀU KHIỂN TABS SÀN, TÌM KIẾM & BỘ LỌC */}
@@ -777,64 +742,121 @@ export default function LiveBoardPage() {
             boardTheme === 'TRADITIONAL' ? 'border-slate-800 bg-black' : 'border-slate-800 bg-slate-950'
           } flex-1 min-h-0 overflow-auto shadow-2xl relative scrollbar-thin`}
         >
-          <table className="w-full text-left border-collapse text-xs border-spacing-0 select-none">
+          <table className={`w-full table-fixed ${columnMode === 'PRO' ? 'min-w-[1720px]' : 'min-w-[1450px]'} text-left border-collapse border-spacing-0 select-none`}>
+            {/* Cố định bề rộng tuyệt đối cho từng cột bằng colgroup, tránh hoàn toàn lỗi giật cột khi cuộn trang */}
+            <colgroup>
+              {columnMode === 'PRO' ? (
+                <>
+                  <col style={{ width: '32px' }} />  {/* Star */}
+                  <col style={{ width: '78px' }} />  {/* Mã CK */}
+                  <col style={{ width: '56px' }} />  {/* Trần */}
+                  <col style={{ width: '56px' }} />  {/* Sàn */}
+                  <col style={{ width: '56px' }} />  {/* TC */}
+                  <col style={{ width: '54px' }} />  {/* Giá 3 */}
+                  <col style={{ width: '74px' }} />  {/* KL 3 */}
+                  <col style={{ width: '54px' }} />  {/* Giá 2 */}
+                  <col style={{ width: '74px' }} />  {/* KL 2 */}
+                  <col style={{ width: '56px' }} />  {/* Giá 1 */}
+                  <col style={{ width: '80px' }} />  {/* KL 1 */}
+                  <col style={{ width: '68px' }} />  {/* Khớp Giá */}
+                  <col style={{ width: '70px' }} />  {/* KL Khớp */}
+                  <col style={{ width: '56px' }} />  {/* +/- */}
+                  <col style={{ width: '58px' }} />  {/* % */}
+                  <col style={{ width: '56px' }} />  {/* Bán Giá 1 */}
+                  <col style={{ width: '80px' }} />  {/* Bán KL 1 */}
+                  <col style={{ width: '54px' }} />  {/* Bán Giá 2 */}
+                  <col style={{ width: '74px' }} />  {/* Bán KL 2 */}
+                  <col style={{ width: '54px' }} />  {/* Bán Giá 3 */}
+                  <col style={{ width: '74px' }} />  {/* Bán KL 3 */}
+                  <col style={{ width: '96px' }} />  {/* Tổng KL */}
+                  <col style={{ width: '56px' }} />  {/* Cao */}
+                  <col style={{ width: '56px' }} />  {/* Thấp */}
+                  <col style={{ width: '56px' }} />  {/* TB */}
+                  <col style={{ width: '80px' }} />  {/* Ngoại Mua */}
+                  <col style={{ width: '80px' }} />  {/* Ngoại Bán */}
+                </>
+              ) : (
+                <>
+                  <col style={{ width: '36px' }} />  {/* Star */}
+                  <col style={{ width: '90px' }} />  {/* Mã CK */}
+                  <col style={{ width: '68px' }} />  {/* Trần */}
+                  <col style={{ width: '68px' }} />  {/* Sàn */}
+                  <col style={{ width: '68px' }} />  {/* TC */}
+                  <col style={{ width: '78px' }} />  {/* Mua Giá 1 */}
+                  <col style={{ width: '90px' }} />  {/* Mua KL 1 */}
+                  <col style={{ width: '88px' }} />  {/* Khớp Giá */}
+                  <col style={{ width: '85px' }} />  {/* KL Khớp */}
+                  <col style={{ width: '68px' }} />  {/* +/- */}
+                  <col style={{ width: '68px' }} />  {/* % */}
+                  <col style={{ width: '78px' }} />  {/* Bán Giá 1 */}
+                  <col style={{ width: '90px' }} />  {/* Bán KL 1 */}
+                  <col style={{ width: '105px' }} /> {/* Tổng KL */}
+                  <col style={{ width: '68px' }} />  {/* Cao */}
+                  <col style={{ width: '68px' }} />  {/* Thấp */}
+                  <col style={{ width: '68px' }} />  {/* TB */}
+                  <col style={{ width: '88px' }} />  {/* Ngoại Mua */}
+                  <col style={{ width: '88px' }} />  {/* Ngoại Bán */}
+                </>
+              )}
+            </colgroup>
+
             {/* Header có độ tương phản cao, chữ to rõ #cbd5e1 */}
             <thead className="sticky top-0 z-20 shadow-md">
               <tr className={`${
                 boardTheme === 'TRADITIONAL' ? 'bg-[#18181b] text-slate-200' : 'bg-slate-900 text-slate-200'
               } border-b-2 border-slate-700/80 font-bold uppercase tracking-wider text-[11px]`}>
-                <th className={`py-2.5 px-2 text-center w-8 sticky left-0 z-30 ${boardTheme === 'TRADITIONAL' ? 'bg-[#18181b]' : 'bg-slate-900'}`}>★</th>
-                <th className={`py-2.5 px-3 font-black text-white w-24 sticky left-8 z-30 ${boardTheme === 'TRADITIONAL' ? 'bg-[#18181b]' : 'bg-slate-900'} text-left`}>Mã CK</th>
+                <th className={`py-2 px-1 text-center sticky left-0 z-30 ${boardTheme === 'TRADITIONAL' ? 'bg-[#18181b]' : 'bg-slate-900'}`}>★</th>
+                <th className={`py-2 px-2.5 font-black text-white sticky left-8 z-30 ${boardTheme === 'TRADITIONAL' ? 'bg-[#18181b]' : 'bg-slate-900'} text-left`}>Mã CK</th>
                 
-                <th className="py-2.5 px-2 text-right text-purple-400">Trần</th>
-                <th className="py-2.5 px-2 text-right text-cyan-400">Sàn</th>
-                <th className="py-2.5 px-2 text-right text-amber-300">TC</th>
+                <th className="py-2 px-1 text-right text-purple-400">Trần</th>
+                <th className="py-2 px-1 text-right text-cyan-400">Sàn</th>
+                <th className="py-2 px-1 text-right text-amber-300">TC</th>
 
                 {columnMode === 'PRO' ? (
                   <>
-                    <th className="py-2.5 px-2 text-right text-emerald-400/80 bg-emerald-500/5">Giá 3</th>
-                    <th className="py-2.5 px-2 text-right text-slate-400 bg-emerald-500/5">KL 3</th>
-                    <th className="py-2.5 px-2 text-right text-emerald-400/90 bg-emerald-500/5">Giá 2</th>
-                    <th className="py-2.5 px-2 text-right text-slate-400 bg-emerald-500/5">KL 2</th>
-                    <th className="py-2.5 px-2 text-right text-emerald-400 bg-emerald-500/10 font-black">Giá 1</th>
-                    <th className="py-2.5 px-2 text-right text-emerald-300 bg-emerald-500/10 font-bold">KL 1</th>
+                    <th className="py-2 px-1 text-right text-emerald-400/80 bg-emerald-500/5">Giá 3</th>
+                    <th className="py-2 px-1 text-right text-slate-400 bg-emerald-500/5">KL 3</th>
+                    <th className="py-2 px-1 text-right text-emerald-400/90 bg-emerald-500/5">Giá 2</th>
+                    <th className="py-2 px-1 text-right text-slate-400 bg-emerald-500/5">KL 2</th>
+                    <th className="py-2 px-1 text-right text-emerald-400 bg-emerald-500/10 font-black">Giá 1</th>
+                    <th className="py-2 px-1 text-right text-emerald-300 bg-emerald-500/10 font-bold">KL 1</th>
                   </>
                 ) : (
                   <>
-                    <th className="py-2.5 px-3 text-right text-emerald-400 bg-emerald-500/10 font-black">Mua Giá 1</th>
-                    <th className="py-2.5 px-3 text-right text-emerald-300 bg-emerald-500/10 font-bold">Mua KL 1</th>
+                    <th className="py-2 px-2 text-right text-emerald-400 bg-emerald-500/10 font-black">Mua Giá 1</th>
+                    <th className="py-2 px-2 text-right text-emerald-300 bg-emerald-500/10 font-bold">Mua KL 1</th>
                   </>
                 )}
 
                 {/* Khớp Lệnh Realtime (Cột Trung Tâm Quan Trọng Nhất) */}
-                <th className="py-2.5 px-3.5 text-right text-primary-300 bg-primary-500/15 font-black border-x border-primary-500/30 text-xs">Khớp Giá</th>
-                <th className="py-2.5 px-2.5 text-right text-white bg-primary-500/10 font-bold">KL Khớp</th>
-                <th className="py-2.5 px-2.5 text-right text-white bg-primary-500/10 font-bold">+/-</th>
-                <th className="py-2.5 px-2.5 text-right text-white bg-primary-500/10 font-bold border-r border-primary-500/30">%</th>
+                <th className="py-2 px-2 text-right text-primary-300 bg-primary-500/15 font-black border-x border-primary-500/30">Khớp Giá</th>
+                <th className="py-2 px-1 text-right text-white bg-primary-500/10 font-bold">KL Khớp</th>
+                <th className="py-2 px-1 text-right text-white bg-primary-500/10 font-bold">+/-</th>
+                <th className="py-2 px-1 text-right text-white bg-primary-500/10 font-bold border-r border-primary-500/30">%</th>
 
                 {columnMode === 'PRO' ? (
                   <>
-                    <th className="py-2.5 px-2 text-right text-rose-400 bg-rose-500/10 font-black">Giá 1</th>
-                    <th className="py-2.5 px-2 text-right text-rose-300 bg-rose-500/10 font-bold">KL 1</th>
-                    <th className="py-2.5 px-2 text-right text-rose-400/90 bg-rose-500/5">Giá 2</th>
-                    <th className="py-2.5 px-2 text-right text-slate-400 bg-rose-500/5">KL 2</th>
-                    <th className="py-2.5 px-2 text-right text-rose-400/80 bg-rose-500/5">Giá 3</th>
-                    <th className="py-2.5 px-2 text-right text-slate-400 bg-rose-500/5">KL 3</th>
+                    <th className="py-2 px-1 text-right text-rose-400 bg-rose-500/10 font-black">Giá 1</th>
+                    <th className="py-2 px-1 text-right text-rose-300 bg-rose-500/10 font-bold">KL 1</th>
+                    <th className="py-2 px-1 text-right text-rose-400/90 bg-rose-500/5">Giá 2</th>
+                    <th className="py-2 px-1 text-right text-slate-400 bg-rose-500/5">KL 2</th>
+                    <th className="py-2 px-1 text-right text-rose-400/80 bg-rose-500/5">Giá 3</th>
+                    <th className="py-2 px-1 text-right text-slate-400 bg-rose-500/5">KL 3</th>
                   </>
                 ) : (
                   <>
-                    <th className="py-2.5 px-3 text-right text-rose-400 bg-rose-500/10 font-black">Bán Giá 1</th>
-                    <th className="py-2.5 px-3 text-right text-rose-300 bg-rose-500/10 font-bold">Bán KL 1</th>
+                    <th className="py-2 px-2 text-right text-rose-400 bg-rose-500/10 font-black">Bán Giá 1</th>
+                    <th className="py-2 px-2 text-right text-rose-300 bg-rose-500/10 font-bold">Bán KL 1</th>
                   </>
                 )}
 
                 {/* Thống kê phiên */}
-                <th className="py-2.5 px-3 text-right font-black text-primary-400">Tổng KL</th>
-                <th className="py-2.5 px-2 text-right text-emerald-400">Cao</th>
-                <th className="py-2.5 px-2 text-right text-rose-400">Thấp</th>
-                <th className="py-2.5 px-2 text-right text-amber-300">TB</th>
-                <th className="py-2.5 px-3 text-right text-slate-400">Ngoại Mua</th>
-                <th className="py-2.5 px-3 text-right text-slate-400">Ngoại Bán</th>
+                <th className="py-2 px-2 text-right font-black text-primary-400">Tổng KL</th>
+                <th className="py-2 px-1 text-right text-emerald-400">Cao</th>
+                <th className="py-2 px-1 text-right text-rose-400">Thấp</th>
+                <th className="py-2 px-1 text-right text-amber-300">TB</th>
+                <th className="py-2 px-2 text-right text-slate-400">Ngoại Mua</th>
+                <th className="py-2 px-2 text-right text-slate-400">Ngoại Bán</th>
               </tr>
             </thead>
 
@@ -842,11 +864,11 @@ export default function LiveBoardPage() {
               {/* Virtual Top Spacer */}
               {topSpacerHeight > 0 && (
                 <tr>
-                  <td colSpan={columnMode === 'PRO' ? 26 : 18} style={{ height: `${topSpacerHeight}px` }} />
+                  <td colSpan={columnMode === 'PRO' ? 27 : 19} style={{ height: `${topSpacerHeight}px` }} />
                 </tr>
               )}
 
-              {/* Dữ liệu từng mã cổ phiếu (Dòng thở thoáng 40px, Font 13.5 - 15px) */}
+              {/* Dữ liệu từng mã cổ phiếu (Dòng thở thoáng 40px, Font 13.5px đồng bộ toàn bộ số) */}
               {visibleStocks.map(stock => {
                 const isWatch = watchlist.includes(stock.symbol);
 
@@ -871,8 +893,8 @@ export default function LiveBoardPage() {
                       <Star className={`w-3.5 h-3.5 mx-auto ${isWatch ? 'fill-amber-400 text-amber-400' : 'text-slate-600 hover:text-amber-400'}`} />
                     </td>
 
-                    {/* Cột Mã CK: In đậm font to 14.5px trắng sáng rõ nét */}
-                    <td className={`px-3 font-black text-[14.5px] text-white sticky left-8 z-10 shadow-sm text-left ${
+                    {/* Cột Mã CK: In đậm trắng sáng rõ nét */}
+                    <td className={`px-2.5 font-black text-[13.5px] text-white sticky left-8 z-10 shadow-sm text-left overflow-hidden text-ellipsis whitespace-nowrap ${
                       boardTheme === 'TRADITIONAL' ? 'bg-black border-r border-slate-700' : 'bg-slate-950'
                     }`}>
                       <div className="font-mono tracking-tight font-black text-white hover:text-primary-300 transition-colors">
@@ -880,10 +902,10 @@ export default function LiveBoardPage() {
                       </div>
                     </td>
 
-                    {/* Trần - Sàn - TC (Right-aligned, font 13px) */}
-                    <td className="px-2 py-2 text-right font-bold font-mono tabular-nums text-purple-400 text-[13px]">{formatPrice(stock.ceiling)}</td>
-                    <td className="px-2 py-2 text-right font-bold font-mono tabular-nums text-cyan-400 text-[13px]">{formatPrice(stock.floor)}</td>
-                    <td className="px-2 py-2 text-right font-bold font-mono tabular-nums text-amber-300 text-[13px]">{formatPrice(stock.ref)}</td>
+                    {/* Trần - Sàn - TC (Right-aligned, font 13.5px đồng bộ) */}
+                    <td className="px-2 py-2 text-right font-bold font-mono tabular-nums text-purple-400 text-[13.5px] overflow-hidden text-ellipsis whitespace-nowrap">{formatPrice(stock.ceiling)}</td>
+                    <td className="px-2 py-2 text-right font-bold font-mono tabular-nums text-cyan-400 text-[13.5px] overflow-hidden text-ellipsis whitespace-nowrap">{formatPrice(stock.floor)}</td>
+                    <td className="px-2 py-2 text-right font-bold font-mono tabular-nums text-amber-300 text-[13.5px] overflow-hidden text-ellipsis whitespace-nowrap">{formatPrice(stock.ref)}</td>
 
                     {/* Bên Mua */}
                     {columnMode === 'PRO' ? (
@@ -902,8 +924,8 @@ export default function LiveBoardPage() {
                       </>
                     )}
 
-                    {/* Khớp Lệnh Realtime: KHỚP GIÁ TO NHẤT 15px & ĐẬM NHẤT */}
-                    <PriceCell price={stock.matchedPrice} refPrice={stock.ref} ceiling={stock.ceiling} floor={stock.floor} boardTheme={boardTheme} isBold triggerVol={stock.matchedVolume || stock.totalVolume} className="border-l border-primary-500/30 bg-primary-500/10 !font-black !text-[15px]" />
+                    {/* Khớp Lệnh Realtime: Font 13.5px đồng bộ */}
+                    <PriceCell price={stock.matchedPrice} refPrice={stock.ref} ceiling={stock.ceiling} floor={stock.floor} boardTheme={boardTheme} isBold triggerVol={stock.matchedVolume || stock.totalVolume} className="border-l border-primary-500/30 bg-primary-500/10 !font-black" />
                     <VolumeCell volume={stock.matchedVolume} price={stock.matchedPrice} refPrice={stock.ref} ceiling={stock.ceiling} floor={stock.floor} boardTheme={boardTheme} className="bg-primary-500/5 !font-bold" />
                     <ChangeCell change={stock.change} changePercent={stock.changePercent} boardTheme={boardTheme} type="change" />
                     <ChangeCell change={stock.change} changePercent={stock.changePercent} boardTheme={boardTheme} type="percent" />
@@ -925,13 +947,13 @@ export default function LiveBoardPage() {
                       </>
                     )}
 
-                    {/* Thống kê phiên: Font 13px, căn phải chuẩn */}
-                    <td className="px-3 py-2 text-right font-black font-mono tabular-nums text-primary-400 text-[13.5px]">{formatNumber(stock.totalVolume)}</td>
-                    <td className="px-2 py-2 text-right font-semibold font-mono tabular-nums text-emerald-400 text-[13px]">{formatPrice(stock.highPrice)}</td>
-                    <td className="px-2 py-2 text-right font-semibold font-mono tabular-nums text-rose-400 text-[13px]">{formatPrice(stock.lowPrice)}</td>
-                    <td className="px-2 py-2 text-right font-mono tabular-nums text-amber-300 text-[13px]">{formatPrice(stock.avgPrice)}</td>
-                    <td className="px-3 py-2 text-right font-mono tabular-nums text-slate-400 text-[12.5px]">{formatNumber(stock.foreignBuy)}</td>
-                    <td className="px-3 py-2 text-right font-mono tabular-nums text-slate-400 text-[12.5px]">{formatNumber(stock.foreignSell)}</td>
+                    {/* Thống kê phiên: Font 13.5px đồng bộ toàn bộ các số */}
+                    <td className="px-2 py-2 text-right font-black font-mono tabular-nums text-primary-400 text-[13.5px] overflow-hidden text-ellipsis whitespace-nowrap">{formatNumber(stock.totalVolume)}</td>
+                    <td className="px-2 py-2 text-right font-semibold font-mono tabular-nums text-emerald-400 text-[13.5px] overflow-hidden text-ellipsis whitespace-nowrap">{formatPrice(stock.highPrice)}</td>
+                    <td className="px-2 py-2 text-right font-semibold font-mono tabular-nums text-rose-400 text-[13.5px] overflow-hidden text-ellipsis whitespace-nowrap">{formatPrice(stock.lowPrice)}</td>
+                    <td className="px-2 py-2 text-right font-mono tabular-nums text-amber-300 text-[13.5px] overflow-hidden text-ellipsis whitespace-nowrap">{formatPrice(stock.avgPrice)}</td>
+                    <td className="px-2 py-2 text-right font-mono tabular-nums text-slate-400 text-[13.5px] overflow-hidden text-ellipsis whitespace-nowrap">{formatNumber(stock.foreignBuy)}</td>
+                    <td className="px-2 py-2 text-right font-mono tabular-nums text-slate-400 text-[13.5px] overflow-hidden text-ellipsis whitespace-nowrap">{formatNumber(stock.foreignSell)}</td>
                   </tr>
                 );
               })}
@@ -939,7 +961,7 @@ export default function LiveBoardPage() {
               {/* Virtual Bottom Spacer */}
               {bottomSpacerHeight > 0 && (
                 <tr>
-                  <td colSpan={columnMode === 'PRO' ? 26 : 18} style={{ height: `${bottomSpacerHeight}px` }} />
+                  <td colSpan={columnMode === 'PRO' ? 27 : 19} style={{ height: `${bottomSpacerHeight}px` }} />
                 </tr>
               )}
             </tbody>

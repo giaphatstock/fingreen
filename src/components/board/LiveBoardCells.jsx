@@ -62,10 +62,10 @@ export const PriceCell = React.memo(function PriceCell({
 
   return (
     <td
-      className={`tabular-nums font-mono text-right transition-all duration-300 ease-out select-none bg-transparent ${
+      className={`tabular-nums font-mono text-right transition-all duration-300 ease-out select-none bg-transparent overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] ${
         boardTheme === 'TRADITIONAL' ? 'px-2 py-2 border border-slate-800' : 'px-2 py-2 border-b border-slate-800/60'
       } ${textColor} ${flashBg} ${
-        isBold ? 'font-black text-[14.5px] sm:text-[15px]' : 'text-[13px] font-semibold'
+        isBold ? 'font-black' : 'font-semibold'
       } ${className}`}
     >
       {formatPrice(price)}
@@ -75,6 +75,7 @@ export const PriceCell = React.memo(function PriceCell({
 
 /**
  * Ô hiển thị Khối Lượng - Chuẩn Smart Board (Chớp sáng xanh/đỏ rực rỡ khi nhảy lệnh)
+ * Đồng bộ kích thước font 13.5px với các ô số khác
  */
 export const VolumeCell = React.memo(function VolumeCell({
   volume,
@@ -114,10 +115,10 @@ export const VolumeCell = React.memo(function VolumeCell({
 
   return (
     <td
-      className={`tabular-nums font-mono text-right transition-all duration-300 ease-out select-none bg-transparent ${
+      className={`tabular-nums font-mono text-right transition-all duration-300 ease-out select-none bg-transparent overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] ${
         boardTheme === 'TRADITIONAL' ? 'px-2 py-2 border border-slate-800' : 'px-2 py-2 border-b border-slate-800/60'
       } ${flashBg} ${
-        isDim ? 'text-slate-400 text-[12px] font-normal' : `${textColor} text-[13px] font-semibold`
+        isDim ? 'text-slate-400 font-normal' : `${textColor} font-semibold`
       } ${className}`}
     >
       {formatNumber(volume)}
@@ -127,6 +128,7 @@ export const VolumeCell = React.memo(function VolumeCell({
 
 /**
  * Ô hiển thị Biến động +/- và %
+ * Đồng bộ kích thước font 13.5px
  */
 export const ChangeCell = React.memo(function ChangeCell({
   change,
@@ -148,9 +150,9 @@ export const ChangeCell = React.memo(function ChangeCell({
 
   return (
     <td
-      className={`tabular-nums font-mono text-right select-none bg-transparent ${
+      className={`tabular-nums font-mono text-right select-none bg-transparent overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] ${
         boardTheme === 'TRADITIONAL' ? 'px-2 py-2 border border-slate-800' : 'px-2 py-2 border-b border-slate-800/60'
-      } ${colorClass} text-[13px] font-bold`}
+      } ${colorClass} font-bold`}
     >
       {displayText}
     </td>

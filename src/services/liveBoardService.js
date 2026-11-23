@@ -232,13 +232,15 @@ export async function fetchMarketIndices() {
 
 /**
  * Tách 3 thành phần của 1 bước giá: "19.7|24300|d" -> { price, volume, type }
+ * Lưu ý: Datafeed VPS trả khối lượng theo đơn vị 10 cổ phiếu (lô 10), cần nhân 10 để ra số lượng cổ phiếu thực tế
  */
 export function parsePriceStep(stepStr) {
   if (!stepStr || typeof stepStr !== 'string') return { price: 0, volume: 0, type: '' };
   const [p, v, t] = stepStr.split('|');
+  const rawVol = parseInt(v, 10) || 0;
   return {
     price: parseFloat(p) || 0,
-    volume: parseInt(v, 10) || 0,
+    volume: rawVol * 10,
     type: t || ''
   };
 }
@@ -253,7 +255,7 @@ export function formatStockData(raw) {
   const floor = raw.f || 0;
   const ref = raw.r || 0;
   const matchedPrice = raw.lastPrice || 0;
-  const matchedVolume = raw.lastVolume || 0;
+  const matchedVolume = raw.lastVolume ? raw.lastVolume * 10 : 0;
   const totalVolume = raw.lot ? raw.lot * 10 : 0;
 
   // Single Source of Truth cho biến động giá cổ phiếu
