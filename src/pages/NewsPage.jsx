@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { supabase, supabasePublic } from '../lib/supabase'
+import React, { useState, useEffect, useRef } from 'react'
+import { supabase } from '../lib/supabase'
 import { Search, TrendingUp, Hash, Eye, Heart, Clock, Sparkles, Filter, ChevronRight } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -40,8 +40,11 @@ export default function NewsPage() {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
   const [filterTemplate, setFilterTemplate] = useState('all')
   const [filterTag, setFilterTag] = useState(initialTag)
+  const abortRef = useRef(null)
+  const debounceRef = useRef(null)
 
   useEffect(() => {
     if (searchParams.get('tag')) {
@@ -49,45 +52,53 @@ export default function NewsPage() {
     }
   }, [searchParams])
 
+  // Debounce 300ms cho search input
+  const handleSearchChange = (e) => {
+    const val = e.target.value
+    setSearchInput(val)
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setSearch(val), 300)
+  }
+
   const fetchPosts = async () => {
+    // Hủy request trước nếu còn pending
+    if (abortRef.current) abortRef.current.abort()
+    abortRef.current = new AbortController()
+
     setLoading(true)
+    // 1 query duy nhất: join public_profiles qua author_id, select cột cụ thể (không SELECT *)
     let query = supabase
       .from('posts')
-      .select(`*, profiles:author_id (full_name, role, company_name, avatar_url)`)
+      .select('id, title, summary, cover_image, template, status, published_at, view_count, like_count, hashtags, stock_codes, author_id, author:public_profiles!author_id(full_name, role, avatar_url, company_name)')
       .eq('status', 'published')
       .order('published_at', { ascending: false })
+      .limit(20)
 
     if (filterTemplate !== 'all') query = query.eq('template', filterTemplate)
     if (filterTag) query = query.contains('hashtags', [filterTag.toUpperCase()])
     if (search) query = query.ilike('title', `%${search}%`)
 
     const { data, error } = await query
-    if (!error && data) {
-      // Đảm bảo thông tin tác giả luôn đầy đủ, kể cả khi RLS profiles chặn user bình thường
-      const enrichedPosts = await Promise.all(
-        data.map(async (item) => {
-          let authorProfile = Array.isArray(item.profiles) ? item.profiles[0] : item.profiles
-          if (!authorProfile?.full_name && item.author_id) {
-            try {
-              const { data: authorData } = await supabasePublic
-                .from('profiles')
-                .select('full_name, role, company_name, avatar_url')
-                .eq('id', item.author_id)
-                .maybeSingle()
-              if (authorData) {
-                authorProfile = authorData
-              }
-            } catch (_) {}
-          }
-          return { ...item, profiles: authorProfile }
-        })
-      )
-      setPosts(enrichedPosts)
+    if (error) {
+      console.warn('[NewsPage] fetchPosts error:', error.message)
+      setLoading(false)
+      return
+    }
+    if (data) {
+      // Normalize: author field từ JOIN (object), không cần Promise.all nữa
+      const normalized = data.map(item => ({
+        ...item,
+        profiles: item.author || null
+      }))
+      setPosts(normalized)
     }
     setLoading(false)
   }
 
-  useEffect(() => { fetchPosts() }, [filterTemplate, filterTag, search])
+  useEffect(() => {
+    fetchPosts()
+    return () => { if (abortRef.current) abortRef.current.abort() }
+  }, [filterTemplate, filterTag, search])
 
   const formatDate = (dateStr) => {
     if (!dateStr) return ''
@@ -152,8 +163,8 @@ export default function NewsPage() {
             <input
               type="text"
               placeholder="Tìm kiếm bài viết theo tiêu đề, mã cổ phiếu..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={handleSearchChange}
               className="input-field pl-10 text-sm"
             />
           </div>

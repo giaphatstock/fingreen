@@ -99,6 +99,7 @@ export default function Navbar() {
               <img
                 src={logoSrc}
                 alt="FinGreen - Kiến tạo giá trị thực"
+                fetchPriority="high"
                 className="h-10 sm:h-11 w-auto object-contain transition-transform duration-200 group-hover:scale-105 drop-shadow-sm"
               />
             </Link>

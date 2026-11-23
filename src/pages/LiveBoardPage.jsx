@@ -216,8 +216,19 @@ export default function LiveBoardPage() {
 
   // Tìm kiếm & Bộ lọc
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const searchDebounceRef = useRef(null);
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'CEILING' | 'UP' | 'REF' | 'DOWN' | 'FLOOR' | 'TOP_VOL'
   const [viewMode, setViewMode] = useState('TABLE'); // 'TABLE' | 'CARDS'
+
+  const handleSearchChange = (e) => {
+    const val = e.target.value;
+    setSearchInput(val);
+    clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setSearchQuery(val);
+    }, 300);
+  };
 
   // Watchlist cá nhân lưu trong localStorage
   const [watchlist, setWatchlist] = useState(() => {
@@ -373,16 +384,46 @@ export default function LiveBoardPage() {
     loadStocks(false);
   }, [currentSymbolList]);
 
-  // Vòng lặp Realtime Streaming (1.2s/lần)
+  // Vòng lặp Realtime Streaming (1500ms/lần, tự động ngắt khi tab ẩn tiết kiệm CPU & network)
   useEffect(() => {
     if (!isLiveActive) return;
 
-    const interval = setInterval(() => {
-      loadStocks(true);
-      loadIndices();
-    }, 350);
+    let interval = null;
+    const startPolling = () => {
+      if (!interval) {
+        interval = setInterval(() => {
+          if (!document.hidden) {
+            loadStocks(true);
+            loadIndices();
+          }
+        }, 1500);
+      }
+    };
 
-    return () => clearInterval(interval);
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        loadStocks(true);
+        loadIndices();
+        startPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [isLiveActive, currentSymbolList]);
 
   // Lọc danh sách hiển thị theo Search và Quick Status Filter
@@ -754,8 +795,8 @@ export default function LiveBoardPage() {
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={searchInput}
+              onChange={handleSearchChange}
               placeholder="Tìm mã (FPT, SSI...)"
               className="w-full pl-8 pr-2.5 py-1 text-[11px] rounded-lg bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-primary-500"
             />
@@ -837,15 +878,15 @@ export default function LiveBoardPage() {
           </p>
         </div>
       ) : viewMode === 'TABLE' ? (
-        /* SMART TRADING TABLE (FULL WIDTH, KHÔNG CẦN CUỘN NGANG, THẤY TRỌN VẸN NGOẠI BÁN) */
+        /* SMART TRADING TABLE (FULL WIDTH, RESPONSIVE CHO MOBILE VỚI SCROLL NGANG & STICKY MÃ CK) */
         <div 
           ref={tableContainerRef}
           onScroll={handleScroll}
           className={`rounded-2xl border ${
             boardTheme === 'TRADITIONAL' ? 'border-slate-800 bg-black' : 'border-slate-800 bg-slate-950'
-          } flex-1 min-h-0 overflow-y-auto overflow-x-hidden shadow-2xl relative scrollbar-thin`}
+          } flex-1 min-h-0 overflow-y-auto overflow-x-auto xl:overflow-x-hidden shadow-2xl relative scrollbar-thin`}
         >
-          <table className="w-full table-fixed text-left border-collapse border-spacing-0 select-none">
+          <table className="w-full min-w-[1050px] xl:min-w-0 table-fixed text-left border-collapse border-spacing-0 select-none">
             {/* Phân bổ tỷ lệ % chuẩn 100% chiều ngang màn hình, thấy trọn vẹn NGOẠI BÁN mà không cần thanh cuộn ngang */}
             <colgroup>
               {columnMode === 'PRO' ? (
@@ -988,7 +1029,7 @@ export default function LiveBoardPage() {
                   >
                     {/* Watchlist toggle */}
                     <td 
-                      className={`text-center sticky left-0 z-10 ${
+                      className={`text-center sticky left-0 z-20 ${
                         boardTheme === 'TRADITIONAL' ? 'bg-black border-r border-slate-800' : 'bg-slate-950'
                       }`}
                       onClick={(e) => { e.stopPropagation(); handleToggleWatchlist(stock.symbol); }}
@@ -996,8 +1037,8 @@ export default function LiveBoardPage() {
                       <Star className={`w-3.5 h-3.5 mx-auto ${isWatch ? 'fill-amber-400 text-amber-400' : 'text-slate-600 hover:text-amber-400'}`} />
                     </td>
 
-                    {/* Cột Mã CK: In đậm trắng sáng rõ nét */}
-                    <td className={`px-1.5 font-black text-[12.5px] sm:text-[13px] text-white sticky left-8 z-10 shadow-sm text-left overflow-hidden text-ellipsis whitespace-nowrap ${
+                    {/* Cột Mã CK: In đậm trắng sáng rõ nét, sticky cố định khi cuộn ngang mobile */}
+                    <td className={`px-1.5 font-black text-[12.5px] sm:text-[13px] text-white sticky left-7 sm:left-8 z-20 shadow-sm text-left overflow-hidden text-ellipsis whitespace-nowrap ${
                       boardTheme === 'TRADITIONAL' ? 'bg-black border-r border-slate-700' : 'bg-slate-950'
                     }`}>
                       <div className="font-mono tracking-tight font-black text-white hover:text-primary-300 transition-colors">

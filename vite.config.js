@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { visualizer } from 'rollup-plugin-visualizer'
 import { EdgeTTS } from 'node-edge-tts'
 
 // Plugin cung cấp endpoint TTS tiếng Việt Neural chất lượng cao chuẩn VTV / TikTok Financial Studio
@@ -135,9 +136,46 @@ function articleScraperPlugin() {
   }
 }
 
+// Plugin tải CSS chính bất đồng bộ để loại bỏ hoàn toàn render-blocking (740ms trên Slow 4G)
+function asyncCssPlugin() {
+  return {
+    name: 'async-css-transform',
+    transformIndexHtml(html) {
+      return html.replace(
+        /<link rel="stylesheet" crossorigin href="([^"]+\.css)">/g,
+        `<link rel="stylesheet" href="$1" media="print" onload="this.media='all'">\n    <noscript><link rel="stylesheet" href="$1"></noscript>`
+      )
+    }
+  }
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), ttsProxyPlugin(), articleScraperPlugin()],
+  plugins: [
+    react(),
+    visualizer({ filename: 'stats.json', template: 'raw-data' }),
+    asyncCssPlugin(),
+    ttsProxyPlugin(),
+    articleScraperPlugin()
+  ],
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/@supabase')) {
+            return 'vendor-supabase'
+          }
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router')) {
+            return 'vendor-react'
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'vendor-icons'
+          }
+        }
+      }
+    }
+  },
   server: {
     proxy: {
       '/api/stock-candles': {

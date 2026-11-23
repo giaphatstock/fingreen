@@ -24,14 +24,35 @@
     <meta name="twitter:description" content="Nền tảng phân tích chứng khoán chuyên nghiệp." />
     <meta name="twitter:image" content="/logo.png" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Performance Preconnects -->
+    <link rel="preconnect" href="https://mobthtgtnymaaijwewfl.supabase.co" crossorigin>
+    <link rel="dns-prefetch" href="https://mobthtgtnymaaijwewfl.supabase.co">
+    <link rel="preconnect" href="https://bgapidatafeed.vps.com.vn" crossorigin>
+    <link rel="dns-prefetch" href="https://bgapidatafeed.vps.com.vn">
+
+    <!-- Preload Fonts cục bộ (Loại bỏ 100% Render-blocking Google Fonts) -->
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/inter-latin.woff2" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="/fonts/inter-vietnamese.woff2" crossorigin>
+
+    <!-- Critical Above-the-Fold Inline CSS (Navbar, Background & Hero Title) -->
+    <style>
+      :root{--color-primary:#5154F0;--bg-main:#0a0b16;--bg-card:#121426;--bg-card-hover:#181b32;--bg-input:#1a1e38;--bg-subtle:#14172e;--border-color:#24294d;--text-main:#f3f4f6;--text-muted:#9ca3af;--nav-bg:rgba(10,11,22,0.92)}
+      html.theme-dark{:root{--bg-main:#000000;--bg-card:#0d0e12;--bg-subtle:#111318;--border-color:#222530;--text-main:#ffffff;--text-muted:#9aa0a6;--nav-bg:rgba(0,0,0,0.94)}}
+      html.theme-light{:root{--bg-main:#F3ECFB;--bg-card:#ffffff;--bg-subtle:#ebdff7;--border-color:#dfceef;--text-main:#1d182b;--text-muted:#6a627a;--nav-bg:rgba(243,236,251,0.94)}}
+      *,::before,::after{box-sizing:border-box}
+      html{line-height:1.5;-webkit-text-size-adjust:100%;font-family:Inter,system-ui,-apple-system,sans-serif}
+      body{margin:0;background-color:var(--bg-main);color:var(--text-main);min-height:100vh}
+      nav{position:fixed;top:0;left:0;right:0;z-index:50;backdrop-filter:blur(16px);border-bottom:1px solid var(--border-color);background-color:var(--nav-bg)}
+      .text-gradient{background:linear-gradient(135deg,#5154F0 0%,#A8AAF8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+      .bg-mesh{background-color:var(--bg-main);background-image:radial-gradient(at 0% 0%,rgba(81,84,240,0.12) 0,transparent 50%),radial-gradient(at 100% 100%,rgba(168,170,248,0.08) 0,transparent 50%)}
+      .card{background-color:var(--bg-card);border:1px solid var(--border-color);border-radius:1rem;padding:1.5rem}
+      .input-field{background-color:var(--bg-input);border:1px solid var(--border-color);border-radius:0.75rem;padding:0.75rem 1rem;color:var(--text-main);width:100%}
+    </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-    <!-- DMCA Protection Helper Script -->
-    <script src="https://images.dmca.com/Badges/DMCABadgeHelper.min.js"></script>
+    <!-- DMCA Protection Helper Script (Deferred để không chặn render) -->
+    <script defer src="https://images.dmca.com/Badges/DMCABadgeHelper.min.js"></script>
   </body>
 </html>

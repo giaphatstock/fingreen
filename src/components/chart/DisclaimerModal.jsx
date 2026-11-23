@@ -94,12 +94,16 @@ export default function DisclaimerModal({
           greensmartone_consent: consentRecord
         };
 
-        await supabase
+        const { error: consentErr } = await supabase
           .from('profiles')
           .update({
             company_description: JSON.stringify(updatedDesc)
           })
           .eq('id', user.id);
+
+        if (consentErr) {
+          console.warn('[DisclaimerModal] Lưu xác nhận vào hồ sơ thất bại:', consentErr.message);
+        }
       }
 
       // 2. Lưu vào localStorage để ghi nhớ phiên làm việc

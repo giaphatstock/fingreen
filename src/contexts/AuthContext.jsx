@@ -9,10 +9,64 @@ export const useAuth = () => {
   return context
 }
 
+// Helper nhận diện thiết bị & hệ điều hành người dùng
+export function detectUserDevice() {
+  if (typeof window === 'undefined' || !navigator) {
+    return { deviceType: 'Unknown', os: 'Unknown', browser: 'Unknown', summary: 'Không xác định' };
+  }
+  const ua = navigator.userAgent || '';
+  let deviceType = 'Desktop';
+  if (/mobile/i.test(ua)) deviceType = 'Mobile';
+  else if (/tablet|ipad/i.test(ua)) deviceType = 'Tablet';
+
+  let os = 'Khác';
+  if (/windows/i.test(ua)) os = 'Windows';
+  else if (/macintosh|mac os x/i.test(ua)) os = 'macOS';
+  else if (/iphone/i.test(ua)) os = 'iPhone (iOS)';
+  else if (/ipad/i.test(ua)) os = 'iPad (iPadOS)';
+  else if (/android/i.test(ua)) os = 'Android';
+  else if (/linux/i.test(ua)) os = 'Linux';
+
+  let browser = 'Khác';
+  if (/chrome|crios/i.test(ua) && !/edg|opr/i.test(ua)) browser = 'Chrome';
+  else if (/safari/i.test(ua) && !/chrome/i.test(ua)) browser = 'Safari';
+  else if (/edg/i.test(ua)) browser = 'Edge';
+  else if (/firefox|fxios/i.test(ua)) browser = 'Firefox';
+  else if (/coc_coc_browser/i.test(ua)) browser = 'Cốc Cốc';
+  else if (/zalo/i.test(ua)) browser = 'Zalo App';
+
+  const icon = deviceType === 'Mobile' ? '📱' : deviceType === 'Tablet' ? '📟' : '💻';
+  const summary = `${icon} ${os} • ${browser}`;
+
+  return { deviceType, os, browser, summary };
+}
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+
+  // Cập nhật thời gian truy cập gần nhất và thiết bị người dùng
+  const recordUserActivity = async (userId) => {
+    if (!userId) return;
+    try {
+      const dev = detectUserDevice();
+      const now = new Date().toISOString();
+      const { error } = await supabase.from('profiles').update({
+        last_seen_at: now,
+        last_device: dev.summary,
+        device_info: {
+          ...dev,
+          userAgent: (navigator.userAgent || '').slice(0, 250),
+          screen: typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : '',
+          updatedAt: now
+        }
+      }).eq('id', userId);
+      if (error) console.warn('[AuthContext] Không thể cập nhật activity:', error.message);
+    } catch (e) {
+      // Non-blocking error
+    }
+  };
 
   const fetchProfile = async (userId, userObj = null) => {
     if (!userId) { setProfile(null); return }
@@ -25,8 +79,10 @@ export const AuthProvider = ({ children }) => {
 
       if (!error && data) {
         setProfile(data)
+        recordUserActivity(userId)
       } else {
         // Nếu trigger chưa tạo kịp, tạo ngay profile
+        const dev = detectUserDevice();
         const newProfile = {
           id: userId,
           email: userObj?.email || user?.email || '',
@@ -34,8 +90,11 @@ export const AuthProvider = ({ children }) => {
           role: 'guest',
           is_approved: false,
           is_banned: false,
+          last_seen_at: new Date().toISOString(),
+          last_device: dev.summary
         }
-        await supabase.from('profiles').upsert(newProfile)
+        const { error: upsertErr } = await supabase.from('profiles').upsert(newProfile)
+        if (upsertErr) console.warn('[AuthContext] Lỗi tạo profile mới:', upsertErr.message)
         setProfile(newProfile)
       }
     } catch (err) {
@@ -68,7 +127,10 @@ export const AuthProvider = ({ children }) => {
         const currentUser = session?.user ?? null
         setUser(currentUser)
         if (currentUser) {
-          await fetchProfile(currentUser.id, currentUser)
+          // BƯỚC 8: Chỉ gọi fetchProfile khi SIGNED_IN hoặc USER_UPDATED, KHÔNG gọi khi TOKEN_REFRESHED
+          if (_event === 'SIGNED_IN' || _event === 'USER_UPDATED') {
+            await fetchProfile(currentUser.id, currentUser)
+          }
         } else {
           setProfile(null)
         }
@@ -79,9 +141,15 @@ export const AuthProvider = ({ children }) => {
   }, [])
 
   const signOut = async () => {
-    await supabase.auth.signOut()
-    setUser(null)
-    setProfile(null)
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) console.warn('[AuthContext] Lỗi đăng xuất:', error.message)
+    } catch (e) {
+      console.warn('[AuthContext] Ngoại lệ đăng xuất:', e)
+    } finally {
+      setUser(null)
+      setProfile(null)
+    }
   }
 
   const refreshProfile = () => fetchProfile(user?.id)

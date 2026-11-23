@@ -117,13 +117,16 @@ export default function AuthPage() {
           setMode('otp')
           startOtpCooldown()
           try {
-            await supabase.auth.resend({
+            const { error: resendErr } = await supabase.auth.resend({
               type: 'signup',
               email: unconfirmedEmail,
               options: {
                 emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/dang-nhap` : undefined
               }
             })
+            if (resendErr) {
+              console.warn('[AuthPage] Lỗi gửi lại mã xác nhận:', resendErr.message)
+            }
             toast('Tài khoản chưa được kích hoạt. Mã OTP mới đã được gửi tới email của bạn!', {
               icon: '🔐',
               duration: 5000

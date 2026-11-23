@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { supabase, supabasePublic, updateMetaTags } from '../lib/supabase'
+import { supabase, updateMetaTags } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 import {
@@ -8,13 +8,28 @@ import {
   TrendingUp, Loader2, AlertTriangle, Lock, LogIn, UserPlus,
   Check, Copy, ExternalLink, X, Sparkles
 } from 'lucide-react'
-import { generateHTML } from '@tiptap/core'
-import StarterKit from '@tiptap/starter-kit'
-import Image from '@tiptap/extension-image'
-import LinkExtension from '@tiptap/extension-link'
-import Underline from '@tiptap/extension-underline'
-import Highlight from '@tiptap/extension-highlight'
-import TextStyle from '@tiptap/extension-text-style'
+
+// Dynamic loader cho Tiptap giúp giảm đáng kể initial bundle size
+async function renderTiptapToHTML(contentDoc) {
+  const [
+    { generateHTML },
+    { default: StarterKit },
+    { default: Image },
+    { default: LinkExtension },
+    { default: Underline },
+    { default: Highlight },
+    { default: TextStyle }
+  ] = await Promise.all([
+    import('@tiptap/core'),
+    import('@tiptap/starter-kit'),
+    import('@tiptap/extension-image'),
+    import('@tiptap/extension-link'),
+    import('@tiptap/extension-underline'),
+    import('@tiptap/extension-highlight'),
+    import('@tiptap/extension-text-style'),
+  ])
+  return generateHTML(contentDoc, [StarterKit, Underline, Highlight, TextStyle, Image, LinkExtension])
+}
 
 const TEMPLATE_ICONS = { standard: '📰', analysis: '📊', signal: '🎯', report: '📋', news: '⚡' }
 const TEMPLATE_LABELS = { standard: 'Tin Tức', analysis: 'Phân Tích', signal: 'Tín Hiệu', report: 'Báo Cáo', news: 'Tin Nhanh' }
@@ -68,41 +83,19 @@ export default function PostDetailPage() {
     const fetchPost = async () => {
       const { data, error } = await supabase
         .from('posts')
-        .select('*, profiles:author_id(full_name, role, company_name, avatar_url)')
+        .select('*, author:public_profiles!author_id(full_name, role, company_name, avatar_url)')
         .eq('id', id)
         .single()
       if (!error && data) {
-        let postData = data
-
-        // Nếu profiles bị null do RLS khi user bình thường đăng nhập, truy vấn tác giả bằng supabasePublic
-        let authorProfile = postData.profiles
-        if (Array.isArray(authorProfile)) {
-          authorProfile = authorProfile[0]
-        }
-        if (!authorProfile?.full_name && postData.author_id) {
-          try {
-            const { data: authorData } = await supabasePublic
-              .from('profiles')
-              .select('full_name, role, company_name, avatar_url')
-              .eq('id', postData.author_id)
-              .maybeSingle()
-            if (authorData) {
-              authorProfile = authorData
-            }
-          } catch (e) {
-            console.warn('Lỗi lấy thông tin tác giả:', e)
-          }
-        }
-        postData = { ...postData, profiles: authorProfile }
+        let postData = { ...data, profiles: data.author || data.profiles }
         setPost(postData)
 
-        // Convert JSON content to HTML
+        // Convert JSON content to HTML (Dynamic Tiptap import)
         try {
           if (data.content && data.content.type === 'doc') {
-            const html = generateHTML(data.content, [
-              StarterKit, Underline, Highlight, TextStyle, Image, LinkExtension
-            ])
-            setHtmlContent(html)
+            renderTiptapToHTML(data.content)
+              .then(html => setHtmlContent(html))
+              .catch(() => setHtmlContent('<p class="text-[var(--text-muted)]">Nội dung đang được cập nhật...</p>'))
           } else if (typeof data.content === 'string') {
             setHtmlContent(data.content)
           }
@@ -120,8 +113,14 @@ export default function PostDetailPage() {
           url: fullUrl,
         })
 
-        // Tăng lượt xem
-        await supabase.from('posts').update({ view_count: (data.view_count || 0) + 1 }).eq('id', id)
+        // Tăng lượt xem (có error handling an toàn)
+        const { error: viewErr } = await supabase
+          .from('posts')
+          .update({ view_count: (data.view_count || 0) + 1 })
+          .eq('id', id)
+        if (viewErr) {
+          console.warn('[PostDetail] Không thể tăng lượt xem:', viewErr.message)
+        }
       }
       setLoading(false)
     }
@@ -134,12 +133,26 @@ export default function PostDetailPage() {
       return
     }
     if (!post) return
+    const prevLiked = liked
+    const prevCount = post.like_count || 0
     const newLiked = !liked
+    const newCount = newLiked ? prevCount + 1 : Math.max(0, prevCount - 1)
+
+    // Optimistic UI update
     setLiked(newLiked)
-    await supabase.from('posts').update({
-      like_count: newLiked ? (post.like_count || 0) + 1 : Math.max(0, (post.like_count || 0) - 1)
+    setPost(p => ({ ...p, like_count: newCount }))
+
+    const { error: likeErr } = await supabase.from('posts').update({
+      like_count: newCount
     }).eq('id', id)
-    setPost(p => ({ ...p, like_count: newLiked ? (p.like_count || 0) + 1 : Math.max(0, (p.like_count || 0) - 1) }))
+
+    if (likeErr) {
+      console.warn('[PostDetail] Lỗi cập nhật thích:', likeErr.message)
+      // Rollback UI state khi lỗi mạng/quyền
+      setLiked(prevLiked)
+      setPost(p => ({ ...p, like_count: prevCount }))
+      toast.error('Không thể cập nhật lượt thích')
+    }
   }
 
   // Xử lý chia sẻ bài viết (Zalo, Facebook, Copy link, Native Share)

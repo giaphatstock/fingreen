@@ -1,10 +1,12 @@
-import React from 'react'
+import React, { Suspense, lazy } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme } from '../../contexts/ThemeContext'
 import Navbar from './Navbar'
-import FinGreenRobot from '../ai/FinGreenRobot'
 import { TrendingUp, ShieldCheck, Award, Heart } from 'lucide-react'
+
+// Lazy-load floating AI robot để không kéo dnseService + aiService (~98 kB) vào initial bundle
+const FinGreenRobot = lazy(() => import('../ai/FinGreenRobot'))
 
 export default function Layout({ children }) {
   const { profile } = useAuth()
@@ -134,8 +136,10 @@ export default function Layout({ children }) {
       </footer>
       )}
 
-      {/* Con robot tròn di chuyển & Chatbot FinGreen AI */}
-      <FinGreenRobot />
+      {/* Con robot tròn di chuyển & Chatbot FinGreen AI (Loaded on-demand) */}
+      <Suspense fallback={null}>
+        <FinGreenRobot />
+      </Suspense>
     </div>
   )
 }

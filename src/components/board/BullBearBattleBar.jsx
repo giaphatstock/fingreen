@@ -35,8 +35,8 @@ export default function BullBearBattleBar({ stats }) {
           </div>
         </div>
 
-        {/* Điểm giao tranh trung tâm (Clash Status) */}
-        <div className="flex items-center gap-1 flex-shrink-0">
+        {/* Điểm giao tranh trung tâm (Clash Status) - Ẩn trên mobile để không chèn chữ Bò / Gấu */}
+        <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
           {dominant === 'BULL' ? (
             <div className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 shadow-[0_0_10px_rgba(16,185,129,0.4)] animate-pulse">
               <Flame className="w-3 h-3 text-emerald-400 fill-current" />

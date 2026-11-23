@@ -57,6 +57,9 @@ export default function AdminPage() {
   const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(false)
   const [searchUser, setSearchUser] = useState('')
+  const [searchUserInput, setSearchUserInput] = useState('')
+  const searchUserDebounceRef = useRef(null)
+  const fetchUsersAbortRef = useRef(null)
   const [stats, setStats] = useState({ users: 0, posts: 0, pending: 0, applications: 0 })
 
   // Quản lý gia hạn GreenSmartOne
@@ -182,31 +185,49 @@ export default function AdminPage() {
   }
 
   const fetchUsers = async () => {
+    if (fetchUsersAbortRef.current) fetchUsersAbortRef.current.abort()
+    fetchUsersAbortRef.current = new AbortController()
+
     setLoading(true)
     let query = supabase.from('profiles').select('*').order('created_at', { ascending: false })
     if (searchUser) query = query.or(`full_name.ilike.%${searchUser}%,email.ilike.%${searchUser}%`)
-    const { data } = await query
-    setUsers(data || [])
+    const { data, error } = await query
+    if (error) {
+      console.warn('[AdminPage] fetchUsers error:', error.message)
+      toast.error('Không thể tải danh sách thành viên')
+    } else {
+      setUsers(data || [])
+    }
     setLoading(false)
   }
 
   const fetchPosts = async () => {
     setLoading(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('posts')
       .select('*, profiles:author_id(full_name, email)')
       .order('created_at', { ascending: false })
-    setPosts(data || [])
+    if (error) {
+      console.warn('[AdminPage] fetchPosts error:', error.message)
+      toast.error('Không thể tải danh sách bài viết')
+    } else {
+      setPosts(data || [])
+    }
     setLoading(false)
   }
 
   const fetchApplications = async () => {
     setLoading(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('partner_applications')
       .select('*, profiles:user_id(full_name, email)')
       .order('created_at', { ascending: false })
-    setApplications(data || [])
+    if (error) {
+      console.warn('[AdminPage] fetchApplications error:', error.message)
+      toast.error('Không thể tải đơn đăng ký')
+    } else {
+      setApplications(data || [])
+    }
     setLoading(false)
   }
 
@@ -215,11 +236,12 @@ export default function AdminPage() {
     if (activeTab === 'users' || activeTab === 'greensmartone') fetchUsers()
     if (activeTab === 'posts') fetchPosts()
     if (activeTab === 'applications') fetchApplications()
+    return () => { if (fetchUsersAbortRef.current) fetchUsersAbortRef.current.abort() }
   }, [activeTab, searchUser])
 
   const updateUserRole = async (userId, role) => {
     const { error } = await supabase.from('profiles').update({ role }).eq('id', userId)
-    if (error) toast.error('Lỗi cập nhật vai trò')
+    if (error) toast.error('Lỗi cập nhật vai trò: ' + error.message)
     else { toast.success('Đã cập nhật vai trò'); fetchUsers() }
   }
 
@@ -229,7 +251,7 @@ export default function AdminPage() {
     const { error } = await supabase.from('profiles')
       .update({ is_banned: !user.is_banned, ban_reason: !user.is_banned ? reason : null })
       .eq('id', user.id)
-    if (error) toast.error('Lỗi')
+    if (error) toast.error('Lỗi khi cập nhật trạng thái: ' + error.message)
     else { toast.success(user.is_banned ? 'Đã mở khóa tài khoản' : 'Đã khóa tài khoản'); fetchUsers() }
   }
 
@@ -237,7 +259,7 @@ export default function AdminPage() {
     const { error } = await supabase.from('profiles')
       .update({ is_approved: !user.is_approved })
       .eq('id', user.id)
-    if (error) toast.error('Lỗi')
+    if (error) toast.error('Lỗi khi phê duyệt: ' + error.message)
     else { toast.success(user.is_approved ? 'Đã thu hồi phê duyệt' : 'Đã phê duyệt'); fetchUsers() }
   }
 
@@ -248,22 +270,33 @@ export default function AdminPage() {
       published_at: status === 'published' ? new Date().toISOString() : null,
       rejected_reason: reason,
     }).eq('id', postId)
-    if (error) toast.error('Lỗi')
+    if (error) toast.error('Lỗi khi cập nhật trạng thái bài viết: ' + error.message)
     else { toast.success(`Bài viết đã được ${status === 'published' ? 'duyệt' : 'từ chối'}`); fetchPosts(); fetchStats() }
   }
 
   const approveApplication = async (app) => {
-    await supabase.from('partner_applications').update({
+    const { error: appErr } = await supabase.from('partner_applications').update({
       status: 'approved',
       reviewed_by: profile.id,
       reviewed_at: new Date().toISOString(),
     }).eq('id', app.id)
 
-    await supabase.from('profiles').update({
+    if (appErr) {
+      toast.error('Lỗi cập nhật trạng thái đơn: ' + appErr.message)
+      return
+    }
+
+    const { error: profErr } = await supabase.from('profiles').update({
       role: app.role_requested,
       is_approved: true,
       company_name: app.company_name,
     }).eq('id', app.user_id)
+
+    if (profErr) {
+      toast.error('Lỗi cập nhật quyền người dùng: ' + profErr.message)
+      return
+    }
+
     toast.success('Đã phê duyệt đối tác thành công!')
     fetchApplications(); fetchStats()
   }
@@ -271,12 +304,18 @@ export default function AdminPage() {
   const rejectApplication = async (appId) => {
     const reason = window.prompt('Lý do từ chối:')
     if (reason === null) return
-    await supabase.from('partner_applications').update({
+    const { error } = await supabase.from('partner_applications').update({
       status: 'rejected',
       reviewed_by: profile.id,
       reviewed_at: new Date().toISOString(),
       rejection_reason: reason,
     }).eq('id', appId)
+
+    if (error) {
+      toast.error('Lỗi từ chối đơn: ' + error.message)
+      return
+    }
+
     toast.success('Đã từ chối đơn đăng ký')
     fetchApplications(); fetchStats()
   }
@@ -669,8 +708,13 @@ export default function AdminPage() {
               <input
                 type="text"
                 placeholder="Tìm thành viên theo họ tên hoặc địa chỉ email..."
-                value={searchUser}
-                onChange={e => setSearchUser(e.target.value)}
+                value={searchUserInput}
+                onChange={e => {
+                  const val = e.target.value
+                  setSearchUserInput(val)
+                  clearTimeout(searchUserDebounceRef.current)
+                  searchUserDebounceRef.current = setTimeout(() => setSearchUser(val), 300)
+                }}
                 className="input-field pl-10 text-xs sm:text-sm"
               />
             </div>
