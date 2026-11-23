@@ -6,6 +6,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import Layout from './components/layout/Layout'
 import NewsPage from './pages/NewsPage'
+import MaintenanceNotice from './components/common/MaintenanceNotice'
+import { getSystemTabs } from './services/systemTabService'
 import './index.css'
 
 // Dynamic lazy imports cho toàn bộ các route phụ (giúp Initial Main Bundle < 200kB)
@@ -41,6 +43,28 @@ function PublicAuthRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return null
   if (user) return <Navigate to="/" replace />
+  return children
+}
+
+function MaintenanceRoute({ tabId, children }) {
+  const { isAdmin } = useAuth()
+  const [tab, setTab] = React.useState(null)
+
+  React.useEffect(() => {
+    getSystemTabs().then(tabs => {
+      const found = tabs?.find(t => t.id === tabId)
+      if (found) setTab(found)
+    })
+  }, [tabId])
+
+  if (tab && tab.is_maintenance) {
+    return (
+      <MaintenanceNotice tab={tab} isAdmin={isAdmin}>
+        {children}
+      </MaintenanceNotice>
+    )
+  }
+
   return children
 }
 
@@ -80,13 +104,13 @@ function AppRoutes() {
         <Layout>
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/" element={<NewsPage />} />
-              <Route path="/bang-dien" element={<LiveBoardPage />} />
-              <Route path="/bang-gia" element={<LiveBoardPage />} />
-              <Route path="/greensmartone" element={<GreenSmartOnePage />} />
-              <Route path="/green-smart-one" element={<GreenSmartOnePage />} />
+              <Route path="/" element={<MaintenanceRoute tabId="posts"><NewsPage /></MaintenanceRoute>} />
+              <Route path="/bang-dien" element={<MaintenanceRoute tabId="bang_dien"><LiveBoardPage /></MaintenanceRoute>} />
+              <Route path="/bang-gia" element={<MaintenanceRoute tabId="bang_dien"><LiveBoardPage /></MaintenanceRoute>} />
+              <Route path="/greensmartone" element={<MaintenanceRoute tabId="greensmartone"><GreenSmartOnePage /></MaintenanceRoute>} />
+              <Route path="/green-smart-one" element={<MaintenanceRoute tabId="greensmartone"><GreenSmartOnePage /></MaintenanceRoute>} />
               <Route path="/bai-viet/:id" element={<PostDetailPage />} />
-              <Route path="/hop-tac" element={<PartnerPage />} />
+              <Route path="/hop-tac" element={<MaintenanceRoute tabId="partner"><PartnerPage /></MaintenanceRoute>} />
               
               <Route path="/dang-bai" element={
                 <ProtectedRoute>
@@ -105,7 +129,9 @@ function AppRoutes() {
               } />
               <Route path="/ai" element={
                 <ProtectedRoute>
-                  <AIAssistantPage />
+                  <MaintenanceRoute tabId="ai">
+                    <AIAssistantPage />
+                  </MaintenanceRoute>
                 </ProtectedRoute>
               } />
               

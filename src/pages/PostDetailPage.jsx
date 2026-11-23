@@ -113,14 +113,14 @@ export default function PostDetailPage() {
           url: fullUrl,
         })
 
-        // Tăng lượt xem (có error handling an toàn)
-        const { error: viewErr } = await supabase
+        // Tăng lượt xem non-blocking ở background, KHÔNG await chặn hiển thị bài
+        supabase
           .from('posts')
           .update({ view_count: (data.view_count || 0) + 1 })
           .eq('id', id)
-        if (viewErr) {
-          console.warn('[PostDetail] Không thể tăng lượt xem:', viewErr.message)
-        }
+          .then(({ error: viewErr }) => {
+            if (viewErr) console.warn('[PostDetail] Không thể tăng lượt xem:', viewErr.message)
+          })
       }
       setLoading(false)
     }
@@ -227,13 +227,13 @@ export default function PostDetailPage() {
 
       {/* Article Card */}
       <article className="card relative overflow-hidden">
-        {/* Cover image an toàn: Tự fallback sang ảnh biểu đồ trong nội dung hoặc logo nếu link ngoài lỗi 404 */}
+        {/* Cover image an toàn: Tự co giãn tỷ lệ (object-contain) giúp bảng biểu tài chính / biểu đồ không bị cắt xén */}
         {coverImage && (
-          <div className="h-64 sm:h-80 bg-[var(--bg-subtle)] rounded-xl overflow-hidden mb-6 -mx-6 -mt-6 border-b border-[var(--border-color)] flex items-center justify-center">
+          <div className="max-h-[500px] bg-[var(--bg-subtle)]/60 rounded-2xl overflow-hidden mb-6 -mx-6 -mt-6 border-b border-[var(--border-color)] flex items-center justify-center p-2 sm:p-4">
             <img
               src={coverImage}
               alt={post.title}
-              className="w-full h-full object-cover"
+              className="max-h-[460px] w-auto max-w-full object-contain rounded-xl shadow-md transition-all"
               onError={(e) => {
                 e.currentTarget.onerror = null
                 e.currentTarget.src = '/logo-horizontal.png'

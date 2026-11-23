@@ -1,19 +1,20 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme } from '../../contexts/ThemeContext'
 import toast from 'react-hot-toast'
 import {
   FileText, Handshake, Shield, LogOut, Menu, X, ChevronDown,
-  User, Newspaper, Palette, LogIn, ExternalLink, Sparkles, Bot, Zap, Activity, MoreHorizontal
+  User, Newspaper, Palette, LogIn, ExternalLink, Sparkles, Bot, Zap, Activity, MoreHorizontal, Wrench
 } from 'lucide-react'
+import { getSystemTabs } from '../../services/systemTabService'
 
 const NAV_ITEMS = [
-  { path: '/', icon: Newspaper, label: 'Tin Tức & Phân Tích' },
-  { path: '/bang-dien', icon: Activity, label: 'Bảng Điện', badge: 'LIVE' },
-  { path: '/greensmartone', icon: Zap, label: 'GreenSmartOne', badge: 'PRO' },
-  { path: '/hop-tac', icon: Handshake, label: 'Hợp Tác FinGreen' },
-  { path: '/ai', icon: Bot, label: 'FinGreen AI', requireAuth: true },
+  { id: 'posts', path: '/', icon: Newspaper, label: 'Tin Tức & Phân Tích' },
+  { id: 'bang_dien', path: '/bang-dien', icon: Activity, label: 'Bảng Điện', badge: 'LIVE' },
+  { id: 'greensmartone', path: '/greensmartone', icon: Zap, label: 'GreenSmartOne', badge: 'PRO' },
+  { id: 'partner', path: '/hop-tac', icon: Handshake, label: 'Hợp Tác FinGreen' },
+  { id: 'ai', path: '/ai', icon: Bot, label: 'FinGreen AI', requireAuth: true },
 ]
 
 const PARTNER_NAV = [
@@ -56,6 +57,13 @@ export default function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [themeMenuOpen, setThemeMenuOpen] = useState(false)
   const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+  const [systemTabs, setSystemTabs] = useState([])
+
+  useEffect(() => {
+    getSystemTabs().then(tabs => {
+      if (tabs) setSystemTabs(tabs)
+    })
+  }, [])
 
   const isLight = theme === 'light'
   const logoSrc = isLight ? '/logo-horizontal-light.png' : '/logo-horizontal-dark.png'
@@ -69,7 +77,17 @@ export default function Navbar() {
   const isActive = (path) => location.pathname === path
 
   const allNav = [
-    ...NAV_ITEMS,
+    ...NAV_ITEMS.filter(item => {
+      if (isAdmin) return true
+      const tabConfig = systemTabs.find(t => t.id === item.id || t.path === item.path)
+      return tabConfig ? tabConfig.is_visible !== false : true
+    }).map(item => {
+      const tabConfig = systemTabs.find(t => t.id === item.id || t.path === item.path)
+      if (tabConfig?.is_maintenance) {
+        return { ...item, isMaintenance: true, badge: 'BẢO TRÌ' }
+      }
+      return item
+    }),
     ...(canPost ? PARTNER_NAV : []),
     ...(isAdmin ? ADMIN_NAV : []),
   ]
@@ -129,7 +147,11 @@ export default function Navbar() {
                     <item.icon className={`w-3.5 h-3.5 flex-shrink-0 ${active ? 'text-primary-400' : 'text-[var(--text-muted)]'}`} />
                     <span className="whitespace-nowrap">{item.label}</span>
                     {item.badge && (
-                      <span className="px-1.5 py-0.2 text-[9px] font-extrabold rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
+                      <span className={`px-1.5 py-0.2 text-[9px] font-extrabold rounded-md whitespace-nowrap ${
+                        item.isMaintenance
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 animate-pulse'
+                          : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                      }`}>
                         {item.badge}
                       </span>
                     )}
@@ -185,7 +207,11 @@ export default function Navbar() {
                               <span>{item.label}</span>
                             </div>
                             {item.badge && (
-                              <span className="px-1.5 py-0.2 text-[9px] font-extrabold rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                              <span className={`px-1.5 py-0.2 text-[9px] font-extrabold rounded-md whitespace-nowrap ${
+                                item.isMaintenance
+                                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 animate-pulse'
+                                  : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                              }`}>
                                 {item.badge}
                               </span>
                             )}
@@ -445,7 +471,11 @@ export default function Navbar() {
                     <span>{item.label}</span>
                   </div>
                   {item.badge && (
-                    <span className="px-1.5 py-0.2 text-[9px] font-extrabold rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    <span className={`px-1.5 py-0.2 text-[9px] font-extrabold rounded-md whitespace-nowrap ${
+                      item.isMaintenance
+                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 animate-pulse'
+                        : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                    }`}>
                       {item.badge}
                     </span>
                   )}

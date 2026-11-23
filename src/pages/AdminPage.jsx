@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
@@ -6,7 +6,7 @@ import {
   Users, Scale, CheckCircle2, FileText, Shield, TrendingUp, CheckCircle, XCircle,
   Ban, Lock, Eye, Search, ChevronDown, AlertTriangle, Loader2,
   ClipboardList, UserCheck, UserX, Trash2, RefreshCw, Activity,
-  Bot, Key, Sparkles, Check, Globe, Zap, Calendar, Clock, X
+  Bot, Key, Sparkles, Check, Globe, Zap, Calendar, Clock, X, Sliders, Wrench, Laptop, Smartphone
 } from 'lucide-react'
 import {
   getGeminiApiKey, saveGeminiApiKey,
@@ -15,6 +15,7 @@ import {
   SUGGESTED_FAST_MODELS, SUGGESTED_TURBO_MODELS
 } from '../services/aiService'
 import { DNSE_MCP_TOOLS } from '../services/dnseService'
+import { getSystemTabs, updateSystemTab, DEFAULT_SYSTEM_TABS } from '../services/systemTabService'
 
 const ROLE_OPTIONS = [
   { value: 'guest', label: 'Thành Viên' },
@@ -68,6 +69,41 @@ export default function AdminPage() {
   const [savingRenew, setSavingRenew] = useState(false)
   const [gsSubTab, setGsSubTab] = useState('licenses') // 'licenses' | 'consents'
   const [searchGs, setSearchGs] = useState('')
+
+  // Quản lý Tab & Chế độ bảo trì hệ thống
+  const [systemTabs, setSystemTabs] = useState([])
+  const [loadingTabs, setLoadingTabs] = useState(false)
+  const [editingTab, setEditingTab] = useState(null)
+  const [savingTab, setSavingTab] = useState(false)
+
+  const fetchSystemTabs = async () => {
+    setLoadingTabs(true)
+    try {
+      const tabs = await getSystemTabs()
+      setSystemTabs(tabs)
+    } catch (e) {
+      console.warn('Lỗi tải danh sách tab:', e)
+    } finally {
+      setLoadingTabs(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchSystemTabs()
+  }, [])
+
+  const handleUpdateTab = async (tabId, updates) => {
+    setSavingTab(true)
+    const res = await updateSystemTab(tabId, updates)
+    setSavingTab(false)
+    if (res.success) {
+      toast.success('Đã lưu cấu hình tab!')
+      setEditingTab(null)
+      fetchSystemTabs()
+    } else {
+      toast.error('Lỗi lưu cấu hình: ' + (res.error?.message || 'Thất bại'))
+    }
+  }
 
   const handleApplyRenewDuration = (days) => {
     const base = (selectedUserForRenew?.greensmartone_expires_at && new Date(selectedUserForRenew.greensmartone_expires_at) > new Date())
@@ -322,6 +358,7 @@ export default function AdminPage() {
 
   const TABS = [
     { id: 'dashboard', label: 'Tổng Quan', icon: Activity },
+    { id: 'system_tabs', label: 'Quản Lý Tab & Bảo Trì', icon: Sliders },
     { id: 'greensmartone', label: 'Quản Trị GreenSmartOne', icon: Zap },
     { id: 'users', label: 'Quản Lý Thành Viên', icon: Users },
     { id: 'posts', label: 'Duyệt Bài Viết', icon: FileText, badge: stats.pending },
@@ -399,6 +436,233 @@ export default function AdminPage() {
               Sử dụng các tab phía trên để phê duyệt bài viết phân tích, quản lý người dùng, duyệt hồ sơ Đối tác IB và Cộng tác viên.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* TAB SYSTEM TABS: QUẢN LÝ ẨN/HIỆN & BẬT BẢO TRÌ TỪNG TAB */}
+      {activeTab === 'system_tabs' && (
+        <div className="animate-fade-in space-y-6">
+          <div className="card p-6 border border-primary-500/30 bg-gradient-to-r from-primary-500/10 via-[var(--bg-card)] to-purple-500/10 shadow-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-primary-500/30">
+                  <Sliders className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-[var(--text-main)]">Quản Lý Tab & Trạng Thái Bảo Trì</h2>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    Cho phép bật/tắt hiển thị trên Menu, bật chế độ bảo trì riêng cho từng tab, hẹn giờ bảo trì dự tính và soạn thông báo cảm ơn kiên nhẫn.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={fetchSystemTabs}
+                disabled={loadingTabs}
+                className="btn-secondary text-xs flex items-center gap-1.5 self-start sm:self-auto"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingTabs ? 'animate-spin' : ''}`} />
+                <span>Làm Mới</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {systemTabs.map(tab => (
+              <div
+                key={tab.id}
+                className={`card p-5 border transition-all ${
+                  tab.is_maintenance
+                    ? 'border-amber-500/50 bg-amber-500/5 shadow-amber-500/10'
+                    : !tab.is_visible
+                    ? 'border-gray-500/30 opacity-75'
+                    : 'border-[var(--border-color)]'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-black text-sm text-[var(--text-main)]">{tab.name}</h3>
+                      <span className="text-[10px] font-mono text-[var(--text-muted)] bg-[var(--bg-subtle)] px-2 py-0.5 rounded border border-[var(--border-color)]">
+                        {tab.path}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[var(--text-muted)] mt-1">{tab.description}</p>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1.5">
+                    {tab.is_maintenance ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[10px] font-black animate-pulse">
+                        <Wrench className="w-3 h-3" /> ĐANG BẢO TRÌ
+                      </span>
+                    ) : tab.is_visible ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                        <Check className="w-3 h-3" /> Hiển Thị
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-500/15 text-[var(--text-muted)] border border-slate-500/30 text-[10px] font-bold">
+                        <Eye className="w-3 h-3" /> Đã Ẩn
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Trạng thái chi tiết bảo trì nếu đang bật */}
+                {tab.is_maintenance && (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs mb-4 space-y-1">
+                    <p className="font-bold text-amber-300 flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                      <span>{tab.maintenance_title || 'Bảo trì hệ thống'}</span>
+                    </p>
+                    <p className="text-[11px] text-amber-200/80 leading-relaxed">
+                      {tab.maintenance_message}
+                    </p>
+                    {tab.maintenance_estimated_end && (
+                      <p className="text-[10px] text-amber-300 font-mono mt-1 pt-1 border-t border-amber-500/20">
+                        Dự kiến hoàn thành: {new Date(tab.maintenance_estimated_end).toLocaleString('vi-VN')}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Nút hành động */}
+                <div className="flex items-center justify-between pt-3 border-t border-[var(--border-color)] gap-2">
+                  {/* Toggle Ẩn / Hiện */}
+                  <button
+                    onClick={() => handleUpdateTab(tab.id, { is_visible: !tab.is_visible })}
+                    className={`text-xs px-3 py-1.5 rounded-xl font-bold transition-all border flex items-center gap-1.5 ${
+                      tab.is_visible
+                        ? 'border-gray-500/30 text-[var(--text-muted)] hover:bg-[var(--bg-subtle)]'
+                        : 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10'
+                    }`}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>{tab.is_visible ? 'Ẩn Khỏi Menu' : 'Hiện Lên Menu'}</span>
+                  </button>
+
+                  {/* Nút Cấu Hình Bảo Trì */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleUpdateTab(tab.id, { is_maintenance: !tab.is_maintenance })}
+                      className={`text-xs px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 ${
+                        tab.is_maintenance
+                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                          : 'bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40'
+                      }`}
+                    >
+                      <Wrench className="w-3.5 h-3.5" />
+                      <span>{tab.is_maintenance ? 'Tắt Bảo Trì' : 'Bật Bảo Trì'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setEditingTab(tab)}
+                      className="text-xs px-3 py-1.5 rounded-xl font-bold bg-primary-600/20 text-primary-300 hover:bg-primary-600/30 border border-primary-500/30"
+                    >
+                      Soạn Nội Dung
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Modal Soạn Nội Dung Bảo Trì */}
+          {editingTab && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+              <div className="max-w-lg w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-3xl p-6 shadow-2xl relative space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color)]">
+                  <div className="flex items-center gap-2">
+                    <Wrench className="w-5 h-5 text-amber-400" />
+                    <h3 className="font-black text-base text-[var(--text-main)]">
+                      Cấu Hình Bảo Trì: {editingTab.name}
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setEditingTab(null)}
+                    className="p-1 rounded-lg text-[var(--text-muted)] hover:text-white"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="block text-[var(--text-muted)] font-bold mb-1">
+                      Tiêu đề thông báo bảo trì:
+                    </label>
+                    <input
+                      type="text"
+                      value={editingTab.maintenance_title || ''}
+                      onChange={e => setEditingTab({ ...editingTab, maintenance_title: e.target.value })}
+                      placeholder="VD: GreenSmartOne PRO Đang Nâng Cấp Thuật Toán"
+                      className="input-field text-xs py-2 w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[var(--text-muted)] font-bold mb-1">
+                      Nội dung chi tiết & Lời cảm ơn sự kiên nhẫn:
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={editingTab.maintenance_message || ''}
+                      onChange={e => setEditingTab({ ...editingTab, maintenance_message: e.target.value })}
+                      placeholder="VD: Hệ thống đang được tối ưu hóa dữ liệu. Cảm ơn bạn đã kiên nhẫn đồng hành cùng FinGreen!"
+                      className="input-field text-xs py-2 w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[var(--text-muted)] font-bold mb-1">
+                      Thời gian dự kiến hoàn thành:
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={editingTab.maintenance_estimated_end ? editingTab.maintenance_estimated_end.slice(0, 16) : ''}
+                      onChange={e => setEditingTab({
+                        ...editingTab,
+                        maintenance_estimated_end: e.target.value ? new Date(e.target.value).toISOString() : null
+                      })}
+                      className="input-field text-xs py-2 w-full font-mono"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editingTab.is_maintenance}
+                        onChange={e => setEditingTab({ ...editingTab, is_maintenance: e.target.checked })}
+                        className="rounded border-slate-700 text-amber-500 focus:ring-0"
+                      />
+                      <span className="font-bold text-amber-400">Kích hoạt chế độ bảo trì ngay</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-4 border-t border-[var(--border-color)]">
+                  <button
+                    onClick={() => setEditingTab(null)}
+                    className="btn-secondary text-xs px-4 py-2"
+                  >
+                    Hủy Bỏ
+                  </button>
+                  <button
+                    disabled={savingTab}
+                    onClick={() => handleUpdateTab(editingTab.id, {
+                      is_maintenance: editingTab.is_maintenance,
+                      maintenance_title: editingTab.maintenance_title,
+                      maintenance_message: editingTab.maintenance_message,
+                      maintenance_estimated_end: editingTab.maintenance_estimated_end
+                    })}
+                    className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-xs shadow-md shadow-primary-600/30 flex items-center gap-1.5"
+                  >
+                    {savingTab ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                    <span>Lưu Cấu Hình</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -732,6 +996,7 @@ export default function AdminPage() {
                     <th className="px-4 py-3">Vai Trò</th>
                     <th className="px-4 py-3">Trạng Thái</th>
                     <th className="px-4 py-3">Hạn GreenSmartOne</th>
+                    <th className="px-4 py-3">Lần Cuối Truy Cập</th>
                     <th className="px-4 py-3">Ngày Đăng Ký</th>
                     <th className="px-4 py-3 text-right">Thao Tác</th>
                   </tr>
@@ -739,14 +1004,14 @@ export default function AdminPage() {
                 <tbody className="divide-y divide-[var(--border-color)] text-xs">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-12 text-[var(--text-muted)]">
+                      <td colSpan={7} className="text-center py-12 text-[var(--text-muted)]">
                         <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary-400" />
                         <span>Đang tải danh sách thành viên...</span>
                       </td>
                     </tr>
                   ) : users.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="text-center py-10 text-[var(--text-muted)]">
+                      <td colSpan={7} className="text-center py-10 text-[var(--text-muted)]">
                         Không tìm thấy thành viên nào.
                       </td>
                     </tr>
@@ -810,6 +1075,35 @@ export default function AdminPage() {
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-500/15 text-[var(--text-muted)] border border-slate-500/20 text-[10px]">
                             Chưa kích hoạt
                           </span>
+                        )}
+                      </td>
+
+                      <td className="px-4 py-3.5">
+                        {u.last_seen_at ? (
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1.5 text-emerald-400 font-bold font-mono text-[11px]">
+                              <Clock className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                              <span>{new Date(u.last_seen_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span className="text-[var(--text-muted)] font-normal font-sans">• {new Date(u.last_seen_at).toLocaleDateString('vi-VN')}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)]">
+                              {u.last_device?.toLowerCase().includes('iphone') || u.last_device?.toLowerCase().includes('android') ? (
+                                <Smartphone className="w-3 h-3 text-cyan-400 flex-shrink-0" />
+                              ) : (
+                                <Laptop className="w-3 h-3 text-indigo-400 flex-shrink-0" />
+                              )}
+                              <span className="truncate max-w-[130px]" title={u.last_device || 'Web'}>
+                                {u.last_device || (u.device_info?.os ? `${u.device_info.os} • ${u.device_info.browser}` : 'Trình duyệt Web')}
+                              </span>
+                            </div>
+                            {(u.last_ip || u.device_info?.ip) && (
+                              <span className="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 px-1.5 py-0.2 rounded w-fit border border-cyan-500/20">
+                                IP: {u.last_ip || u.device_info?.ip}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[var(--text-muted)] italic text-[11px]">Chưa đăng nhập</span>
                         )}
                       </td>
 
@@ -1355,6 +1649,233 @@ export default function AdminPage() {
             </div>
 
           </div>
+        </div>
+      )}
+
+      {/* TAB SYSTEM TABS: QUẢN LÝ ẨN/HIỆN & BẬT BẢO TRÌ TỪNG TAB */}
+      {activeTab === 'system_tabs' && (
+        <div className="animate-fade-in space-y-6">
+          <div className="card p-6 border border-primary-500/30 bg-gradient-to-r from-primary-500/10 via-[var(--bg-card)] to-purple-500/10 shadow-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-primary-500/30">
+                  <Sliders className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-[var(--text-main)]">Quản Lý Tab & Trạng Thái Bảo Trì</h2>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                    Cho phép bật/tắt hiển thị trên Menu, bật chế độ bảo trì riêng cho từng tab, hẹn giờ bảo trì dự tính và soạn thông báo cảm ơn kiên nhẫn.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={fetchSystemTabs}
+                disabled={loadingTabs}
+                className="btn-secondary text-xs flex items-center gap-1.5 self-start sm:self-auto"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingTabs ? 'animate-spin' : ''}`} />
+                <span>Làm Mới</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {systemTabs.map(tab => (
+              <div
+                key={tab.id}
+                className={`card p-5 border transition-all ${
+                  tab.is_maintenance
+                    ? 'border-amber-500/50 bg-amber-500/5 shadow-amber-500/10'
+                    : !tab.is_visible
+                    ? 'border-gray-500/30 opacity-75'
+                    : 'border-[var(--border-color)]'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-black text-sm text-[var(--text-main)]">{tab.name}</h3>
+                      <span className="text-[10px] font-mono text-[var(--text-muted)] bg-[var(--bg-subtle)] px-2 py-0.5 rounded border border-[var(--border-color)]">
+                        {tab.path}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[var(--text-muted)] mt-1">{tab.description}</p>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1.5">
+                    {tab.is_maintenance ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[10px] font-black animate-pulse">
+                        <Wrench className="w-3 h-3" /> ĐANG BẢO TRÌ
+                      </span>
+                    ) : tab.is_visible ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                        <Check className="w-3 h-3" /> Hiển Thị
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-500/15 text-[var(--text-muted)] border border-slate-500/30 text-[10px] font-bold">
+                        <Eye className="w-3 h-3" /> Đã Ẩn
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Trạng thái chi tiết bảo trì nếu đang bật */}
+                {tab.is_maintenance && (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs mb-4 space-y-1">
+                    <p className="font-bold text-amber-300 flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                      <span>{tab.maintenance_title || 'Bảo trì hệ thống'}</span>
+                    </p>
+                    <p className="text-[11px] text-amber-200/80 leading-relaxed">
+                      {tab.maintenance_message}
+                    </p>
+                    {tab.maintenance_estimated_end && (
+                      <p className="text-[10px] text-amber-300 font-mono mt-1 pt-1 border-t border-amber-500/20">
+                        Dự kiến hoàn thành: {new Date(tab.maintenance_estimated_end).toLocaleString('vi-VN')}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Nút hành động */}
+                <div className="flex items-center justify-between pt-3 border-t border-[var(--border-color)] gap-2">
+                  {/* Toggle Ẩn / Hiện */}
+                  <button
+                    onClick={() => handleUpdateTab(tab.id, { is_visible: !tab.is_visible })}
+                    className={`text-xs px-3 py-1.5 rounded-xl font-bold transition-all border flex items-center gap-1.5 ${
+                      tab.is_visible
+                        ? 'border-gray-500/30 text-[var(--text-muted)] hover:bg-[var(--bg-subtle)]'
+                        : 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10'
+                    }`}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>{tab.is_visible ? 'Ẩn Khỏi Menu' : 'Hiện Lên Menu'}</span>
+                  </button>
+
+                  {/* Nút Cấu Hình Bảo Trì */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleUpdateTab(tab.id, { is_maintenance: !tab.is_maintenance })}
+                      className={`text-xs px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 ${
+                        tab.is_maintenance
+                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                          : 'bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/40'
+                      }`}
+                    >
+                      <Wrench className="w-3.5 h-3.5" />
+                      <span>{tab.is_maintenance ? 'Tắt Bảo Trì' : 'Bật Bảo Trì'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setEditingTab(tab)}
+                      className="text-xs px-3 py-1.5 rounded-xl font-bold bg-primary-600/20 text-primary-300 hover:bg-primary-600/30 border border-primary-500/30"
+                    >
+                      Soạn Nội Dung
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Modal Soạn Nội Dung Bảo Trì */}
+          {editingTab && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+              <div className="max-w-lg w-full bg-[var(--bg-card)] border border-[var(--border-color)] rounded-3xl p-6 shadow-2xl relative space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color)]">
+                  <div className="flex items-center gap-2">
+                    <Wrench className="w-5 h-5 text-amber-400" />
+                    <h3 className="font-black text-base text-[var(--text-main)]">
+                      Cấu Hình Bảo Trì: {editingTab.name}
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setEditingTab(null)}
+                    className="p-1 rounded-lg text-[var(--text-muted)] hover:text-white"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="block text-[var(--text-muted)] font-bold mb-1">
+                      Tiêu đề thông báo bảo trì:
+                    </label>
+                    <input
+                      type="text"
+                      value={editingTab.maintenance_title || ''}
+                      onChange={e => setEditingTab({ ...editingTab, maintenance_title: e.target.value })}
+                      placeholder="VD: GreenSmartOne PRO Đang Nâng Cấp Thuật Toán"
+                      className="input-field text-xs py-2 w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[var(--text-muted)] font-bold mb-1">
+                      Nội dung chi tiết & Lời cảm ơn sự kiên nhẫn:
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={editingTab.maintenance_message || ''}
+                      onChange={e => setEditingTab({ ...editingTab, maintenance_message: e.target.value })}
+                      placeholder="VD: Hệ thống đang được tối ưu hóa dữ liệu. Cảm ơn bạn đã kiên nhẫn đồng hành cùng FinGreen!"
+                      className="input-field text-xs py-2 w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[var(--text-muted)] font-bold mb-1">
+                      Thời gian dự kiến hoàn thành:
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={editingTab.maintenance_estimated_end ? editingTab.maintenance_estimated_end.slice(0, 16) : ''}
+                      onChange={e => setEditingTab({
+                        ...editingTab,
+                        maintenance_estimated_end: e.target.value ? new Date(e.target.value).toISOString() : null
+                      })}
+                      className="input-field text-xs py-2 w-full font-mono"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editingTab.is_maintenance}
+                        onChange={e => setEditingTab({ ...editingTab, is_maintenance: e.target.checked })}
+                        className="rounded border-slate-700 text-amber-500 focus:ring-0"
+                      />
+                      <span className="font-bold text-amber-400">Kích hoạt chế độ bảo trì ngay</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-4 border-t border-[var(--border-color)]">
+                  <button
+                    onClick={() => setEditingTab(null)}
+                    className="btn-secondary text-xs px-4 py-2"
+                  >
+                    Hủy Bỏ
+                  </button>
+                  <button
+                    disabled={savingTab}
+                    onClick={() => handleUpdateTab(editingTab.id, {
+                      is_maintenance: editingTab.is_maintenance,
+                      maintenance_title: editingTab.maintenance_title,
+                      maintenance_message: editingTab.maintenance_message,
+                      maintenance_estimated_end: editingTab.maintenance_estimated_end
+                    })}
+                    className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-xs shadow-md shadow-primary-600/30 flex items-center gap-1.5"
+                  >
+                    {savingTab ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                    <span>Lưu Cấu Hình</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

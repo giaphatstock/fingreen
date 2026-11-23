@@ -46,22 +46,37 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // Cập nhật thời gian truy cập gần nhất và thiết bị người dùng
+  // Cập nhật thời gian truy cập gần nhất, thiết bị và IP người dùng
   const recordUserActivity = async (userId) => {
     if (!userId) return;
     try {
       const dev = detectUserDevice();
       const now = new Date().toISOString();
-      const { error } = await supabase.from('profiles').update({
+      let clientIp = null;
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(2000) });
+        if (ipRes.ok) {
+          const ipData = await ipRes.json();
+          clientIp = ipData.ip;
+        }
+      } catch (_) {}
+
+      const updatePayload = {
         last_seen_at: now,
         last_device: dev.summary,
         device_info: {
           ...dev,
+          ip: clientIp || undefined,
           userAgent: (navigator.userAgent || '').slice(0, 250),
           screen: typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : '',
           updatedAt: now
         }
-      }).eq('id', userId);
+      };
+      if (clientIp) {
+        updatePayload.last_ip = clientIp;
+      }
+
+      const { error } = await supabase.from('profiles').update(updatePayload).eq('id', userId);
       if (error) console.warn('[AuthContext] Không thể cập nhật activity:', error.message);
     } catch (e) {
       // Non-blocking error
