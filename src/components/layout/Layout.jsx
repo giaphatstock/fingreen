@@ -1,5 +1,5 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme } from '../../contexts/ThemeContext'
 import Navbar from './Navbar'
@@ -9,8 +9,10 @@ import { TrendingUp, ShieldCheck, Award, Heart } from 'lucide-react'
 export default function Layout({ children }) {
   const { profile } = useAuth()
   const { theme } = useTheme()
+  const location = useLocation()
   const isLight = theme === 'light'
   const logoSrc = isLight ? '/logo-horizontal-light.png' : '/logo-horizontal-dark.png'
+  const isWideLayout = location.pathname.startsWith('/bang-dien') || location.pathname.startsWith('/bang-gia')
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--bg-main)] text-[var(--text-main)] transition-colors">
@@ -22,7 +24,7 @@ export default function Layout({ children }) {
       <Navbar />
       
       <main className={`flex-1 pt-16 ${profile?.is_banned ? 'pt-24' : 'pt-16'}`}>
-        <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className={`${isWideLayout ? 'max-w-[1780px] px-2 sm:px-6 py-6' : 'max-w-7xl px-4 py-8'} mx-auto`}>
           {children}
         </div>
       </main>

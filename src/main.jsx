@@ -14,6 +14,7 @@ import PostDetailPage from './pages/PostDetailPage'
 import ProfilePage from './pages/ProfilePage'
 import AIAssistantPage from './pages/AIAssistantPage'
 import GreenSmartOnePage from './pages/GreenSmartOnePage'
+import LiveBoardPage from './pages/LiveBoardPage'
 import './index.css'
 
 function ProtectedRoute({ children }) {
@@ -64,6 +65,8 @@ function AppRoutes() {
         <Layout>
           <Routes>
             <Route path="/" element={<NewsPage />} />
+            <Route path="/bang-dien" element={<LiveBoardPage />} />
+            <Route path="/bang-gia" element={<LiveBoardPage />} />
             <Route path="/greensmartone" element={<GreenSmartOnePage />} />
             <Route path="/green-smart-one" element={<GreenSmartOnePage />} />
             <Route path="/bai-viet/:id" element={<PostDetailPage />} />
