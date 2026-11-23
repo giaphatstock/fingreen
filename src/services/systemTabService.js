@@ -98,22 +98,28 @@ export async function updateSystemTab(tabId, updates) {
     updated_at: new Date().toISOString()
   };
 
-  const { data, error } = await supabase
-    .from('system_tabs')
-    .upsert({ id: tabId, ...payload })
-    .select()
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('system_tabs')
+      .update(payload)
+      .eq('id', tabId)
+      .select();
 
-  if (error) {
-    throw error;
+    if (error) {
+      console.error('[systemTabService] Lỗi update:', error);
+      return { success: false, error };
+    }
+
+    // Cập nhật lại cache cục bộ
+    const current = await getSystemTabs();
+    const next = current.map(t => (t.id === tabId ? { ...t, ...payload } : t));
+    localStorage.setItem(CACHE_KEY, JSON.stringify(next));
+
+    return { success: true, data: data?.[0] };
+  } catch (err) {
+    console.error('[systemTabService] Ngoại lệ update:', err);
+    return { success: false, error: err };
   }
-
-  // Cập nhật lại cache cục bộ
-  const current = await getSystemTabs();
-  const next = current.map(t => (t.id === tabId ? { ...t, ...payload } : t));
-  localStorage.setItem(CACHE_KEY, JSON.stringify(next));
-
-  return data;
 }
 
 /**
