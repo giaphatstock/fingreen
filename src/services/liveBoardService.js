@@ -199,12 +199,12 @@ export async function fetchMarketIndices() {
         percentChange = Number(((pointChange / refPoint) * 100).toFixed(2));
       }
 
-      // Parse trường ot để lấy thống kê số mã Tăng/Đứng/Giảm và Giá trị GD
+      // Parse trường ot: [0] Điểm, [1] %, [2] Giá trị triệu, [3] Số mã Tăng, [4] Số mã Giảm, [5] Số mã Đứng giá
       const parts = (item.ot || '').split('|');
       const valueBillion = parts[2] ? (parseFloat(parts[2]) / 1000).toFixed(1) : '0';
-      const countDecrease = parseInt(parts[3], 10) || 0;
-      const countIncrease = parseInt(parts[4], 10) || 0;
-      const countUnchanged = parseInt(parts[5], 10) || 0;
+      const countIncrease = parseInt(parts[3], 10) || 0; // Mã Tăng (Xanh ▲)
+      const countDecrease = parseInt(parts[4], 10) || 0; // Mã Giảm (Đỏ ▼)
+      const countUnchanged = parseInt(parts[5], 10) || 0; // Mã Tham chiếu (Vàng ■)
 
       return {
         id: item.hashValue || meta.id,
