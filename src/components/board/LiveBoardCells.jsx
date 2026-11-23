@@ -2,10 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { formatNumber, formatPrice, getPriceTextColor } from '../../services/liveBoardService';
 
 /**
- * Ô hiển thị Giá
- * CHUẨN SSI / FINTECH: Ở trạng thái tĩnh chỉ có CHỮ ĐỔI MÀU (nền trong suốt),
- * TUYỆT ĐỐI KHÔNG tô nền đỏ/xanh toàn bộ.
- * CHỈ KHI CÓ BIẾN ĐỘNG GIÁ MỚI CHỚP TÔ NỀN Ô ĐÓ VÀ FADE-OUT MỜ DẦN TRONG 550MS!
+ * Ô hiển thị Giá - Chuẩn Smart Board (Font 13px - 15px, Phân cấp thị giác rõ ràng)
+ * Trạng thái tĩnh: Nền trong suốt, chỉ chữ đổi màu.
+ * Khi giá thay đổi: Chớp sáng ô và fade-out trong 550ms.
  */
 export const PriceCell = React.memo(function PriceCell({
   price,
@@ -16,7 +15,7 @@ export const PriceCell = React.memo(function PriceCell({
   className = '',
   isBold = false
 }) {
-  const [flash, setFlash] = useState(''); // 'flash-up' | 'flash-down' | ''
+  const [flash, setFlash] = useState('');
   const prevPriceRef = useRef(price);
 
   useEffect(() => {
@@ -30,10 +29,8 @@ export const PriceCell = React.memo(function PriceCell({
     prevPriceRef.current = price;
   }, [price]);
 
-  // Chỉ lấy màu CHỮ theo bước giá (Trần: Tím, Sàn: Xanh lơ, Tăng: Xanh lá, Giảm: Đỏ, TC: Vàng)
   const textColor = getPriceTextColor(price, refPrice, ceiling, floor);
 
-  // CHỈ KHI SỐ THAY ĐỔI MỚI CHỚP NỀN Ô NÀY!
   let flashBg = '';
   if (flash === 'flash-up') {
     flashBg = '!bg-emerald-500/40 text-white ring-1 ring-emerald-400';
@@ -44,8 +41,10 @@ export const PriceCell = React.memo(function PriceCell({
   return (
     <td
       className={`tabular-nums font-mono text-right transition-colors duration-500 ease-out select-none bg-transparent ${
-        boardTheme === 'TRADITIONAL' ? 'px-1 py-0.5 border border-neutral-800' : 'px-1 py-1'
-      } ${textColor} ${flashBg} ${isBold ? 'font-bold text-[11px]' : 'text-[11px] font-medium'} ${className}`}
+        boardTheme === 'TRADITIONAL' ? 'px-2 py-2 border border-slate-800' : 'px-2 py-2 border-b border-slate-800/60'
+      } ${textColor} ${flashBg} ${
+        isBold ? 'font-black text-[14.5px] sm:text-[15px]' : 'text-[13px] font-semibold'
+      } ${className}`}
     >
       {formatPrice(price)}
     </td>
@@ -53,9 +52,7 @@ export const PriceCell = React.memo(function PriceCell({
 });
 
 /**
- * Ô hiển thị Khối Lượng
- * Bình thường: nền trong suốt, màu chữ nhẹ nhàng
- * Chỉ khi Khối lượng khớp nhảy số mới chớp sáng ô này
+ * Ô hiển thị Khối Lượng - Chuẩn Smart Board (Font 13px, Số căn lề phải rõ ràng)
  */
 export const VolumeCell = React.memo(function VolumeCell({
   volume,
@@ -80,16 +77,16 @@ export const VolumeCell = React.memo(function VolumeCell({
     prevVolRef.current = volume;
   }, [volume]);
 
-  // Màu chữ tương đồng với bước giá tương ứng
   const textColor = getPriceTextColor(price, refPrice, ceiling, floor);
-
   const flashBg = flash ? '!bg-primary-500/30 text-white ring-1 ring-primary-400' : '';
 
   return (
     <td
       className={`tabular-nums font-mono text-right transition-colors duration-500 ease-out select-none bg-transparent ${
-        boardTheme === 'TRADITIONAL' ? 'px-1 py-0.5 border border-neutral-800' : 'px-1 py-1'
-      } ${flashBg} ${isDim ? 'text-neutral-500 text-[10px]' : `${textColor} text-[11px] font-medium`} ${className}`}
+        boardTheme === 'TRADITIONAL' ? 'px-2 py-2 border border-slate-800' : 'px-2 py-2 border-b border-slate-800/60'
+      } ${flashBg} ${
+        isDim ? 'text-slate-400 text-[12px] font-normal' : `${textColor} text-[13px] font-semibold`
+      } ${className}`}
     >
       {formatNumber(volume)}
     </td>
@@ -97,22 +94,20 @@ export const VolumeCell = React.memo(function VolumeCell({
 });
 
 /**
- * Ô hiển thị Biến động +/- và % (Single Source of Truth)
- * Nền trong suốt, chỉ chữ hiển thị màu đỏ/xanh/vàng
+ * Ô hiển thị Biến động +/- và % - Chuẩn Smart Board (Font 13px bold, màu sắc tương phản cao)
  */
 export const ChangeCell = React.memo(function ChangeCell({
   change,
   changePercent,
   boardTheme = 'MODERN',
-  type = 'change' // 'change' | 'percent'
+  type = 'change'
 }) {
   const isUp = change > 0;
   const isDown = change < 0;
 
-  // CHỈ ĐỔI MÀU CHỮ, NỀN TRONG SUỐT (Không bao giờ tô nguyên ô đỏ chói)
-  let colorClass = 'text-amber-300';
-  if (isUp) colorClass = 'text-emerald-400 font-semibold';
-  else if (isDown) colorClass = 'text-rose-400 font-semibold';
+  let colorClass = 'text-amber-300 font-bold';
+  if (isUp) colorClass = 'text-emerald-400 font-black';
+  else if (isDown) colorClass = 'text-rose-400 font-black';
 
   const sign = isUp ? '+' : '';
   const displayText = type === 'change'
@@ -122,8 +117,8 @@ export const ChangeCell = React.memo(function ChangeCell({
   return (
     <td
       className={`tabular-nums font-mono text-right select-none bg-transparent ${
-        boardTheme === 'TRADITIONAL' ? 'px-1 py-0.5 border border-neutral-800' : 'px-1 py-1'
-      } ${colorClass} text-[11px]`}
+        boardTheme === 'TRADITIONAL' ? 'px-2 py-2 border border-slate-800' : 'px-2 py-2 border-b border-slate-800/60'
+      } ${colorClass} text-[13px] font-bold`}
     >
       {displayText}
     </td>
