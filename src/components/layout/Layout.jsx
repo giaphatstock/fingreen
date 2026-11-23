@@ -23,8 +23,8 @@ export default function Layout({ children }) {
       )}
       <Navbar />
       
-      <main className={`flex-1 ${profile?.is_banned ? 'pt-24' : 'pt-16'} ${isWideLayout ? 'overflow-hidden flex flex-col' : ''}`}>
-        <div className={`${isWideLayout ? 'w-full max-w-[1850px] px-2 sm:px-4 py-2 flex-1 flex flex-col overflow-hidden' : 'max-w-7xl px-4 py-8'} mx-auto`}>
+      <main className={`flex-1 ${profile?.is_banned ? 'pt-24' : 'pt-14 sm:pt-16'} ${isWideLayout ? 'overflow-hidden flex flex-col' : ''}`}>
+        <div className={`${isWideLayout ? 'w-full px-1 sm:px-2 py-1 flex-1 flex flex-col overflow-hidden' : 'max-w-7xl px-4 py-8'} mx-auto`}>
           {children}
         </div>
       </main>

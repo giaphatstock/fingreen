@@ -44,8 +44,8 @@ export const PriceCell = React.memo(function PriceCell({
   return (
     <td
       className={`tabular-nums font-mono text-right transition-colors duration-500 ease-out select-none bg-transparent ${
-        boardTheme === 'TRADITIONAL' ? 'px-2 py-1 border border-neutral-800' : 'px-2.5 py-1.5'
-      } ${textColor} ${flashBg} ${isBold ? 'font-black text-sm' : 'text-xs font-medium'} ${className}`}
+        boardTheme === 'TRADITIONAL' ? 'px-1 py-0.5 border border-neutral-800' : 'px-1 py-1'
+      } ${textColor} ${flashBg} ${isBold ? 'font-bold text-[11px]' : 'text-[11px] font-medium'} ${className}`}
     >
       {formatPrice(price)}
     </td>
@@ -88,8 +88,8 @@ export const VolumeCell = React.memo(function VolumeCell({
   return (
     <td
       className={`tabular-nums font-mono text-right transition-colors duration-500 ease-out select-none bg-transparent ${
-        boardTheme === 'TRADITIONAL' ? 'px-2 py-1 border border-neutral-800' : 'px-2 py-1.5'
-      } ${flashBg} ${isDim ? 'text-[var(--text-muted)] text-[11px]' : `${textColor} text-xs font-semibold`} ${className}`}
+        boardTheme === 'TRADITIONAL' ? 'px-1 py-0.5 border border-neutral-800' : 'px-1 py-1'
+      } ${flashBg} ${isDim ? 'text-neutral-500 text-[10px]' : `${textColor} text-[11px] font-medium`} ${className}`}
     >
       {formatNumber(volume)}
     </td>
@@ -111,8 +111,8 @@ export const ChangeCell = React.memo(function ChangeCell({
 
   // CHỈ ĐỔI MÀU CHỮ, NỀN TRONG SUỐT (Không bao giờ tô nguyên ô đỏ chói)
   let colorClass = 'text-amber-300';
-  if (isUp) colorClass = 'text-emerald-400 font-bold';
-  else if (isDown) colorClass = 'text-rose-400 font-bold';
+  if (isUp) colorClass = 'text-emerald-400 font-semibold';
+  else if (isDown) colorClass = 'text-rose-400 font-semibold';
 
   const sign = isUp ? '+' : '';
   const displayText = type === 'change'
@@ -122,8 +122,8 @@ export const ChangeCell = React.memo(function ChangeCell({
   return (
     <td
       className={`tabular-nums font-mono text-right select-none bg-transparent ${
-        boardTheme === 'TRADITIONAL' ? 'px-2 py-1 border border-neutral-800' : 'px-2.5 py-1.5'
-      } ${colorClass} text-xs`}
+        boardTheme === 'TRADITIONAL' ? 'px-1 py-0.5 border border-neutral-800' : 'px-1 py-1'
+      } ${colorClass} text-[11px]`}
     >
       {displayText}
     </td>
