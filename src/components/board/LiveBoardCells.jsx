@@ -62,8 +62,8 @@ export const PriceCell = React.memo(function PriceCell({
 
   return (
     <td
-      className={`tabular-nums font-mono text-right transition-all duration-300 ease-out select-none bg-transparent overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] ${
-        boardTheme === 'TRADITIONAL' ? 'px-2 py-2 border border-slate-800' : 'px-2 py-2 border-b border-slate-800/60'
+      className={`tabular-nums font-mono text-right transition-all duration-300 ease-out select-none bg-transparent overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] sm:text-[13px] ${
+        boardTheme === 'TRADITIONAL' ? 'px-1 py-1.5 border border-slate-800' : 'px-1 py-1.5 border-b border-slate-800/60'
       } ${textColor} ${flashBg} ${
         isBold ? 'font-black' : 'font-semibold'
       } ${className}`}
@@ -75,7 +75,7 @@ export const PriceCell = React.memo(function PriceCell({
 
 /**
  * Ô hiển thị Khối Lượng - Chuẩn Smart Board (Chớp sáng xanh/đỏ rực rỡ khi nhảy lệnh)
- * Đồng bộ kích thước font 13.5px với các ô số khác
+ * Đồng bộ kích thước font 13px với các ô số khác
  */
 export const VolumeCell = React.memo(function VolumeCell({
   volume,
@@ -115,8 +115,8 @@ export const VolumeCell = React.memo(function VolumeCell({
 
   return (
     <td
-      className={`tabular-nums font-mono text-right transition-all duration-300 ease-out select-none bg-transparent overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] ${
-        boardTheme === 'TRADITIONAL' ? 'px-2 py-2 border border-slate-800' : 'px-2 py-2 border-b border-slate-800/60'
+      className={`tabular-nums font-mono text-right transition-all duration-300 ease-out select-none bg-transparent overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] sm:text-[13px] ${
+        boardTheme === 'TRADITIONAL' ? 'px-1 py-1.5 border border-slate-800' : 'px-1 py-1.5 border-b border-slate-800/60'
       } ${flashBg} ${
         isDim ? 'text-slate-400 font-normal' : `${textColor} font-semibold`
       } ${className}`}
@@ -128,7 +128,7 @@ export const VolumeCell = React.memo(function VolumeCell({
 
 /**
  * Ô hiển thị Biến động +/- và %
- * Đồng bộ kích thước font 13.5px
+ * Đồng bộ kích thước font 13px
  */
 export const ChangeCell = React.memo(function ChangeCell({
   change,
@@ -150,8 +150,8 @@ export const ChangeCell = React.memo(function ChangeCell({
 
   return (
     <td
-      className={`tabular-nums font-mono text-right select-none bg-transparent overflow-hidden text-ellipsis whitespace-nowrap text-[13.5px] ${
-        boardTheme === 'TRADITIONAL' ? 'px-2 py-2 border border-slate-800' : 'px-2 py-2 border-b border-slate-800/60'
+      className={`tabular-nums font-mono text-right select-none bg-transparent overflow-hidden text-ellipsis whitespace-nowrap text-[12.5px] sm:text-[13px] ${
+        boardTheme === 'TRADITIONAL' ? 'px-1 py-1.5 border border-slate-800' : 'px-1 py-1.5 border-b border-slate-800/60'
       } ${colorClass} font-bold`}
     >
       {displayText}

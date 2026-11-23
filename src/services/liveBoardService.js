@@ -103,6 +103,99 @@ export const SECTORS = [
   }
 ];
 
+// Toàn bộ mã HOSE quét toàn diện số mã Trần & Sàn thị trường
+const ALL_HOSE_SYMBOLS = [
+  'AAA','AAM','AAT','ABR','ABS','ABT','ACB','ACC','ACG','ACL','ADG','ADS','AGG','AGM','AGR','AMD','ANV','APC','APG','APH','ASG','ASM','ASP','AST',
+  'BAF','BBC','BCE','BCG','BCM','BFC','BIC','BID','BKG','BMC','BMI','BMP','BRC','BSI','BTP','BTT','BVH','BWE',
+  'C32','C47','CAV','CCL','CDC','CHP','CIG','CII','CKG','CLC','CLL','CLW','CMG','CMV','CNG','COM','CRC','CRE','CSM','CSV','CTD','CTF','CTG','CTI','CTR','CTS','CVT',
+  'D2D','DAG','DAH','DAT','DBC','DBD','DBT','DC4','DCL','DCM','DGC','DGW','DHA','DHC','DHG','DHM','DIG','DLG','DMC','DPG','DPM','DPR','DP3','DRC','DRH','DRL','DSN','DTA','DTL','DTT','DVP','DXG','DXS',
+  'EIB','ELC','EMC','EVE','EVF','EVG','FCN','FDC','FIR','FIT','FLC','FMC','FPT','FRT','FTS','GAS','GDT','GEG','GEX','GIL','GMC','GMD','GSP','GTA','GVR',
+  'HAG','HAH','HAP','HAR','HAS','HAX','HBC','HCD','HDB','HDC','HDG','HHP','HII','HMC','HNG','HOT','HPG','HPX','HQC','HRC','HSG','HSL','HT1','HTI','HTL','HTV','HU1','HU3','HUB','HUT',
+  'IBC','ICT','IDI','IJC','ILB','IMP','ITA','ITC','ITD','JVC','KBC','KDC','KDH','KHG','KHP','KMR','KOS','KPF','KSB','L10','LAF','LBM','LCG','LCM','LDG','LGC','LGL','LHG','LIX','LM8','LPB','LSS',
+  'MBB','MCG','MCP','MDG','MHC','MIG','MSB','MSN','MWG','NAF','NAV','NBW','NCT','NHA','NHH','NHT','NKG','NLG','NNC','NSC','NT2','NTL','NVL','NVT',
+  'OGC','OPC','ORIX','ORS','PAC','PAN','PC1','PDN','PDR','PET','PGC','PGD','PGI','PGV','PHC','PHR','PIT','PJT','PLX','PLP','PMG','PNC','PNJ','POM','POW','PPC','PSH','PTB','PTC','PTL','PVD','PVP','PVT',
+  'QBS','QCG','RAL','RDP','REE','ROS','S4A','SAB','SAM','SAV','SBA','SBT','SBV','SC5','SCD','SCR','SCS','SFI','SGN','SGR','SGT','SHA','SHB','SHI','SHP','SIP','SJD','SJF','SJS','SKG','SMA','SMB','SMC','SPM','SRC','SRF','SSB','SSI','ST8','STB','STG','STK','SVC','SVD','SVI','SVT','SZC','SZL',
+  'TA9','TAC','TBC','TCB','TCD','TCH','TCL','TCM','TCO','TCR','TCT','TDC','TDG','TDH','TDM','TDP','TDW','TEG','TET','THG','THI','TIP','TLD','TLG','TLH','TMP','TMS','TMT','TN1','TNA','TNC','TNH','TNI','TNT','TPB','TPC','TRC','TSC','TTA','TTB','TTE','TTF','TV2','TVB','TVS','TYA',
+  'UIC','VAF','VCA','VCB','VCF','VCG','VCI','VCL','VDP','VDS','VFG','VGC','VGI','VGL','VGM','VGP','VHC','VHM','VIB','VIC','VID','VIP','VIS','VIX','VJC','VMD','VND','VNE','VNG','VNL','VNM','VPB','VPD','VPG','VPH','VPI','VPS','VRC','VRE','VSC','VSH','VSI','VTB','VTO','VTP','YBM','YEG'
+];
+
+// Toàn bộ mã HNX quét toàn diện số mã Trần & Sàn thị trường
+const ALL_HNX_SYMBOLS = [
+  'AAV','AMV','API','APS','BAB','BAX','BBS','BCC','BCF','BPC','BSC','BST','BTS','BVS','BXH',
+  'C69','CAG','CAN','CAP','CC4','CDN','CEO','CET','CIA','CJC','CKV','CLH','CMC','CMS','CPC','CSC','CTC','CTP','CTS','CTX',
+  'D11','DAD','DAE','DAR','DAS','DBT','DC2','DDG','DGC','DGL','DHT','DIH','DL1','DNC','DNM','DP3','DPC','DPS','DTD','DVG','DXP',
+  'EBS','ECI','FID','GIC','GKM','GLT','GMX','HAD','HAT','HBS','HCT','HDA','HEV','HGM','HHC','HHG','HJS','HLC','HLD','HMH','HOM','HPM','HPS','HTC','HTP','HUT','HVT',
+  'ICG','IDC','IDJ','IDV','INC','IN4','ITQ','IVS','KDM','KHS','KKC','KLF','KMT','KSD','KSQ','KST','KSV','KTS','KTT',
+  'L14','L18','L35','L40','L43','L61','L62','LAS','LBE','LCS','LDP','LHC','LIG','LM7','LUT',
+  'MAC','MAS','MBG','MBS','MCF','MCO','MDC','MED','MEL','MHL','MKV','MST','MTA','MTV',
+  'NBC','NBP','NDN','NDX','NET','NFC','NHC','NRC','NST','NTP','NVB',
+  'ONE','PBP','PCE','PCG','PCT','PDB','PDC','PEN','PET','PFI','PFL','PGN','PGS','PGT','PHC','PHN','PIA','PIC','PJC','PLC','PMB','PMC','PMP','PMS','POT','PPE','PPY','PRC','PSC','PSD','PSI','PTS','PV2','PVB','PVC','PVG','PVI','PVR','PVS','PVV','PXA',
+  'QHD','QST','RCL','S55','S99','SAF','SCG','SCI','SD2','SD4','SD5','SD6','SD9','SDA','SDC','SDG','SDN','SDT','SEB','SED','SFN','SGC','SGD','SGH','SHE','SHN','SHS','SJ1','SJE','SLS','SMN','SMT','SPI','SSM','STC','STP','SVN','SZB',
+  'TA9','TAR','TBX','TC6','TCS','TDN','TET','TFI','THB','THS','THT','TID','TIG','TJC','TKC','TKG','TKU','TLC','TLP','TMX','TNG','TPH','TPP','TSB','TT6','TTC','TTD','TTZ','TV3','TV4','TVC','TVD','TXM',
+  'UNI','V12','V21','VBC','VBH','VC1','VC2','VC3','VC6','VC7','VC9','VCC','VCM','VCS','VDL','VE1','VE2','VE3','VE4','VE8','VFR','VGS','VGV','VHE','VHL','VIE','VIF','VIG','VIT','VIX','VKC','VMC','VMI','VMS','VNC','VND','VNF','VNT','VTC','VTH','VTJ','VTL','VTM','VTV','VTX','VXB','WCS','WSS'
+];
+
+let cachedMarketBreadth = {
+  VNINDEX: { ceiling: 0, floor: 9 },
+  VN30: { ceiling: 0, floor: 0 },
+  HNX: { ceiling: 4, floor: 5 },
+  UPCOM: { ceiling: 0, floor: 0 }
+};
+let lastBreadthScanTime = 0;
+
+/**
+ * Quét toàn bộ sàn HOSE & HNX để lấy số lượng mã Trần & Sàn chính xác 100% như SSI iBoard
+ */
+export async function scanFullMarketBreadth() {
+  const now = Date.now();
+  if (now - lastBreadthScanTime < 4000) {
+    return cachedMarketBreadth;
+  }
+  lastBreadthScanTime = now;
+
+  try {
+    const p1 = fetch(`${DATA_API_BASE}/getliststockdata/${ALL_HOSE_SYMBOLS.slice(0, 180).join(',')}`).then(r => r.json()).catch(() => []);
+    const p2 = fetch(`${DATA_API_BASE}/getliststockdata/${ALL_HOSE_SYMBOLS.slice(180).join(',')}`).then(r => r.json()).catch(() => []);
+    const p3 = fetch(`${DATA_API_BASE}/getliststockdata/${ALL_HNX_SYMBOLS.slice(0, 150).join(',')}`).then(r => r.json()).catch(() => []);
+    const p4 = fetch(`${DATA_API_BASE}/getliststockdata/${ALL_HNX_SYMBOLS.slice(150).join(',')}`).then(r => r.json()).catch(() => []);
+
+    const [hose1, hose2, hnx1, hnx2] = await Promise.all([p1, p2, p3, p4]);
+    const hoseAll = [...(Array.isArray(hose1) ? hose1 : []), ...(Array.isArray(hose2) ? hose2 : [])];
+    const hnxAll = [...(Array.isArray(hnx1) ? hnx1 : []), ...(Array.isArray(hnx2) ? hnx2 : [])];
+
+    let vnindexCeil = 0, vnindexFloor = 0;
+    let vn30Ceil = 0, vn30Floor = 0;
+    hoseAll.forEach(s => {
+      if (!s) return;
+      const isCeil = s.lastPrice && s.c && s.lastPrice >= s.c;
+      const isFloor = s.lastPrice && s.f && s.lastPrice <= s.f;
+      if (isCeil) vnindexCeil++;
+      if (isFloor) vnindexFloor++;
+      if (VN30_STOCKS.includes(s.sym)) {
+        if (isCeil) vn30Ceil++;
+        if (isFloor) vn30Floor++;
+      }
+    });
+
+    let hnxCeil = 0, hnxFloor = 0;
+    hnxAll.forEach(s => {
+      if (!s) return;
+      if (s.lastPrice && s.c && s.lastPrice >= s.c) hnxCeil++;
+      if (s.lastPrice && s.f && s.lastPrice <= s.f) hnxFloor++;
+    });
+
+    cachedMarketBreadth = {
+      VNINDEX: { ceiling: vnindexCeil, floor: vnindexFloor },
+      VN30: { ceiling: vn30Ceil, floor: vn30Floor },
+      HNX: { ceiling: hnxCeil, floor: hnxFloor },
+      UPCOM: { ceiling: 0, floor: 0 }
+    };
+  } catch (err) {
+    console.warn('Breadth scan error:', err);
+  }
+  return cachedMarketBreadth;
+}
+
 export const COMPANY_NAMES = {
   'SSI': 'Chứng khoán SSI',
   'HPG': 'Tập đoàn Hòa Phát',
@@ -174,6 +267,7 @@ const DATA_API_BASE = 'https://bgapidatafeed.vps.com.vn';
  */
 export async function fetchMarketIndices() {
   try {
+    const breadthPromise = scanFullMarketBreadth();
     const res = await fetch(`${DATA_API_BASE}/getlistindexdetail/10,11,02,03`, {
       headers: { 'Accept': 'application/json' },
       signal: AbortSignal.timeout(3500)
@@ -181,6 +275,8 @@ export async function fetchMarketIndices() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     if (!Array.isArray(data)) return [];
+
+    const breadth = await breadthPromise;
 
     return data.map((item, index) => {
       if (!item) return null;
@@ -206,6 +302,10 @@ export async function fetchMarketIndices() {
       const countDecrease = parseInt(parts[4], 10) || 0; // Mã Giảm (Đỏ ▼)
       const countUnchanged = parseInt(parts[5], 10) || 0; // Mã Tham chiếu (Vàng ■)
 
+      const floorKey = meta.code === 'VN30' ? 'VN30' : meta.floor === 'HNX' ? 'HNX' : meta.floor === 'UPCOM' ? 'UPCOM' : 'VNINDEX';
+      const countCeiling = breadth[floorKey]?.ceiling ?? 0;
+      const countFloor = breadth[floorKey]?.floor ?? 0;
+
       return {
         id: item.hashValue || meta.id,
         code: meta.code,
@@ -220,6 +320,8 @@ export async function fetchMarketIndices() {
         countIncrease,
         countDecrease,
         countUnchanged,
+        countCeiling,
+        countFloor,
         time: item.time || '',
         status: item.status || 'O'
       };

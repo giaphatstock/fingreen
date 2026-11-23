@@ -616,9 +616,8 @@ export default function LiveBoardPage() {
 
                   {/* Hàng 3: Mini Bar 5 phân đoạn: Trần (Tím) - Tăng (Xanh) - TC (Vàng) - Giảm (Đỏ) - Sàn (Lam) */}
                   {(() => {
-                    const floorKey = idx.code === 'VN30' ? 'VN30' : idx.floor === 'HNX' ? 'HNX' : idx.floor === 'UPCOM' ? 'UPCOM' : 'VNINDEX';
-                    const ceilCount = floorCounts[floorKey]?.ceiling ?? 0;
-                    const floorCount = floorCounts[floorKey]?.floor ?? 0;
+                    const ceilCount = idx.countCeiling ?? 0;
+                    const floorCount = idx.countFloor ?? 0;
 
                     return (
                       <div className="mt-1">
@@ -633,15 +632,15 @@ export default function LiveBoardPage() {
                             <div className="h-full bg-cyan-400" style={{ width: `${Math.max(2, Math.round((floorCount / totalStocks) * 100))}%` }} />
                           )}
                         </div>
-                        <div className="flex items-center justify-between text-[9px] font-semibold font-mono tabular-nums">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-purple-400 font-bold" title="Số mã Trần">Trần {ceilCount}</span>
-                            <span className="text-emerald-400">▲ {idx.countIncrease}</span>
+                        <div className="flex items-center justify-between text-[11px] font-semibold font-mono tabular-nums">
+                          <div className="flex items-center gap-1">
+                            <span className="text-emerald-400 font-bold">↑ {idx.countIncrease}</span>
+                            <span className="text-purple-400 font-bold" title="Trần">({ceilCount})</span>
                           </div>
-                          <span className="text-amber-300">■ {idx.countUnchanged}</span>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-rose-400">▼ {idx.countDecrease}</span>
-                            <span className="text-cyan-400 font-bold" title="Số mã Sàn">Sàn {floorCount}</span>
+                          <span className="text-amber-300 font-bold" title="Tham chiếu">_ {idx.countUnchanged}</span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-rose-400 font-bold">↓ {idx.countDecrease}</span>
+                            <span className="text-cyan-400 font-bold" title="Sàn">({floorCount})</span>
                           </div>
                         </div>
                       </div>
