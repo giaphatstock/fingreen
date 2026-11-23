@@ -90,8 +90,8 @@ export default function Navbar() {
         borderColor: 'var(--border-color)',
       }}
     >
-      <div className="w-full max-w-[1780px] mx-auto px-3 sm:px-6">
-        <div className="flex items-center h-16 gap-3">
+      <div className="w-full px-2 sm:px-3">
+        <div className="flex items-center h-16 gap-3 justify-between">
           {/* Cụm Bên Trái (Left Group): Logo + Menu điều hướng sát nhau */}
           <div className="flex items-center gap-3 xl:gap-5 flex-shrink min-w-0">
             {/* LOGO FINGREEN */}
