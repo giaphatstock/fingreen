@@ -84,53 +84,56 @@ export default function Navbar() {
         borderColor: 'var(--border-color)',
       }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16 gap-3">
-          {/* LOGO FINGREEN TO RÕ, SẮC NÉT (Không còn bị nhỏ) */}
-          <Link to="/" className="flex items-center gap-2 flex-shrink-0 group py-0.5">
-            <img
-              src={logoSrc}
-              alt="FinGreen - Kiến tạo giá trị thực"
-              className="h-11 sm:h-12 w-auto object-contain transition-transform duration-200 group-hover:scale-105 drop-shadow-sm"
-            />
-          </Link>
+      <div className="w-full max-w-[1780px] mx-auto px-3 sm:px-6">
+        <div className="flex items-center h-16 gap-3">
+          {/* Cụm Bên Trái (Left Group): Logo + Menu điều hướng sát nhau */}
+          <div className="flex items-center gap-3 xl:gap-5 flex-shrink min-w-0">
+            {/* LOGO FINGREEN */}
+            <Link to="/" className="flex items-center gap-2 flex-shrink-0 group py-0.5">
+              <img
+                src={logoSrc}
+                alt="FinGreen - Kiến tạo giá trị thực"
+                className="h-10 sm:h-11 w-auto object-contain transition-transform duration-200 group-hover:scale-105 drop-shadow-sm"
+              />
+            </Link>
 
-          {/* Desktop Navigation Links */}
-          <div className="hidden lg:flex items-center gap-1 flex-shrink-0">
-            {allNav.map(item => {
-              const active = isActive(item.path)
-              const handleClick = (e) => {
-                if (item.requireAuth && !user) {
-                  e.preventDefault()
-                  toast('Vui lòng đăng nhập để sử dụng FinGreen AI', { icon: '🔒' })
-                  navigate(`/dang-nhap?redirect=${encodeURIComponent(item.path)}`)
+            {/* Desktop Navigation Links */}
+            <div className="hidden lg:flex items-center gap-1 flex-shrink min-w-0 overflow-x-auto scrollbar-none">
+              {allNav.map(item => {
+                const active = isActive(item.path)
+                const handleClick = (e) => {
+                  if (item.requireAuth && !user) {
+                    e.preventDefault()
+                    toast('Vui lòng đăng nhập để sử dụng FinGreen AI', { icon: '🔒' })
+                    navigate(`/dang-nhap?redirect=${encodeURIComponent(item.path)}`)
+                  }
                 }
-              }
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  onClick={handleClick}
-                  className={`flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap flex-shrink-0 transition-all duration-150 ${
-                    active
-                      ? 'bg-primary-500/15 text-primary-400 border border-primary-500/30 shadow-sm'
-                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)]'
-                  }`}
-                >
-                  <item.icon className={`w-3.5 h-3.5 flex-shrink-0 ${active ? 'text-primary-400' : 'text-[var(--text-muted)]'}`} />
-                  <span className="whitespace-nowrap">{item.label}</span>
-                  {item.badge && (
-                    <span className="px-1.5 py-0.2 text-[9px] font-extrabold rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              )
-            })}
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={handleClick}
+                    className={`flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap flex-shrink-0 transition-all duration-150 ${
+                      active
+                        ? 'bg-primary-500/15 text-primary-400 border border-primary-500/30 shadow-sm'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)]'
+                    }`}
+                  >
+                    <item.icon className={`w-3.5 h-3.5 flex-shrink-0 ${active ? 'text-primary-400' : 'text-[var(--text-muted)]'}`} />
+                    <span className="whitespace-nowrap">{item.label}</span>
+                    {item.badge && (
+                      <span className="px-1.5 py-0.2 text-[9px] font-extrabold rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                )
+              })}
+            </div>
           </div>
 
-          {/* Right Section: Socials, Theme Switcher, Account User */}
-          <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Cụm Bên Phải (Right Group): Tự động neo sát góc phải bằng ml-auto, flex-shrink-0 */}
+          <div className="flex items-center gap-2 sm:gap-2.5 ml-auto flex-shrink-0">
             {/* Social Channels: TikTok & YouTube icon pills */}
             <div className="hidden md:flex items-center gap-1 px-1.5 py-1 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-color)]">
               <a

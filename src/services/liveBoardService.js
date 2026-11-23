@@ -1,6 +1,6 @@
 /**
  * Dịch vụ cung cấp dữ liệu Bảng Điện Chứng Khoán Realtime Không Độ Trễ
- * Kết nối dữ liệu tốc độ cao sub-100ms, hỗ trợ VN30, HOSE, HNX, UPCOM và các nhóm ngành.
+ * Chuẩn hóa tính toán chỉ số thị trường (Single Source of Truth), phân nhóm ngành và định dạng terminal.
  */
 
 // Danh sách các chỉ số thị trường
@@ -103,7 +103,6 @@ export const SECTORS = [
   }
 ];
 
-// Tên đầy đủ công ty phổ biến để hiển thị thân thiện
 export const COMPANY_NAMES = {
   'SSI': 'Chứng khoán SSI',
   'HPG': 'Tập đoàn Hòa Phát',
@@ -120,12 +119,12 @@ export const COMPANY_NAMES = {
   'GAS': 'Tổng Công ty Khí VN',
   'VND': 'Chứng khoán VNDIRECT',
   'VIX': 'Chứng khoán VIX',
-  'HCM': 'Chứng khoán TP.HCM (HSC)',
+  'HCM': 'Chứng khoán HSC',
   'VCI': 'Chứng khoán Vietcap',
   'SHS': 'Chứng khoán Sài Gòn - HN',
   'DXG': 'Tập đoàn Đất Xanh',
   'DIG': 'Tổng Công ty DIC Corp',
-  'PDR': 'Bất động sản Phát Đạt',
+  'PDR': 'BĐS Phát Đạt',
   'NVL': 'Tập đoàn Novaland',
   'CEO': 'Tập đoàn C.E.O',
   'KBC': 'Đô thị Kinh Bắc',
@@ -136,7 +135,7 @@ export const COMPANY_NAMES = {
   'PVD': 'Khoan Dầu khí PVD',
   'PVS': 'Dịch vụ Kỹ thuật Dầu khí',
   'BSR': 'Lọc hóa dầu Bình Sơn',
-  'PLX': 'Tập đoàn Xăng dầu Petrolimex',
+  'PLX': 'Petrolimex',
   'POW': 'Điện lực Dầu khí VN',
   'FRT': 'Bán lẻ FPT (Long Châu)',
   'DGW': 'Thế Giới Số (Digiworld)',
@@ -156,7 +155,6 @@ export const COMPANY_NAMES = {
   'LPB': 'LPBank',
   'SAB': 'Sabeco',
   'GVR': 'Cao su Việt Nam',
-  'PLX': 'Petrolimex',
   'BCM': 'Becamex IDC',
   'BVH': 'Bảo Việt',
   'SSB': 'SeABank',
@@ -172,6 +170,7 @@ const DATA_API_BASE = 'https://bgapidatafeed.vps.com.vn';
 
 /**
  * Lấy dữ liệu các chỉ số chính (VN-Index, VN30, HNX, UPCOM)
+ * FIX TRIỆT ĐỂ: Single Source of Truth cho biến động điểm số và màu sắc.
  */
 export async function fetchMarketIndices() {
   try {
@@ -187,27 +186,34 @@ export async function fetchMarketIndices() {
       if (!item) return null;
       const meta = MARKET_INDICES[index] || { code: item.hashValue, name: 'Chỉ số', floor: '' };
       
-      // Parse trường ot: "8.00|0.47%|601652.663|80|142|57"
-      // [0]: Điểm thay đổi, [1]: % thay đổi, [2]: Giá trị (triệu), [3]: Số mã giảm, [4]: Số mã tăng, [5]: Số mã đứng giá
-      const parts = (item.ot || '').split('|');
-      const pointChange = parseFloat(parts[0]) || 0;
-      const percentChange = parseFloat((parts[1] || '0').replace('%', '')) || 0;
-      const valueBillion = parts[2] ? (parseFloat(parts[2]) / 1000).toFixed(1) : '0';
-      const countDecrease = parseInt(parts[3]) || 0;
-      const countIncrease = parseInt(parts[4]) || 0;
-      const countUnchanged = parseInt(parts[5]) || 0;
+      // cIndex = Điểm số hiện tại (Current), oIndex = Điểm tham chiếu/mở cửa (Reference)
+      const currentPoint = Number(item.cIndex || 0);
+      const refPoint = Number(item.oIndex || 0);
 
-      const currentPoint = item.cIndex || item.oIndex || 0;
-      const openPoint = item.oIndex || currentPoint;
+      // SINGLE SOURCE OF TRUTH:
+      // Điểm thay đổi = Current - Reference
+      let pointChange = 0;
+      let percentChange = 0;
+      if (refPoint > 0 && currentPoint > 0) {
+        pointChange = Number((currentPoint - refPoint).toFixed(2));
+        percentChange = Number(((pointChange / refPoint) * 100).toFixed(2));
+      }
+
+      // Parse trường ot để lấy thống kê số mã Tăng/Đứng/Giảm và Giá trị GD
+      const parts = (item.ot || '').split('|');
+      const valueBillion = parts[2] ? (parseFloat(parts[2]) / 1000).toFixed(1) : '0';
+      const countDecrease = parseInt(parts[3], 10) || 0;
+      const countIncrease = parseInt(parts[4], 10) || 0;
+      const countUnchanged = parseInt(parts[5], 10) || 0;
 
       return {
         id: item.hashValue || meta.id,
         code: meta.code,
         name: meta.name,
         floor: meta.floor,
-        currentPoint: currentPoint,
-        openPoint: openPoint,
-        pointChange,
+        currentPoint,
+        refPoint,
+        pointChange, // Giữ nguyên dấu: âm ra âm (-11.24), dương ra dương (+11.24), không dùng Math.abs()
         percentChange,
         totalVolume: item.vol || 0,
         totalValueBillion: valueBillion,
@@ -215,7 +221,7 @@ export async function fetchMarketIndices() {
         countDecrease,
         countUnchanged,
         time: item.time || '',
-        status: item.status || 'O' // O = Open, C = Closed
+        status: item.status || 'O'
       };
     }).filter(Boolean);
   } catch (error) {
@@ -225,7 +231,7 @@ export async function fetchMarketIndices() {
 }
 
 /**
- * Tách 3 thành phần của 1 bước giá VPS: "19.7|24300|d" -> { price, volume, type }
+ * Tách 3 thành phần của 1 bước giá: "19.7|24300|d" -> { price, volume, type }
  */
 export function parsePriceStep(stepStr) {
   if (!stepStr || typeof stepStr !== 'string') return { price: 0, volume: 0, type: '' };
@@ -238,7 +244,7 @@ export function parsePriceStep(stepStr) {
 }
 
 /**
- * Chuẩn hóa 1 bản ghi cổ phiếu từ API thành dạng dữ liệu trực quan
+ * Chuẩn hóa 1 bản ghi cổ phiếu từ API
  */
 export function formatStockData(raw) {
   if (!raw || !raw.sym) return null;
@@ -248,13 +254,21 @@ export function formatStockData(raw) {
   const ref = raw.r || 0;
   const matchedPrice = raw.lastPrice || 0;
   const matchedVolume = raw.lastVolume || 0;
-  const totalVolume = raw.lot ? raw.lot * 10 : 0; // Đổi lot sang số lượng CP chuẩn
+  const totalVolume = raw.lot ? raw.lot * 10 : 0;
 
-  const change = parseFloat(raw.ot) || 0;
-  const changePercent = parseFloat(raw.changePc) || 0;
+  // Single Source of Truth cho biến động giá cổ phiếu
+  let change = 0;
+  let changePercent = 0;
+  if (matchedPrice > 0 && ref > 0) {
+    change = Number((matchedPrice - ref).toFixed(2));
+    changePercent = Number(((change / ref) * 100).toFixed(2));
+  } else if (raw.ot !== undefined) {
+    change = parseFloat(raw.ot) || 0;
+    changePercent = parseFloat(raw.changePc) || 0;
+  }
 
-  // Xác định trạng thái màu sắc: tím (trần), xanh lá (tăng), vàng (tham chiếu), đỏ (giảm), xanh lơ (sàn)
-  let statusColor = 'ref'; // 'ceiling' | 'floor' | 'up' | 'down' | 'ref'
+  // Xác định trạng thái màu sắc chuẩn
+  let statusColor = 'ref';
   if (matchedPrice >= ceiling && ceiling > 0) {
     statusColor = 'ceiling';
   } else if (matchedPrice <= floor && floor > 0) {
@@ -267,12 +281,12 @@ export function formatStockData(raw) {
     statusColor = 'ref';
   }
 
-  // 3 bước giá mua (Bid: g1, g2, g3)
+  // 3 bước giá mua
   const bid1 = parsePriceStep(raw.g1);
   const bid2 = parsePriceStep(raw.g2);
   const bid3 = parsePriceStep(raw.g3);
 
-  // 3 bước giá bán (Ask: g4, g5, g6)
+  // 3 bước giá bán
   const ask1 = parsePriceStep(raw.g4);
   const ask2 = parsePriceStep(raw.g5);
   const ask3 = parsePriceStep(raw.g6);
@@ -307,12 +321,10 @@ export function formatStockData(raw) {
 }
 
 /**
- * Lấy dữ liệu danh sách cổ phiếu realtime theo danh sách mã
+ * Lấy dữ liệu danh sách cổ phiếu realtime
  */
 export async function fetchStockBatch(symbolArray) {
   if (!symbolArray || symbolArray.length === 0) return [];
-  
-  // Lọc trùng và chuẩn hóa
   const cleanSymbols = [...new Set(symbolArray.map(s => s.toUpperCase().trim()))].filter(Boolean);
   const url = `${DATA_API_BASE}/getliststockdata/${cleanSymbols.join(',')}`;
 
@@ -333,7 +345,7 @@ export async function fetchStockBatch(symbolArray) {
 }
 
 /**
- * Helper định dạng số với dấu phân cách hàng ngàn
+ * Helper định dạng số có dấu phân cách hàng ngàn (Monospaced alignment)
  */
 export function formatNumber(num, decimals = 0) {
   if (num === null || num === undefined || isNaN(num)) return '-';
@@ -345,7 +357,7 @@ export function formatNumber(num, decimals = 0) {
 }
 
 /**
- * Helper định dạng giá (Chia 1,000 nếu hiển thị dạng nghìn đồng như bảng giá tiêu chuẩn)
+ * Helper định dạng giá
  */
 export function formatPrice(price) {
   if (!price || price === 0) return '-';
@@ -353,13 +365,55 @@ export function formatPrice(price) {
 }
 
 /**
- * Lấy class CSS màu sắc fintech chuẩn sàn CK Việt Nam
+ * Lấy style màu sắc theo theme (MODERN vs TRADITIONAL SSI)
  */
-export function getPriceColorClass(price, ref, ceiling, floor) {
-  if (!price || price === 0) return 'text-[var(--text-muted)]';
-  if (ceiling && price >= ceiling) return 'text-purple-400 font-bold'; // Giá Trần (Tím)
-  if (floor && price <= floor) return 'text-cyan-400 font-bold'; // Giá Sàn (Xanh lơ)
-  if (price > ref) return 'text-emerald-400 font-semibold'; // Tăng giá (Xanh lá)
-  if (price < ref) return 'text-rose-400 font-semibold'; // Giảm giá (Đỏ)
-  return 'text-amber-300 font-semibold'; // Tham chiếu (Vàng)
+export function getThemePriceStyle(price, ref, ceiling, floor, theme = 'MODERN') {
+  if (!price || price === 0) {
+    return theme === 'TRADITIONAL'
+      ? 'text-gray-400 bg-transparent'
+      : 'text-[var(--text-muted)] bg-transparent';
+  }
+
+  // Trần: Tím
+  if (ceiling && price >= ceiling) {
+    return theme === 'TRADITIONAL'
+      ? 'bg-[#9333ea] text-white font-bold'
+      : 'text-purple-400 bg-purple-500/15 font-bold';
+  }
+  // Sàn: Xanh lơ
+  if (floor && price <= floor) {
+    return theme === 'TRADITIONAL'
+      ? 'bg-[#0284c7] text-white font-bold'
+      : 'text-cyan-400 bg-cyan-500/15 font-bold';
+  }
+  // Tăng: Xanh lá
+  if (price > ref) {
+    return theme === 'TRADITIONAL'
+      ? 'bg-[#16a34a] text-white font-bold'
+      : 'text-emerald-400 bg-emerald-500/15 font-semibold';
+  }
+  // Giảm: Đỏ
+  if (price < ref) {
+    return theme === 'TRADITIONAL'
+      ? 'bg-[#dc2626] text-white font-bold'
+      : 'text-rose-400 bg-rose-500/15 font-semibold';
+  }
+  // Tham chiếu: Vàng
+  return theme === 'TRADITIONAL'
+    ? 'bg-[#eab308] text-black font-extrabold'
+    : 'text-amber-300 bg-amber-500/15 font-semibold';
 }
+
+/**
+ * Lấy màu text đơn giản
+ */
+export function getPriceTextColor(price, ref, ceiling, floor) {
+  if (!price || price === 0) return 'text-[var(--text-muted)]';
+  if (ceiling && price >= ceiling) return 'text-purple-400';
+  if (floor && price <= floor) return 'text-cyan-400';
+  if (price > ref) return 'text-emerald-400';
+  if (price < ref) return 'text-rose-400';
+  return 'text-amber-300';
+}
+
+export const getPriceColorClass = getPriceTextColor;
