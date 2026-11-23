@@ -13,6 +13,7 @@ import {
   HNX_POPULAR, UPCOM_POPULAR, SECTORS, COMPANY_NAMES
 } from '../services/liveBoardService';
 import StockDetailDrawer from '../components/board/StockDetailDrawer';
+import BullBearBattleBar from '../components/board/BullBearBattleBar';
 import { PriceCell, VolumeCell, ChangeCell } from '../components/board/LiveBoardCells';
 
 // Hàm lấy giờ Hà Nội (GMT+7) chuẩn time.is
@@ -340,6 +341,33 @@ export default function LiveBoardPage() {
     return result;
   }, [stocks, searchQuery, statusFilter]);
 
+  // Tính toán Tương quan Lực lượng Bò vs Gấu (Dư Mua vs Dư Bán toàn bộ thị trường)
+  const bullBearStats = useMemo(() => {
+    let totalBidVol = 0;
+    let totalAskVol = 0;
+
+    stocks.forEach(stock => {
+      const bidVol = (stock.bid1?.volume || 0) + (stock.bid2?.volume || 0) + (stock.bid3?.volume || 0);
+      const askVol = (stock.ask1?.volume || 0) + (stock.ask2?.volume || 0) + (stock.ask3?.volume || 0);
+      totalBidVol += bidVol;
+      totalAskVol += askVol;
+    });
+
+    const total = totalBidVol + totalAskVol;
+    const bullPercent = total > 0 ? (totalBidVol / total) * 100 : 50;
+    const bearPercent = 100 - bullPercent;
+    const diff = bullPercent - bearPercent;
+
+    return {
+      totalBidVol,
+      totalAskVol,
+      bullPercent: Math.round(bullPercent * 10) / 10,
+      bearPercent: Math.round(bearPercent * 10) / 10,
+      diff: Math.round(diff * 10) / 10,
+      dominant: diff > 4 ? 'BULL' : diff < -4 ? 'BEAR' : 'NEUTRAL'
+    };
+  }, [stocks]);
+
   // Tính toán Virtualization
   const totalCount = filteredStocks.length;
   const containerHeight = 650; // Viewport height
@@ -629,6 +657,9 @@ export default function LiveBoardPage() {
           </div>
         </div>
       </div>
+
+      {/* 2.5 THANH CHIẾN ĐẤU BÒ VS GẤU (BULL VS BEAR RGB BATTLE BAR) */}
+      <BullBearBattleBar stats={bullBearStats} />
 
       {/* 3. Dữ Liệu Bảng Điện Chính (TABLE MODE với VIRTUALIZATION & CELL-LEVEL FLASHING) */}
       {stocksLoading ? (
