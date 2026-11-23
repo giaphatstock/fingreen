@@ -377,7 +377,7 @@ export function getThemePriceStyle(price, ref, ceiling, floor, theme = 'MODERN')
   // Trần: Tím
   if (ceiling && price >= ceiling) {
     return theme === 'TRADITIONAL'
-      ? 'bg-[#9333ea] text-white font-bold'
+      ? 'bg-[#7e22ce] text-white font-bold'
       : 'text-purple-400 bg-purple-500/15 font-bold';
   }
   // Sàn: Xanh lơ
@@ -386,21 +386,21 @@ export function getThemePriceStyle(price, ref, ceiling, floor, theme = 'MODERN')
       ? 'bg-[#0284c7] text-white font-bold'
       : 'text-cyan-400 bg-cyan-500/15 font-bold';
   }
-  // Tăng: Xanh lá
+  // Tăng: Xanh lá (Tone dịu mắt #2E7D32)
   if (price > ref) {
     return theme === 'TRADITIONAL'
-      ? 'bg-[#16a34a] text-white font-bold'
+      ? 'bg-[#2E7D32] text-white font-bold'
       : 'text-emerald-400 bg-emerald-500/15 font-semibold';
   }
-  // Giảm: Đỏ
+  // Giảm: Đỏ (Tone dịu mắt #C62828 - Không dùng đỏ chót)
   if (price < ref) {
     return theme === 'TRADITIONAL'
-      ? 'bg-[#dc2626] text-white font-bold'
+      ? 'bg-[#C62828] text-white font-bold'
       : 'text-rose-400 bg-rose-500/15 font-semibold';
   }
   // Tham chiếu: Vàng
   return theme === 'TRADITIONAL'
-    ? 'bg-[#eab308] text-black font-extrabold'
+    ? 'bg-[#d97706] text-black font-extrabold'
     : 'text-amber-300 bg-amber-500/15 font-semibold';
 }
 

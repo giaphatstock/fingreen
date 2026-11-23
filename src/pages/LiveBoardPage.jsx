@@ -130,7 +130,7 @@ export default function LiveBoardPage() {
   const handleSwitchBoardTheme = (theme) => {
     setBoardTheme(theme);
     localStorage.setItem('fingreen_board_theme', theme);
-    toast.success(theme === 'TRADITIONAL' ? 'Đã chuyển sang Giao diện Chuẩn SSI (Khối màu đặc)' : 'Đã chuyển sang Giao diện Modern Fintech');
+    toast.success(theme === 'TRADITIONAL' ? 'Đã chuyển sang Giao diện Truyền thống' : 'Đã chuyển sang Giao diện Modern Fintech');
   };
 
   // Dữ liệu chỉ số thị trường (VNINDEX, VN30, HNX, UPCOM)
@@ -357,9 +357,9 @@ export default function LiveBoardPage() {
   };
 
   return (
-    <div className="space-y-5 pb-20 animate-in fade-in duration-300">
+    <div className="h-full flex flex-col space-y-2.5 overflow-hidden animate-in fade-in duration-300">
       {/* 1. Header Ticker 4 Chỉ Số Lớn (SINGLE SOURCE OF TRUTH) */}
-      <div>
+      <div className="flex-shrink-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-3.5">
           <div>
             <div className="flex items-center gap-2.5">
@@ -402,10 +402,10 @@ export default function LiveBoardPage() {
                     ? 'bg-amber-500 text-black shadow-sm font-black'
                     : 'text-[var(--text-muted)] hover:text-white'
                 }`}
-                title="Giao diện Chuẩn SSI (Khối màu đặc, kẻ lưới Excel)"
+                title="Giao diện Truyền thống (Khối màu trầm dịu mắt, kẻ lưới)"
               >
                 <Table className="w-3.5 h-3.5" />
-                Chuẩn SSI
+                Giao diện Truyền thống
               </button>
             </div>
 
@@ -529,7 +529,7 @@ export default function LiveBoardPage() {
       </div>
 
       {/* 2. Thanh Điều Khiển: Tabs Sàn / Ngành, Search & Quick Filters */}
-      <div className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] space-y-3.5">
+      <div className="flex-shrink-0 p-3 sm:p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] space-y-2.5">
         {/* Tabs chọn Sàn & Watchlist */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-color)]">
@@ -675,13 +675,13 @@ export default function LiveBoardPage() {
           </p>
         </div>
       ) : viewMode === 'TABLE' ? (
-        /* PRO TRADING TABLE (VIRTUALIZED & CELL FLASHING) */
+        /* PRO TRADING TABLE (VIRTUALIZED & CELL FLASHING - SINGLE SCROLLBAR) */
         <div 
           ref={tableContainerRef}
           onScroll={handleScroll}
           className={`rounded-2xl border ${
             boardTheme === 'TRADITIONAL' ? 'border-neutral-700 bg-black' : 'border-[var(--border-color)] bg-[var(--bg-card)]'
-          } overflow-auto shadow-2xl max-h-[700px] relative scrollbar-thin`}
+          } flex-1 min-h-0 overflow-auto shadow-2xl relative scrollbar-thin`}
         >
           <table className="w-full text-left border-collapse text-xs border-spacing-0">
             {/* Sticky Header */}
@@ -819,91 +819,93 @@ export default function LiveBoardPage() {
         </div>
       ) : (
         /* FINTECH CARDS GRID MODE */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredStocks.map(stock => {
-            const isWatch = watchlist.includes(stock.symbol);
-            const isUp = stock.change > 0;
-            const isDown = stock.change < 0;
+        <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+            {filteredStocks.map(stock => {
+              const isWatch = watchlist.includes(stock.symbol);
+              const isUp = stock.change > 0;
+              const isDown = stock.change < 0;
 
-            return (
-              <div
-                key={stock.symbol}
-                onClick={() => setSelectedStock(stock)}
-                className="p-4 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-primary-500/50 cursor-pointer shadow-md transition-all hover:scale-[1.01] flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-10 h-10 rounded-xl bg-primary-500/10 border border-primary-500/30 flex items-center justify-center font-black text-sm text-primary-400">
-                        {stock.symbol.slice(0, 3)}
+              return (
+                <div
+                  key={stock.symbol}
+                  onClick={() => setSelectedStock(stock)}
+                  className="p-3.5 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] hover:border-primary-500/50 cursor-pointer shadow-md transition-all hover:scale-[1.01] flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-9 h-9 rounded-xl bg-primary-500/10 border border-primary-500/30 flex items-center justify-center font-black text-xs text-primary-400">
+                          {stock.symbol.slice(0, 3)}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-black text-sm text-[var(--text-main)]">{stock.symbol}</span>
+                            <span className="text-[10px] px-1 rounded bg-[var(--bg-subtle)] text-[var(--text-muted)]">
+                              {stock.raw?.marketId || 'HOSE'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[var(--text-muted)] line-clamp-1">{stock.name}</p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleToggleWatchlist(stock.symbol); }}
+                        className="p-1 rounded-lg hover:bg-[var(--bg-subtle)] transition-colors"
+                      >
+                        <Star className={`w-4 h-4 ${isWatch ? 'fill-amber-400 text-amber-400' : 'text-gray-500'}`} />
+                      </button>
+                    </div>
+
+                    {/* Giá khớp chính */}
+                    <div className="mt-3 flex items-baseline justify-between">
+                      <div>
+                        <span className={`text-xl font-black font-mono tabular-nums ${getPriceTextColor(stock.matchedPrice, stock.ref, stock.ceiling, stock.floor)}`}>
+                          {formatPrice(stock.matchedPrice)}
+                        </span>
+                      </div>
+                      <div className={`text-xs font-bold font-mono tabular-nums px-2 py-0.5 rounded-lg flex items-center ${
+                        isUp ? 'bg-emerald-500/15 text-emerald-400' :
+                        isDown ? 'bg-rose-500/15 text-rose-400' : 'bg-amber-500/15 text-amber-300'
+                      }`}>
+                        {isUp ? <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" /> : isDown ? <ArrowDownRight className="w-3.5 h-3.5 mr-0.5" /> : null}
+                        {isUp ? '+' : ''}{stock.change.toFixed(2)} ({isUp ? '+' : ''}{stock.changePercent.toFixed(2)}%)
+                      </div>
+                    </div>
+
+                    {/* Mini Trần - Sàn - TC */}
+                    <div className="grid grid-cols-3 gap-1 text-[10px] text-center my-2.5 p-1.5 rounded-xl bg-[var(--bg-subtle)] font-mono tabular-nums">
+                      <div>
+                        <span className="text-purple-400 block font-semibold">Trần</span>
+                        <span className="font-bold">{formatPrice(stock.ceiling)}</span>
                       </div>
                       <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-black text-base text-[var(--text-main)]">{stock.symbol}</span>
-                          <span className="text-[10px] px-1 rounded bg-[var(--bg-subtle)] text-[var(--text-muted)]">
-                            {stock.raw?.marketId || 'HOSE'}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-[var(--text-muted)] line-clamp-1">{stock.name}</p>
+                        <span className="text-amber-300 block font-semibold">TC</span>
+                        <span className="font-bold">{formatPrice(stock.ref)}</span>
+                      </div>
+                      <div>
+                        <span className="text-cyan-400 block font-semibold">Sàn</span>
+                        <span className="font-bold">{formatPrice(stock.floor)}</span>
                       </div>
                     </div>
 
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleToggleWatchlist(stock.symbol); }}
-                      className="p-1 rounded-lg hover:bg-[var(--bg-subtle)] transition-colors"
-                    >
-                      <Star className={`w-4 h-4 ${isWatch ? 'fill-amber-400 text-amber-400' : 'text-gray-500'}`} />
-                    </button>
-                  </div>
-
-                  {/* Giá khớp chính */}
-                  <div className="mt-4 flex items-baseline justify-between">
-                    <div>
-                      <span className={`text-2xl font-black font-mono tabular-nums ${getPriceTextColor(stock.matchedPrice, stock.ref, stock.ceiling, stock.floor)}`}>
-                        {formatPrice(stock.matchedPrice)}
-                      </span>
-                    </div>
-                    <div className={`text-xs font-bold font-mono tabular-nums px-2 py-0.5 rounded-lg flex items-center ${
-                      isUp ? 'bg-emerald-500/15 text-emerald-400' :
-                      isDown ? 'bg-rose-500/15 text-rose-400' : 'bg-amber-500/15 text-amber-300'
-                    }`}>
-                      {isUp ? <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" /> : isDown ? <ArrowDownRight className="w-3.5 h-3.5 mr-0.5" /> : null}
-                      {isUp ? '+' : ''}{stock.change.toFixed(2)} ({isUp ? '+' : ''}{stock.changePercent.toFixed(2)}%)
+                    {/* Bước giá tốt nhất */}
+                    <div className="flex justify-between text-xs py-1 px-2 rounded-lg bg-[var(--bg-subtle)]/50 font-mono tabular-nums">
+                      <span className="text-emerald-400">Mua: <strong>{formatPrice(stock.bid1.price)}</strong> ({formatNumber(stock.bid1.volume)})</span>
+                      <span className="text-rose-400">Bán: <strong>{formatPrice(stock.ask1.price)}</strong> ({formatNumber(stock.ask1.volume)})</span>
                     </div>
                   </div>
 
-                  {/* Mini Trần - Sàn - TC */}
-                  <div className="grid grid-cols-3 gap-1 text-[10px] text-center my-3 p-2 rounded-xl bg-[var(--bg-subtle)] font-mono tabular-nums">
-                    <div>
-                      <span className="text-purple-400 block font-semibold">Trần</span>
-                      <span className="font-bold">{formatPrice(stock.ceiling)}</span>
-                    </div>
-                    <div>
-                      <span className="text-amber-300 block font-semibold">TC</span>
-                      <span className="font-bold">{formatPrice(stock.ref)}</span>
-                    </div>
-                    <div>
-                      <span className="text-cyan-400 block font-semibold">Sàn</span>
-                      <span className="font-bold">{formatPrice(stock.floor)}</span>
-                    </div>
-                  </div>
-
-                  {/* Bước giá tốt nhất */}
-                  <div className="flex justify-between text-xs py-1 px-2 rounded-lg bg-[var(--bg-subtle)]/50 font-mono tabular-nums">
-                    <span className="text-emerald-400">Mua: <strong>{formatPrice(stock.bid1.price)}</strong> ({formatNumber(stock.bid1.volume)})</span>
-                    <span className="text-rose-400">Bán: <strong>{formatPrice(stock.ask1.price)}</strong> ({formatNumber(stock.ask1.volume)})</span>
+                  <div className="mt-2.5 pt-2 border-t border-[var(--border-color)]/60 flex items-center justify-between text-[11px] text-[var(--text-muted)] font-mono tabular-nums">
+                    <span>Tổng KL: <strong className="text-primary-400">{formatNumber(stock.totalVolume)}</strong></span>
+                    <span className="text-primary-400 font-bold flex items-center gap-0.5 hover:underline">
+                      Chi tiết <ChevronRight className="w-3 h-3" />
+                    </span>
                   </div>
                 </div>
-
-                <div className="mt-3 pt-2.5 border-t border-[var(--border-color)]/60 flex items-center justify-between text-[11px] text-[var(--text-muted)] font-mono tabular-nums">
-                  <span>Tổng KL: <strong className="text-primary-400">{formatNumber(stock.totalVolume)}</strong></span>
-                  <span className="text-primary-400 font-bold flex items-center gap-0.5 hover:underline">
-                    Chi tiết <ChevronRight className="w-3 h-3" />
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 

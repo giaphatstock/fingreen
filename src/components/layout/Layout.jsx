@@ -15,7 +15,7 @@ export default function Layout({ children }) {
   const isWideLayout = location.pathname.startsWith('/bang-dien') || location.pathname.startsWith('/bang-gia')
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-main)] text-[var(--text-main)] transition-colors">
+    <div className={`${isWideLayout ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col bg-[var(--bg-main)] text-[var(--text-main)] transition-colors`}>
       {profile?.is_banned && (
         <div className="fixed top-0 left-0 right-0 z-[100] bg-red-600 text-white text-center py-2 text-sm font-semibold shadow-lg">
           ⛔ Tài khoản của bạn đã bị tạm khóa. Lý do: {profile.ban_reason || 'Vi phạm điều khoản cộng đồng'}
@@ -23,14 +23,15 @@ export default function Layout({ children }) {
       )}
       <Navbar />
       
-      <main className={`flex-1 pt-16 ${profile?.is_banned ? 'pt-24' : 'pt-16'}`}>
-        <div className={`${isWideLayout ? 'max-w-[1780px] px-2 sm:px-6 py-6' : 'max-w-7xl px-4 py-8'} mx-auto`}>
+      <main className={`flex-1 ${profile?.is_banned ? 'pt-24' : 'pt-16'} ${isWideLayout ? 'overflow-hidden flex flex-col' : ''}`}>
+        <div className={`${isWideLayout ? 'w-full max-w-[1850px] px-2 sm:px-4 py-2 flex-1 flex flex-col overflow-hidden' : 'max-w-7xl px-4 py-8'} mx-auto`}>
           {children}
         </div>
       </main>
 
-      {/* Footer FinGreen */}
-      <footer className="border-t border-[var(--border-color)] bg-[var(--bg-card)] mt-20 transition-colors">
+      {/* Footer FinGreen (Ẩn trên Bảng Điện để loại bỏ 2 thanh cuộn) */}
+      {!isWideLayout && (
+        <footer className="border-t border-[var(--border-color)] bg-[var(--bg-card)] mt-20 transition-colors">
         <div className="max-w-7xl mx-auto px-4 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             {/* Col 1: Logo & Slogan */}
@@ -131,6 +132,7 @@ export default function Layout({ children }) {
           </div>
         </div>
       </footer>
+      )}
 
       {/* Con robot tròn di chuyển & Chatbot FinGreen AI */}
       <FinGreenRobot />

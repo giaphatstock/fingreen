@@ -5,7 +5,7 @@ import { useTheme } from '../../contexts/ThemeContext'
 import toast from 'react-hot-toast'
 import {
   FileText, Handshake, Shield, LogOut, Menu, X, ChevronDown,
-  User, Newspaper, Palette, LogIn, ExternalLink, Sparkles, Bot, Zap, Activity
+  User, Newspaper, Palette, LogIn, ExternalLink, Sparkles, Bot, Zap, Activity, MoreHorizontal
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -55,6 +55,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [themeMenuOpen, setThemeMenuOpen] = useState(false)
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false)
 
   const isLight = theme === 'light'
   const logoSrc = isLight ? '/logo-horizontal-light.png' : '/logo-horizontal-dark.png'
@@ -72,6 +73,11 @@ export default function Navbar() {
     ...(canPost ? PARTNER_NAV : []),
     ...(isAdmin ? ADMIN_NAV : []),
   ]
+
+  // Tối ưu Progressive Disclosure: 3 menu chính luôn hiển thị, menu phụ đưa vào Dropdown "Thêm..."
+  const coreNav = allNav.slice(0, 3)
+  const moreNav = allNav.slice(3)
+  const isMoreActive = moreNav.some(item => isActive(item.path))
 
   const role = ROLE_INFO[profile?.role] || ROLE_INFO.guest
   const currentTheme = THEMES.find(t => t.id === theme) || THEMES[0]
@@ -97,9 +103,9 @@ export default function Navbar() {
               />
             </Link>
 
-            {/* Desktop Navigation Links */}
-            <div className="hidden lg:flex items-center gap-1 flex-shrink min-w-0 overflow-x-auto scrollbar-none">
-              {allNav.map(item => {
+            {/* Desktop Navigation Links (Progressive Disclosure - Không dùng scrollbar ngang) */}
+            <div className="hidden lg:flex items-center gap-1.5 flex-shrink-0">
+              {coreNav.map(item => {
                 const active = isActive(item.path)
                 const handleClick = (e) => {
                   if (item.requireAuth && !user) {
@@ -113,7 +119,7 @@ export default function Navbar() {
                     key={item.path}
                     to={item.path}
                     onClick={handleClick}
-                    className={`flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap flex-shrink-0 transition-all duration-150 ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all duration-150 ${
                       active
                         ? 'bg-primary-500/15 text-primary-400 border border-primary-500/30 shadow-sm'
                         : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)]'
@@ -129,6 +135,66 @@ export default function Navbar() {
                   </Link>
                 )
               })}
+
+              {/* Nút "Thêm" Dropdown gọn gàng cho các tính năng phụ */}
+              {moreNav.length > 0 && (
+                <div className="relative">
+                  <button
+                    onClick={() => {
+                      setMoreMenuOpen(o => !o)
+                      setUserMenuOpen(false)
+                      setThemeMenuOpen(false)
+                    }}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold tracking-wide whitespace-nowrap transition-all duration-150 ${
+                      isMoreActive
+                        ? 'bg-primary-500/15 text-primary-400 border border-primary-500/30 shadow-sm'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)]'
+                    }`}
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                    <span>Thêm</span>
+                    <ChevronDown className="w-3 h-3 opacity-60" />
+                  </button>
+
+                  {moreMenuOpen && (
+                    <div className="absolute left-0 top-full mt-2 w-56 rounded-2xl bg-[var(--bg-card)] border border-[var(--border-color)] p-2 z-50 animate-fade-in shadow-2xl">
+                      {moreNav.map(item => {
+                        const active = isActive(item.path)
+                        const handleClick = (e) => {
+                          setMoreMenuOpen(false)
+                          if (item.requireAuth && !user) {
+                            e.preventDefault()
+                            toast('Vui lòng đăng nhập để sử dụng FinGreen AI', { icon: '🔒' })
+                            navigate(`/dang-nhap?redirect=${encodeURIComponent(item.path)}`)
+                          }
+                        }
+                        return (
+                          <Link
+                            key={item.path}
+                            to={item.path}
+                            onClick={handleClick}
+                            className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all mb-1 ${
+                              active
+                                ? 'bg-primary-500/15 text-primary-400 font-bold'
+                                : 'text-[var(--text-main)] hover:bg-[var(--bg-subtle)]'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <item.icon className="w-4 h-4 text-primary-400" />
+                              <span>{item.label}</span>
+                            </div>
+                            {item.badge && (
+                              <span className="px-1.5 py-0.2 text-[9px] font-extrabold rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                {item.badge}
+                              </span>
+                            )}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -409,12 +475,13 @@ export default function Navbar() {
       </div>
 
       {/* Backdrop overlay */}
-      {(userMenuOpen || themeMenuOpen) && (
+      {(userMenuOpen || themeMenuOpen || moreMenuOpen) && (
         <div
           className="fixed inset-0 z-40 bg-black/10"
           onClick={() => {
             setUserMenuOpen(false)
             setThemeMenuOpen(false)
+            setMoreMenuOpen(false)
           }}
         />
       )}
