@@ -1,0 +1,1 @@
+const u=50,B=5e3,S=50,A=2e3,M={daily:400,minute:400};let e=M.daily,_=M.minute;function n(t,i,a){return Number.isFinite(t)?Math.max(i,Math.min(a,Math.trunc(t))):i}function s(t){typeof t.daily=="number"&&(e=n(t.daily,50,5e3)),typeof t.minute=="number"&&(_=n(t.minute,50,2e3))}function L(){return e}function c(){return _}export{B as D,A as M,u as a,S as b,c,L as g,s};

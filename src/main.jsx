@@ -20,6 +20,7 @@ const CreatePostPage = lazy(() => import('./pages/CreatePostPage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
 const GreenSmartOnePage = lazy(() => import('./pages/GreenSmartOnePage'))
 const AIAssistantPage = lazy(() => import('./pages/AIAssistantPage'))
+const StockPanelPage = lazy(() => import('./pages/StockPanelPage'))
 
 function PageLoader() {
   return (
@@ -109,6 +110,8 @@ function AppRoutes() {
               <Route path="/bang-gia" element={<MaintenanceRoute tabId="bang_dien"><LiveBoardPage /></MaintenanceRoute>} />
               <Route path="/greensmartone" element={<MaintenanceRoute tabId="greensmartone"><GreenSmartOnePage /></MaintenanceRoute>} />
               <Route path="/green-smart-one" element={<MaintenanceRoute tabId="greensmartone"><GreenSmartOnePage /></MaintenanceRoute>} />
+              <Route path="/stock-panel" element={<StockPanelPage />} />
+              <Route path="/quant" element={<StockPanelPage />} />
               <Route path="/bai-viet/:id" element={<PostDetailPage />} />
               <Route path="/hop-tac" element={<MaintenanceRoute tabId="partner"><PartnerPage /></MaintenanceRoute>} />
               

@@ -1,0 +1,6 @@
+import{J as o,aq as e}from"./index-D-CnUT8L.js";import{R as i}from"./refresh-cw-Dm_NwDhX.js";/**
+ * @license lucide-react v0.439.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const n=o("CloudOff",[["path",{d:"m2 2 20 20",key:"1ooewy"}],["path",{d:"M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193",key:"yfwify"}],["path",{d:"M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07",key:"jlfiyv"}]]);function m({icon:r=n,title:d="数据加载失败",hint:t,retrying:a,onRetry:s}){return e.jsx("div",{className:"h-full grid place-items-center px-8 py-16",children:e.jsxs("div",{className:"text-center max-w-md",children:[e.jsx(r,{className:"mx-auto h-10 w-10 text-danger/70",strokeWidth:1.5}),e.jsx("h2",{className:"mt-4 text-[16px] leading-6 font-medium text-foreground",children:d}),t&&e.jsx("p",{className:"mt-2 text-sm text-secondary leading-relaxed",children:t}),s&&e.jsxs("button",{type:"button",onClick:s,disabled:a,className:"mt-5 inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm text-accent hover:bg-elevated disabled:opacity-50 transition-colors",children:[e.jsx(i,{className:a?"h-3.5 w-3.5 animate-spin":"h-3.5 w-3.5"}),"重试"]})]})})}export{m as E};

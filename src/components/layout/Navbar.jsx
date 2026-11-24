@@ -5,13 +5,14 @@ import { useTheme } from '../../contexts/ThemeContext'
 import toast from 'react-hot-toast'
 import {
   FileText, Handshake, Shield, LogOut, Menu, X, ChevronDown,
-  User, Newspaper, Palette, LogIn, ExternalLink, Sparkles, Bot, Zap, Activity, MoreHorizontal, Wrench
+  User, Newspaper, Palette, LogIn, ExternalLink, Sparkles, Bot, Zap, Activity, MoreHorizontal, Wrench, BarChart3
 } from 'lucide-react'
 import { getSystemTabs } from '../../services/systemTabService'
 
 const NAV_ITEMS = [
   { id: 'posts', path: '/', icon: Newspaper, label: 'Tin Tức & Phân Tích' },
   { id: 'bang_dien', path: '/bang-dien', icon: Activity, label: 'Bảng Điện', badge: 'LIVE' },
+  { id: 'stock_panel', path: '/stock-panel', icon: BarChart3, label: 'Stock Panel', badge: 'PRO' },
   { id: 'greensmartone', path: '/greensmartone', icon: Zap, label: 'GreenSmartOne', badge: 'PRO' },
   { id: 'partner', path: '/hop-tac', icon: Handshake, label: 'Hợp Tác FinGreen' },
   { id: 'ai', path: '/ai', icon: Bot, label: 'FinGreen AI', requireAuth: true },

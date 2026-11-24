@@ -2,6 +2,10 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/stock-panel/(.*)",
+      "destination": "/stock-panel/$1"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },
