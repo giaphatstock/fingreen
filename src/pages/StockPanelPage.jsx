@@ -67,7 +67,7 @@ export default function StockPanelPage() {
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
           <a
-            href="/stock-panel/"
+            href="/stock-panel/index.html#/"
             target="_blank"
             rel="noopener noreferrer"
             className="p-1.5 rounded-md text-[#A1A1AA] hover:text-white hover:bg-[#212126] transition-colors"
@@ -89,7 +89,7 @@ export default function StockPanelPage() {
       {/* Frame nhúng trực tiếp giao diện Tick Stock Panel hoàn chỉnh */}
       <iframe
         ref={iframeRef}
-        src="/stock-panel/index.html"
+        src="/stock-panel/index.html#/"
         title="Tick Stock Panel Vietnam"
         className="w-full flex-1 border-0 bg-[#0A0A0B]"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
