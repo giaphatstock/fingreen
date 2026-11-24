@@ -2,6 +2,18 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/stock-panel/index.html",
+      "destination": "/stock-panel/index.html"
+    },
+    {
+      "source": "/stock-panel/assets/(.*)",
+      "destination": "/stock-panel/assets/$1"
+    },
+    {
+      "source": "/stock-panel/third-party/(.*)",
+      "destination": "/stock-panel/third-party/$1"
+    },
+    {
       "source": "/stock-panel/(.*)",
       "destination": "/stock-panel/$1"
     },
