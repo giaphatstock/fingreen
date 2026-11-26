@@ -1,1 +1,0 @@
-import{v as r}from"./index-B6cxAsj0.js";import{g as s}from"./klineBatchLimits-DUxT6Fkr.js";async function l(a,c=12){const i={},n=s();for(let t=0;t<a.length;t+=n){const e=a.slice(t,t+n),o=await r.klineDailyBatch(e,c);Object.assign(i,o.data??{})}return{data:i}}export{l as f};
