@@ -23,8 +23,8 @@ export default async function handler(req, res) {
   const toSec = to ? parseInt(to, 10) : Math.floor(Date.now() / 1000);
   const fromSec = from ? parseInt(from, 10) : toSec - (365 * 86400);
 
-  const resParam = resolution === '1H' ? '1H' : resolution === '15' ? '15' : '1D';
-  const vndRes = resolution === '1H' ? '60' : resolution === '15' ? '15' : '1D';
+  const resParam = resolution === '60' ? '1H' : (resolution || '1D');
+  const vndRes = resolution === '1H' ? '60' : (resolution === '1D' ? 'D' : (resolution || 'D'));
 
   const urls = [
     `https://services.entrade.com.vn/chart-api/v2/ohlcs/stock?symbol=${cleanSymbol}&from=${fromSec}&to=${toSec}&resolution=${resParam}`,
