@@ -1,1 +1,0 @@
-import{aB as o}from"./index-D7P819jD.js";function s(a,t){const c=o.useRef(!1),u=o.useCallback(r=>{c.current=r.target===r.currentTarget},[]),e=o.useCallback(r=>{t&&!t()||c.current&&r.target===r.currentTarget&&a()},[a,t]);return{onMouseDown:u,onClick:e}}export{s as u};

@@ -1,10 +1,9 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="vi-VN">
   <head>
     <meta charset="UTF-8" />
     <script>
-      // 预渲染主题脚本: 首屏前设置 html.dark, 避免亮暗闪烁 (FOUC)。
-      // 默认暗色; 用户切过亮色后 (localStorage tf-theme=light) 保持亮色。
+      // Script khoi tao giao dien: thiet lap che do toi html.dark truoc khi render de tranh giat man hinh
       (function () {
         try {
           if (localStorage.getItem('tf-theme') !== 'light') {
@@ -18,24 +17,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg?v=double-quote" />
     <meta name="theme-color" content="#8B5CF6" />
-    <title>Tick Stock Panel · Quant Terminal</title>
-    <!-- 字体已自托管 (@fontsource, 见 main.tsx), 不再引用第三方 CDN 样式表 -->
-    <script type="module" crossorigin src="./assets/index-D7P819jD.js"></script>
+    <title>Tick Stock Panel · Quant Terminal (Thị trường Chứng khoán Việt Nam)</title>
+    <script type="module" crossorigin src="./assets/index-B6cxAsj0.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-Df5IeE5j.css">
   </head>
   <body class="bg-base text-foreground">
     <div id="root"></div>
     <script>
-      // 预渲染缩放脚本: #root transform scale (方案详见 src/lib/pageZoom.ts —
-      // 不用 CSS zoom, zoom≠1 会让 ECharts 鼠标命中偏移)。
-      // 放在 #root 之后、main.tsx (module 延迟执行) 之前: 首帧绘制前生效, 无尺寸跳变。
+      // Script can chinh ty le zoom giao dien #root
       (function () {
         var z = 1
         try {
           var raw = localStorage.getItem('tf-page-zoom')
           var v = raw == null ? 1 : JSON.parse(raw)
           if (typeof v === 'number' && v >= 0.8 && v <= 1.5) z = v
-        } catch (e) { /* 解析失败保底不缩放 */ }
+        } catch (e) {}
         if (z !== 1) {
           var root = document.getElementById('root')
           root.style.transformOrigin = '0 0'
@@ -44,6 +40,6 @@
           root.style.height = (100 / z) + '%'
         }
       })()
-    </script>
+    </script>
   </body>
 </html>
