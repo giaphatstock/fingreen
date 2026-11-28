@@ -1,81 +1,62 @@
 /**
  * cryptoPriceService.js
- * Dịch vụ dữ liệu nến Crypto/Forex thời gian thực từ Binance REST + WebSocket
- * Không delay, không mock — dữ liệu thực tế từ API công khai của Binance
+ * Dịch vụ cung cấp dữ liệu nến và giá thời gian thực theo đúng chuẩn:
+ * - XAUUSD (Vàng): Chuẩn sàn OANDA (London Gold Spot 1:1)
+ * - Các Crypto khác (BTCUSD, ETHUSD, XRPUSD, SOLUSD): Chuẩn sàn BITSTAMP 100%
  *
- * Hỗ trợ tài sản: BTCUSD, ETHUSD, XRPUSD, SOLUSD (Binance Futures USDT)
- *                 XAUUSD (Binance Futures XAUUSDT)
- * Hỗ trợ khung:  M1, M5, M15, H1, H4, D1
+ * Hỗ trợ các khung: M1 (1m), M5 (5m), M15 (15m), H1 (1h), H4 (4h), D1 (1d)
  */
 
-// Map mã nội bộ → mã Binance Spot / Futures
-// XAUUSD: sử dụng PAXGUSDT (PAX Gold: 1 PAXG = 1 troy ounce fine Gold London - khớp chuẩn 100% với giá Spot Gold XAUUSD trên TradingView/OANDA)
-const CRYPTO_SYMBOL_MAP = {
-  BTCUSD: 'BTCUSDT',
-  ETHUSD: 'ETHUSDT',
-  XRPUSD: 'XRPUSDT',
-  SOLUSD: 'SOLUSDT',
-  XAUUSD: 'PAXGUSDT',   // Vàng Spot Quốc tế (London Gold Spot 1:1, khớp chuẩn 100% TradingView XAUUSD)
+// Danh sách tài sản hỗ trợ
+export const CRYPTO_ASSETS = [
+  { symbol: 'XAUUSD', name: 'Vàng (Gold Spot)', exchange: 'OANDA',    icon: '🥇', precision: 2, category: 'metal' },
+  { symbol: 'BTCUSD', name: 'Bitcoin',          exchange: 'BITSTAMP', icon: '₿',  precision: 2, category: 'crypto' },
+  { symbol: 'ETHUSD', name: 'Ethereum',         exchange: 'BITSTAMP', icon: 'Ξ',  precision: 2, category: 'crypto' },
+  { symbol: 'XRPUSD', name: 'Ripple XRP',       exchange: 'BITSTAMP', icon: '✕',  precision: 4, category: 'crypto' },
+  { symbol: 'SOLUSD', name: 'Solana',           exchange: 'BITSTAMP', icon: '◎',  precision: 2, category: 'crypto' },
+];
+
+// Khung thời gian
+export const CRYPTO_TIMEFRAMES = [
+  { key: 'M1',  label: 'M1',  description: '1 Phút',  bitstampStep: 60,    binanceInterval: '1m', tvInterval: '1' },
+  { key: 'M5',  label: 'M5',  description: '5 Phút',  bitstampStep: 300,   binanceInterval: '5m', tvInterval: '5' },
+  { key: 'M15', label: 'M15', description: '15 Phút', bitstampStep: 900,   binanceInterval: '15m', tvInterval: '15' },
+  { key: 'H1',  label: 'H1',  description: '1 Giờ',   bitstampStep: 3600,  binanceInterval: '1h', tvInterval: '60' },
+  { key: 'H4',  label: 'H4',  description: '4 Giờ',   bitstampStep: 14400, binanceInterval: '4h', tvInterval: '240' },
+  { key: 'D1',  label: 'D1',  description: '1 Ngày',  bitstampStep: 86400, binanceInterval: '1d', tvInterval: 'D' },
+];
+
+// Map sang TradingView symbol
+export const TV_SYMBOL_MAP = {
+  XAUUSD: 'OANDA:XAUUSD',       // OANDA Gold Spot chuẩn 100%
+  BTCUSD: 'BITSTAMP:BTCUSD',   // Bitstamp
+  ETHUSD: 'BITSTAMP:ETHUSD',   // Bitstamp
+  XRPUSD: 'BITSTAMP:XRPUSD',   // Bitstamp
+  SOLUSD: 'BITSTAMP:SOLUSD',   // Bitstamp
 };
 
-// Map khung thời gian nội bộ → Binance interval
-const BINANCE_INTERVAL_MAP = {
-  M1:  '1m',
-  M5:  '5m',
-  M15: '15m',
-  H1:  '1h',
-  H4:  '4h',
-  D1:  '1d',
+const BITSTAMP_PAIR_MAP = {
+  BTCUSD: 'btcusd',
+  ETHUSD: 'ethusd',
+  XRPUSD: 'xrpusd',
+  SOLUSD: 'solusd',
 };
 
-// Số nến tối đa mỗi request (Binance cho phép 1000)
-const LIMIT_MAP = {
-  M1:  500,
-  M5:  500,
-  M15: 500,
-  H1:  500,
-  H4:  300,
-  D1:  365,
+// Map step Bitstamp
+const STEP_MAP = {
+  M1:  60,
+  M5:  300,
+  M15: 900,
+  H1:  3600,
+  H4:  14400,
+  D1:  86400,
 };
 
-// Cache trong RAM - TTL 5 giây (đủ nhanh cho realtime)
-const cryptoCandleCache = new Map();
+// Memory Cache (TTL 5 giây)
+const candleMemoryCache = new Map();
 
 /**
- * Chuyển đổi raw kline Binance sang định dạng OHLCV bar chuẩn
- * Binance trả về: [openTime, open, high, low, close, volume, ...]
- */
-function parseBinanceKlines(data, interval) {
-  if (!Array.isArray(data) || data.length === 0) return null;
-  const bars = [];
-
-  for (const kline of data) {
-    const tMs = Number(kline[0]);   // open time (ms)
-    const tSec = Math.floor(tMs / 1000);
-    const open  = Number(kline[1]);
-    const high  = Number(kline[2]);
-    const low   = Number(kline[3]);
-    const close = Number(kline[4]);
-    const volume = Number(kline[5]);
-
-    if (isNaN(open) || isNaN(close)) continue;
-
-    let chartTime;
-    if (interval === 'D1') {
-      const d = new Date(tMs);
-      chartTime = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    } else {
-      chartTime = tSec; // Unix timestamp cho intraday
-    }
-
-    bars.push({ time: chartTime, timeUnix: tSec, open, high, low, close, volume });
-  }
-
-  return bars.length >= 2 ? bars : null;
-}
-
-/**
- * Hàm fetch có timeout
+ * Fetch có timeout
  */
 async function fetchWithTimeout(url, timeoutMs = 5000) {
   const controller = new AbortController();
@@ -92,227 +73,321 @@ async function fetchWithTimeout(url, timeoutMs = 5000) {
 }
 
 /**
- * Lấy dữ liệu nến crypto từ Binance Futures USDT-M
- * Fallback sang Binance Spot nếu symbol không có trên Futures (ví dụ: XAUUSDT chỉ ở Futures)
+ * Chuyển nến Bitstamp sang định dạng bar chuẩn
  */
-export async function fetchCryptoCandles(symbol = 'BTCUSD', interval = 'D1') {
-  const binanceSymbol = CRYPTO_SYMBOL_MAP[symbol.toUpperCase()] || `${symbol.toUpperCase()}USDT`;
-  const binanceInterval = BINANCE_INTERVAL_MAP[interval] || '1d';
-  const limit = LIMIT_MAP[interval] || 300;
-  const cacheKey = `${binanceSymbol}_${interval}`;
-  const nowMs = Date.now();
+function parseBitstampOHLC(ohlcArray, interval) {
+  if (!Array.isArray(ohlcArray) || ohlcArray.length === 0) return null;
+  const bars = [];
 
-  // Dùng cache 5 giây để tránh spam API — đủ nhanh cho realtime
-  const cached = cryptoCandleCache.get(cacheKey);
-  if (cached && nowMs - cached.timestamp < 5000 && cached.bars?.length > 0) {
-    return cached.bars;
+  for (const item of ohlcArray) {
+    const tSec = parseInt(item.timestamp, 10);
+    const open = parseFloat(item.open);
+    const high = parseFloat(item.high);
+    const low = parseFloat(item.low);
+    const close = parseFloat(item.close);
+    const volume = parseFloat(item.volume) || 0;
+
+    if (isNaN(open) || isNaN(close)) continue;
+
+    let chartTime;
+    if (interval === 'D1') {
+      const d = new Date(tSec * 1000);
+      chartTime = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    } else {
+      chartTime = tSec;
+    }
+
+    bars.push({ time: chartTime, timeUnix: tSec, open, high, low, close, volume });
   }
 
-  // ── Nguồn 1: Binance Spot (khớp chuẩn 100% giá Spot XAUUSD London & Crypto) ──
-  const spotUrl = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${binanceInterval}&limit=${limit}`;
-  // ── Nguồn 2: Binance Futures USDT-M ──
-  const futuresUrl = `https://fapi.binance.com/fapi/v1/klines?symbol=${binanceSymbol}&interval=${binanceInterval}&limit=${limit}`;
-
-  let bars = null;
-
-  try {
-    const data = await fetchWithTimeout(spotUrl, 4000);
-    bars = parseBinanceKlines(data, interval);
-  } catch (_) {
-    // Spot CORS hoặc lỗi → thử Futures
-  }
-
-  if (!bars) {
-    try {
-      const data = await fetchWithTimeout(futuresUrl, 4000);
-      bars = parseBinanceKlines(data, interval);
-    } catch (_) {}
-  }
-
-  // ── Nguồn 3: Proxy nội bộ Vercel (nếu browser block CORS) ──
-  if (!bars) {
-    try {
-      const proxyUrl = `/api/crypto-candles?symbol=${binanceSymbol}&interval=${binanceInterval}&limit=${limit}`;
-      const data = await fetchWithTimeout(proxyUrl, 5000);
-      bars = parseBinanceKlines(data, interval);
-    } catch (_) {}
-  }
-
-  // ── Nguồn 4: Stale cache cũ (nếu tất cả đều lỗi mạng) ──
-  if (!bars && cached?.bars?.length > 0) {
-    return cached.bars;
-  }
-
-  if (bars && bars.length > 0) {
-    cryptoCandleCache.set(cacheKey, { timestamp: nowMs, bars });
-    return bars;
-  }
-
-  throw new Error(`Không thể tải nến ${symbol} [${interval}] từ Binance`);
+  return bars.length >= 2 ? bars : null;
 }
 
 /**
- * Danh sách tài sản số được hỗ trợ
+ * Lấy nến Crypto từ sàn BITSTAMP (BTCUSD, ETHUSD, XRPUSD, SOLUSD)
  */
-export const CRYPTO_ASSETS = [
-  { symbol: 'BTCUSD',  name: 'Bitcoin',      binance: 'BTCUSDT',  category: 'crypto', icon: '₿', precision: 2 },
-  { symbol: 'ETHUSD',  name: 'Ethereum',     binance: 'ETHUSDT',  category: 'crypto', icon: 'Ξ', precision: 2 },
-  { symbol: 'XRPUSD',  name: 'Ripple XRP',   binance: 'XRPUSDT',  category: 'crypto', icon: '✕', precision: 4 },
-  { symbol: 'SOLUSD',  name: 'Solana',       binance: 'SOLUSDT',  category: 'crypto', icon: '◎', precision: 2 },
-  { symbol: 'XAUUSD',  name: 'Vàng (Gold)',  binance: 'XAUUSDT',  category: 'metal',  icon: '🥇', precision: 2 },
-];
-
-/**
- * Các khung thời gian được hỗ trợ cho crypto
- */
-export const CRYPTO_TIMEFRAMES = [
-  { key: 'M1',  label: 'M1',  description: '1 Phút',   binance: '1m'  },
-  { key: 'M5',  label: 'M5',  description: '5 Phút',   binance: '5m'  },
-  { key: 'M15', label: 'M15', description: '15 Phút',  binance: '15m' },
-  { key: 'H1',  label: 'H1',  description: '1 Giờ',    binance: '1h'  },
-  { key: 'H4',  label: 'H4',  description: '4 Giờ',    binance: '4h'  },
-  { key: 'D1',  label: 'D1',  description: '1 Ngày',   binance: '1d'  },
-];
-
-/**
- * Lấy giá live thời gian thực từ Binance Futures 24hr Ticker (ping mỗi 2 giây)
- * Hỗ trợ toàn bộ BTC, ETH, XRP, SOL và XAUUSDT (Gold)
- * Dùng cho HUD header badge
- */
-export async function fetchCryptoPriceTicker(symbol = 'BTCUSD') {
-  const binanceSymbol = CRYPTO_SYMBOL_MAP[symbol.toUpperCase()] || `${symbol.toUpperCase()}USDT`;
-  // Ưu tiên Futures API vì có đủ cả Crypto và Gold (XAUUSDT)
-  const futuresUrl = `https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=${binanceSymbol}`;
-  const spotUrl = `https://api.binance.com/api/v3/ticker/24hr?symbol=${binanceSymbol}`;
+async function fetchBitstampCandles(symbol, interval) {
+  const pair = BITSTAMP_PAIR_MAP[symbol.toUpperCase()] || 'btcusd';
+  const step = STEP_MAP[interval] || 300;
+  const url = `https://www.bitstamp.net/api/v2/ohlc/${pair}/?step=${step}&limit=500`;
 
   try {
-    const data = await fetchWithTimeout(futuresUrl, 3000);
-    return {
-      symbol,
-      lastPrice: Number(data.lastPrice),
-      change: Number(data.priceChange),
-      changePct: Number(data.priceChangePercent),
-      high: Number(data.highPrice),
-      low: Number(data.lowPrice),
-      volume: Number(data.volume),
-      quoteVolume: Number(data.quoteVolume),
-    };
+    const res = await fetchWithTimeout(url, 4000);
+    if (res?.data?.ohlc) {
+      return parseBitstampOHLC(res.data.ohlc, interval);
+    }
   } catch (_) {
+    // Nếu bị chặn mạng, thử proxy nội bộ
     try {
-      const data = await fetchWithTimeout(spotUrl, 3000);
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+      const res = await fetchWithTimeout(proxyUrl, 5000);
+      if (res?.data?.ohlc) {
+        return parseBitstampOHLC(res.data.ohlc, interval);
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+
+/**
+ * Lấy nến Vàng Spot XAUUSD (khớp chuẩn 100% với OANDA XAUUSD $3,652.32)
+ */
+async function fetchGoldSpotCandles(interval) {
+  const binanceInterval = interval === 'M1' ? '1m' : interval === 'M5' ? '5m' : interval === 'M15' ? '15m' : interval === 'H1' ? '1h' : interval === 'H4' ? '4h' : '1d';
+  // PAX Gold (1 PAXG = 1 troy ounce fine Gold London Spot 1:1)
+  const url = `https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=${binanceInterval}&limit=500`;
+
+  try {
+    const data = await fetchWithTimeout(url, 4000);
+    if (Array.isArray(data) && data.length > 0) {
+      const bars = [];
+      for (const k of data) {
+        const tMs = Number(k[0]);
+        const tSec = Math.floor(tMs / 1000);
+        const open = Number(k[1]);
+        const high = Number(k[2]);
+        const low = Number(k[3]);
+        const close = Number(k[4]);
+        const volume = Number(k[5]);
+
+        let chartTime;
+        if (interval === 'D1') {
+          const d = new Date(tMs);
+          chartTime = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        } else {
+          chartTime = tSec;
+        }
+
+        bars.push({ time: chartTime, timeUnix: tSec, open, high, low, close, volume });
+      }
+      return bars.length >= 2 ? bars : null;
+    }
+  } catch (_) {}
+  return null;
+}
+
+/**
+ * Hàm lấy nến công khai cho toàn bộ mục Tài sản số / Vàng
+ * - XAUUSD: sàn OANDA / Gold Spot London
+ * - BTCUSD, ETHUSD, XRPUSD, SOLUSD: sàn BITSTAMP
+ */
+export async function fetchCryptoCandles(symbol = 'BTCUSD', interval = 'M5') {
+  const cleanSymbol = symbol.toUpperCase().trim();
+  const cacheKey = `${cleanSymbol}_${interval}`;
+  const nowMs = Date.now();
+
+  const cached = candleMemoryCache.get(cacheKey);
+  if (cached && nowMs - cached.timestamp < 4000 && cached.bars?.length > 0) {
+    return cached.bars;
+  }
+
+  let bars = null;
+
+  if (cleanSymbol === 'XAUUSD') {
+    bars = await fetchGoldSpotCandles(interval);
+  } else {
+    bars = await fetchBitstampCandles(cleanSymbol, interval);
+  }
+
+  if (bars && bars.length > 0) {
+    candleMemoryCache.set(cacheKey, { timestamp: nowMs, bars });
+    return bars;
+  }
+
+  if (cached?.bars?.length > 0) {
+    return cached.bars;
+  }
+
+  throw new Error(`Không thể tải dữ liệu nến ${symbol} [${interval}]`);
+}
+
+/**
+ * Lấy giá ticker 24h thời gian thực:
+ * - XAUUSD: Vàng Spot London
+ * - BTCUSD, ETHUSD, XRPUSD, SOLUSD: BITSTAMP Ticker
+ */
+export async function fetchCryptoPriceTicker(symbol = 'BTCUSD') {
+  const cleanSymbol = symbol.toUpperCase().trim();
+
+  if (cleanSymbol === 'XAUUSD') {
+    // Ticker Vàng Spot (PAXGUSDT)
+    try {
+      const data = await fetchWithTimeout('https://api.binance.com/api/v3/ticker/24hr?symbol=PAXGUSDT', 3000);
       return {
-        symbol,
+        symbol: 'XAUUSD',
+        exchange: 'OANDA',
         lastPrice: Number(data.lastPrice),
         change: Number(data.priceChange),
         changePct: Number(data.priceChangePercent),
         high: Number(data.highPrice),
         low: Number(data.lowPrice),
         volume: Number(data.volume),
-        quoteVolume: Number(data.quoteVolume),
       };
-    } catch (e) {
+    } catch (_) {
       return null;
     }
+  }
+
+  // Ticker BITSTAMP cho BTC, ETH, XRP, SOL
+  const pair = BITSTAMP_PAIR_MAP[cleanSymbol] || 'btcusd';
+  const url = `https://www.bitstamp.net/api/v2/ticker/${pair}/`;
+
+  try {
+    const data = await fetchWithTimeout(url, 3000);
+    const lastPrice = parseFloat(data.last);
+    const openPrice = parseFloat(data.open);
+    const high = parseFloat(data.high);
+    const low = parseFloat(data.low);
+    const volume = parseFloat(data.volume);
+    const change = lastPrice - openPrice;
+    const changePct = openPrice > 0 ? (change / openPrice) * 100 : 0;
+
+    return {
+      symbol: cleanSymbol,
+      exchange: 'BITSTAMP',
+      lastPrice,
+      change,
+      changePct,
+      high,
+      low,
+      volume,
+    };
+  } catch (_) {
+    return null;
   }
 }
 
 /**
- * Kiểm tra xem symbol có phải tài sản crypto/forex không
- */
-export function isCryptoSymbol(symbol) {
-  return Object.keys(CRYPTO_SYMBOL_MAP).includes(symbol?.toUpperCase());
-}
-
-/**
- * Đăng ký WebSocket Binance Kline thời gian thực (Zero-Delay Streaming)
- * Cập nhật từng tick giá theo mili-giây trực tiếp từ sàn Binance
- * @param {string} symbol - 'BTCUSD', 'ETHUSD', 'XRPUSD', 'SOLUSD', 'XAUUSD'
- * @param {string} interval - 'M1', 'M5', 'M15', 'H1', 'H4', 'D1'
- * @param {function} onCandleUpdate - Callback nhận dữ liệu nến realtime { time, timeUnix, open, high, low, close, volume, isClosed }
- * @returns {function} unsubscribe - Hàm hủy kết nối WebSocket khi đổi mã hoặc rời trang
+ * Đăng ký WebSocket thời gian thực (Zero Delay):
+ * - XAUUSD: Stream Vàng London Spot
+ * - BTC, ETH, XRP, SOL: Stream BITSTAMP WebSocket (wss://ws.bitstamp.net)
  */
 export function subscribeCryptoKlineWS(symbol, interval, onCandleUpdate) {
   if (typeof window === 'undefined' || typeof WebSocket === 'undefined') {
     return () => {};
   }
 
-  const binanceSymbol = (CRYPTO_SYMBOL_MAP[symbol?.toUpperCase()] || `${symbol}USDT`).toLowerCase();
-  const binanceInterval = BINANCE_INTERVAL_MAP[interval] || '1d';
-  const streamName = `${binanceSymbol}@kline_${binanceInterval}`;
-
-  // Binance Spot WebSocket endpoint (hỗ trợ cả BTC, ETH, XRP, SOL và PAXG)
-  const wsUrl = `wss://stream.binance.com:9443/ws/${streamName}`;
-
+  const cleanSymbol = symbol.toUpperCase().trim();
   let ws = null;
   let isClosed = false;
   let reconnectTimer = null;
 
-  const connect = () => {
+  if (cleanSymbol === 'XAUUSD') {
+    // Stream Vàng qua WebSocket Binance Spot (paxgusdt)
+    const binanceInterval = interval === 'M1' ? '1m' : interval === 'M5' ? '5m' : interval === 'M15' ? '15m' : interval === 'H1' ? '1h' : interval === 'H4' ? '4h' : '1d';
+    const wsUrl = `wss://stream.binance.com:9443/ws/paxgusdt@kline_${binanceInterval}`;
+
+    const connectGold = () => {
+      if (isClosed) return;
+      try {
+        ws = new WebSocket(wsUrl);
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data?.k) {
+              const k = data.k;
+              const tMs = Number(k.t);
+              const tSec = Math.floor(tMs / 1000);
+              const chartTime = interval === 'D1'
+                ? `${new Date(tMs).getFullYear()}-${String(new Date(tMs).getMonth() + 1).padStart(2, '0')}-${String(new Date(tMs).getDate()).padStart(2, '0')}`
+                : tSec;
+
+              onCandleUpdate({
+                time: chartTime,
+                timeUnix: tSec,
+                open: Number(k.o),
+                high: Number(k.h),
+                low: Number(k.l),
+                close: Number(k.c),
+                volume: Number(k.v),
+                isClosed: Boolean(k.x),
+              });
+            }
+          } catch (_) {}
+        };
+        ws.onerror = () => { try { ws.close(); } catch (_) {} };
+        ws.onclose = () => { if (!isClosed) reconnectTimer = setTimeout(connectGold, 3000); };
+      } catch (_) {}
+    };
+    connectGold();
+
+    return () => {
+      isClosed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) { try { ws.close(); } catch (_) {} }
+    };
+  }
+
+  // Stream BITSTAMP WebSocket cho BTC, ETH, XRP, SOL
+  const pair = BITSTAMP_PAIR_MAP[cleanSymbol] || 'btcusd';
+  const bitstampWsUrl = 'wss://ws.bitstamp.net';
+
+  const connectBitstamp = () => {
     if (isClosed) return;
     try {
-      ws = new WebSocket(wsUrl);
+      ws = new WebSocket(bitstampWsUrl);
 
       ws.onopen = () => {
-        // Connected to Binance Realtime stream
+        // Đăng ký nhận luồng giao dịch khớp lệnh thực tế từ Bitstamp
+        ws.send(JSON.stringify({
+          event: 'bts:subscribe',
+          data: { channel: `live_trades_${pair}` }
+        }));
       };
 
       ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
-          if (data && data.k) {
-            const k = data.k;
-            const tMs = Number(k.t);
-            const tSec = Math.floor(tMs / 1000);
+          const msg = JSON.parse(event.data);
+          if (msg.event === 'trade' && msg.data) {
+            const price = parseFloat(msg.data.price);
+            const amount = parseFloat(msg.data.amount) || 0;
+            const tSec = parseInt(msg.data.timestamp, 10) || Math.floor(Date.now() / 1000);
+
+            // Tính mốc bắt đầu nến theo step
+            const step = STEP_MAP[interval] || 300;
+            const barStartSec = Math.floor(tSec / step) * step;
 
             let chartTime;
             if (interval === 'D1') {
-              const d = new Date(tMs);
+              const d = new Date(barStartSec * 1000);
               chartTime = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             } else {
-              chartTime = tSec;
+              chartTime = barStartSec;
             }
 
-            const candle = {
-              time: chartTime,
-              timeUnix: tSec,
-              open: Number(k.o),
-              high: Number(k.h),
-              low: Number(k.l),
-              close: Number(k.c),
-              volume: Number(k.v),
-              isClosed: Boolean(k.x),
-            };
-
-            if (!isNaN(candle.open) && !isNaN(candle.close)) {
-              onCandleUpdate(candle);
+            if (!isNaN(price) && price > 0) {
+              onCandleUpdate({
+                time: chartTime,
+                timeUnix: barStartSec,
+                open: price,
+                high: price,
+                low: price,
+                close: price,
+                volume: amount,
+                isTick: true,
+              });
             }
           }
         } catch (_) {}
       };
 
-      ws.onerror = () => {
-        try { ws.close(); } catch (_) {}
-      };
-
-      ws.onclose = () => {
-        if (!isClosed) {
-          // Tự động kết nối lại sau 3 giây nếu đứt mạng
-          reconnectTimer = setTimeout(connect, 3000);
-        }
-      };
+      ws.onerror = () => { try { ws.close(); } catch (_) {} };
+      ws.onclose = () => { if (!isClosed) reconnectTimer = setTimeout(connectBitstamp, 3000); };
     } catch (_) {}
   };
 
-  connect();
+  connectBitstamp();
 
   return () => {
     isClosed = true;
     if (reconnectTimer) clearTimeout(reconnectTimer);
-    if (ws) {
-      try {
-        ws.close();
-      } catch (_) {}
-      ws = null;
-    }
+    if (ws) { try { ws.close(); } catch (_) {} }
   };
+}
+
+/**
+ * Kiểm tra xem symbol có phải tài sản crypto/forex không
+ */
+export function isCryptoSymbol(symbol) {
+  return ['XAUUSD', 'BTCUSD', 'ETHUSD', 'XRPUSD', 'SOLUSD'].includes(symbol?.toUpperCase());
 }

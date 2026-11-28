@@ -337,18 +337,33 @@ export default function GreenSmartOnePage() {
   // ── Danh sách timeframe phù hợp mode ──
   const availableTimeframes = assetMode === 'crypto' ? CRYPTO_TIMEFRAMES : VN_TIMEFRAMES;
 
-  // ── Tên hiển thị cho TradingView Widget (crypto cần map sang format TV) ──
+  // ── Tên hiển thị cho TradingView Widget (OANDA cho Vàng XAUUSD, BITSTAMP cho toàn bộ Crypto khác) ──
   const tvSymbol = useMemo(() => {
     if (!isCryptoSymbol(symbol)) return symbol;
     const map = {
-      BTCUSD: 'BINANCE:BTCUSDT',
-      ETHUSD: 'BINANCE:ETHUSDT',
-      XRPUSD: 'BINANCE:XRPUSDT',
-      SOLUSD: 'BINANCE:SOLUSDT',
-      XAUUSD: 'OANDA:XAUUSD',
+      XAUUSD: 'OANDA:XAUUSD',      // OANDA Gold Spot chuẩn 100%
+      BTCUSD: 'BITSTAMP:BTCUSD',  // BITSTAMP
+      ETHUSD: 'BITSTAMP:ETHUSD',  // BITSTAMP
+      XRPUSD: 'BITSTAMP:XRPUSD',  // BITSTAMP
+      SOLUSD: 'BITSTAMP:SOLUSD',  // BITSTAMP
     };
-    return map[symbol] || `BINANCE:${symbol}`;
+    return map[symbol] || `BITSTAMP:${symbol}`;
   }, [symbol]);
+
+  // ── Khung thời gian cho TradingView Widget ──
+  const tvInterval = useMemo(() => {
+    const map = {
+      M1: '1',
+      M5: '5',
+      M15: '15',
+      H1: '60',
+      H4: '240',
+      D1: 'D',
+      '1D': 'D',
+      '1H': '60',
+    };
+    return map[timeframe] || (assetMode === 'crypto' ? '5' : 'D');
+  }, [timeframe, assetMode]);
 
   return (
     <div className="min-h-screen pb-16 bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-200">
@@ -416,9 +431,14 @@ export default function GreenSmartOnePage() {
                     : 'border-[var(--border-color)] bg-[var(--bg-card)] text-[var(--text-muted)] hover:border-orange-500/30 hover:text-orange-400'
                 }`}
               >
-                <span className="text-lg leading-none">{asset.icon}</span>
-                <span className="font-mono text-[10px] font-extrabold">{asset.symbol}</span>
-                <span className="text-[9px] text-[var(--text-muted)] truncate max-w-full">{asset.name}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base leading-none">{asset.icon}</span>
+                  <span className="font-mono text-[11px] font-extrabold">{asset.symbol}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] text-[var(--text-muted)] truncate max-w-[80px]">{asset.name}</span>
+                  <span className="text-[8px] px-1 py-0.2 rounded bg-white/10 text-orange-400 font-mono font-bold">{asset.exchange}</span>
+                </div>
               </button>
             ))}
           </div>
@@ -660,7 +680,7 @@ export default function GreenSmartOnePage() {
             <span className="text-[var(--text-muted)]">24h Cao: <strong className="text-emerald-400">{cryptoTicker.high.toLocaleString('en-US', { maximumFractionDigits: pricePrecision })}</strong></span>
             <span className="text-[var(--text-muted)]">24h Thấp: <strong className="text-rose-400">{cryptoTicker.low.toLocaleString('en-US', { maximumFractionDigits: pricePrecision })}</strong></span>
             <span className="text-[var(--text-muted)]">KL 24h: <strong className="text-cyan-400">{cryptoTicker.volume.toLocaleString('en-US', { maximumFractionDigits: 2 })}</strong></span>
-            <span className="text-[var(--text-muted)]">Nguồn: <strong className="text-orange-400">Binance Spot {symbol === 'XAUUSD' ? '(PAX Gold London 1:1 Spot)' : ''}</strong></span>
+            <span className="text-[var(--text-muted)]">Nguồn: <strong className="text-orange-400">{symbol === 'XAUUSD' ? 'OANDA (Vàng Spot London)' : 'BITSTAMP Realtime'}</strong></span>
             <span className="ml-auto text-[9px] text-[var(--text-muted)] opacity-60">Cập nhật mỗi 2 giây · Không delay</span>
           </div>
         )}
@@ -703,17 +723,40 @@ export default function GreenSmartOnePage() {
             </div>
 
             <div className="flex items-center gap-2 text-xs">
+              {/* Nút chuyển đổi nhanh chế độ Biểu đồ: GreenSmartOne Engine / TradingView Chính Thức */}
+              <div className="flex items-center p-1 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-color)]">
+                <button
+                  onClick={() => setViewMode('canvas')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition-all ${
+                    viewMode === 'canvas'
+                      ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-md'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                  }`}
+                  title="Biểu đồ GreenSmartOne với 7-Sens Adaptive Pine Script v5"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>GreenSmartOne</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('tv_widget')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-bold transition-all ${
+                    viewMode === 'tv_widget'
+                      ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                  }`}
+                  title="Biểu đồ TradingView Advanced Chart chính thức (OANDA XAUUSD, Binance Crypto)"
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>TradingView (Chuẩn 100%)</span>
+                </button>
+              </div>
+
               {assetMode === 'crypto' ? (
-                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/30">
+                <span className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/30">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  BINANCE REALTIME ({timeframe})
+                  LIVE
                 </span>
-              ) : (
-                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/30">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  HOSE/HNX ({timeframe})
-                </span>
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -780,14 +823,19 @@ export default function GreenSmartOnePage() {
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-cyan-400 font-sans">⚡ Sens = {indicatorResults.finalEffSens?.toFixed(2)}</span>
                   {assetMode === 'crypto' && (
-                    <span className="text-[10px] text-orange-400 font-sans">🔸 Binance {timeframe}</span>
+                    <span className="text-[10px] text-orange-400 font-sans">🔸 {symbol === 'XAUUSD' ? 'OANDA Gold' : 'Bitstamp'} {timeframe}</span>
                   )}
                 </div>
               </div>
             </>
           ) : (
-            <div className="h-[620px] w-full p-2">
-              <TradingViewClassicWidget symbol={tvSymbol} theme={theme} isCrypto={assetMode === 'crypto'} />
+            <div className="h-[640px] w-full p-1">
+              <TradingViewClassicWidget
+                symbol={tvSymbol}
+                interval={tvInterval}
+                theme={theme}
+                isCrypto={assetMode === 'crypto'}
+              />
             </div>
           )}
         </div>
