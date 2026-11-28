@@ -263,8 +263,8 @@ export default function GreenSmartOnePage() {
   const handleSelectAssetMode = (mode) => {
     setAssetMode(mode);
     if (mode === 'crypto') {
-      setSymbol('BTCUSD');
-      setTimeframe('D1');
+      setSymbol('XAUUSD');
+      setTimeframe('M5'); // Mặc định M5 cho Vàng/Crypto khớp trực tiếp với TradingView 5m
     } else {
       setSymbol('FPT');
       setTimeframe('1D');
@@ -406,7 +406,10 @@ export default function GreenSmartOnePage() {
             {CRYPTO_ASSETS.map(asset => (
               <button
                 key={asset.symbol}
-                onClick={() => setSymbol(asset.symbol)}
+                onClick={() => {
+                  setSymbol(asset.symbol);
+                  if (timeframe === 'D1' || timeframe === '1D') setTimeframe('M5');
+                }}
                 className={`flex flex-col items-center gap-1 px-3 py-2.5 rounded-2xl border text-xs font-bold transition-all ${
                   symbol === asset.symbol
                     ? 'bg-gradient-to-b from-orange-500/20 to-amber-500/10 border-orange-500/50 text-orange-400 shadow-lg'
@@ -657,13 +660,63 @@ export default function GreenSmartOnePage() {
             <span className="text-[var(--text-muted)]">24h Cao: <strong className="text-emerald-400">{cryptoTicker.high.toLocaleString('en-US', { maximumFractionDigits: pricePrecision })}</strong></span>
             <span className="text-[var(--text-muted)]">24h Thấp: <strong className="text-rose-400">{cryptoTicker.low.toLocaleString('en-US', { maximumFractionDigits: pricePrecision })}</strong></span>
             <span className="text-[var(--text-muted)]">KL 24h: <strong className="text-cyan-400">{cryptoTicker.volume.toLocaleString('en-US', { maximumFractionDigits: 2 })}</strong></span>
-            <span className="text-[var(--text-muted)]">Nguồn: <strong className="text-orange-400">Binance {symbol === 'XAUUSD' ? 'Futures' : 'Spot/Futures'}</strong></span>
+            <span className="text-[var(--text-muted)]">Nguồn: <strong className="text-orange-400">Binance Spot {symbol === 'XAUUSD' ? '(PAX Gold London 1:1 Spot)' : ''}</strong></span>
             <span className="ml-auto text-[9px] text-[var(--text-muted)] opacity-60">Cập nhật mỗi 2 giây · Không delay</span>
           </div>
         )}
 
         {/* ══ Khung Biểu Đồ Chính ══ */}
         <div className="relative rounded-3xl border border-[var(--border-color)] bg-[var(--bg-card)] overflow-hidden shadow-2xl min-h-[580px]">
+          {/* Thanh điều hướng khung thời gian tích hợp trực tiếp trên đỉnh biểu đồ (Always visible) */}
+          <div className="px-4 py-2.5 border-b border-[var(--border-color)] bg-[var(--bg-card)]/95 flex flex-wrap items-center justify-between gap-3 z-20">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 font-mono">
+                <span className={`text-base font-extrabold tracking-wider ${assetMode === 'crypto' ? 'text-orange-400' : 'text-emerald-400'}`}>
+                  {symbol}
+                </span>
+                {latestBar && (
+                  <span className="text-sm font-bold text-[var(--text-main)] px-2.5 py-0.5 rounded-lg bg-[var(--bg-subtle)] border border-[var(--border-color)]">
+                    {(cryptoTicker?.lastPrice ?? latestBar.close).toLocaleString('en-US', { minimumFractionDigits: pricePrecision, maximumFractionDigits: pricePrecision })}
+                  </span>
+                )}
+              </div>
+
+              {/* Khung thời gian M1 - D1 hiển thị cố định trên biểu đồ */}
+              <div className="flex items-center p-1 rounded-xl bg-[var(--bg-subtle)] border border-[var(--border-color)]">
+                {availableTimeframes.map(tf => (
+                  <button
+                    key={tf.key}
+                    onClick={() => setTimeframe(tf.key)}
+                    className={`px-3 py-1 rounded-lg text-xs font-extrabold transition-all ${
+                      timeframe === tf.key
+                        ? assetMode === 'crypto'
+                          ? 'bg-orange-500 text-white shadow-md'
+                          : 'bg-emerald-500 text-white shadow-md'
+                        : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-white/5'
+                    }`}
+                    title={tf.description}
+                  >
+                    {tf.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs">
+              {assetMode === 'crypto' ? (
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  BINANCE REALTIME ({timeframe})
+                </span>
+              ) : (
+                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  HOSE/HNX ({timeframe})
+                </span>
+              )}
+            </div>
+          </div>
+
           {loading && (
             <div className="absolute inset-0 z-30 flex items-center justify-center bg-[var(--bg-card)]/80 backdrop-blur-sm">
               <div className="text-center">

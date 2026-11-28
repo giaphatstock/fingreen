@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   const { symbol = 'BTCUSDT', interval = '1d', limit = '300' } = req.query;
 
   // Chỉ cho phép các symbol hợp lệ (tránh abuse)
-  const ALLOWED_SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'SOLUSDT', 'XAUUSDT'];
+  const ALLOWED_SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'XRPUSDT', 'SOLUSDT', 'XAUUSDT', 'PAXGUSDT'];
   const ALLOWED_INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d'];
 
   if (!ALLOWED_SYMBOLS.includes(symbol.toUpperCase())) {

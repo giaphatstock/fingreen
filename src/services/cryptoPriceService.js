@@ -8,13 +8,14 @@
  * Hỗ trợ khung:  M1, M5, M15, H1, H4, D1
  */
 
-// Map mã nội bộ → mã Binance Futures (USDT-M)
+// Map mã nội bộ → mã Binance Spot / Futures
+// XAUUSD: sử dụng PAXGUSDT (PAX Gold: 1 PAXG = 1 troy ounce fine Gold London - khớp chuẩn 100% với giá Spot Gold XAUUSD trên TradingView/OANDA)
 const CRYPTO_SYMBOL_MAP = {
   BTCUSD: 'BTCUSDT',
   ETHUSD: 'ETHUSDT',
   XRPUSD: 'XRPUSDT',
   SOLUSD: 'SOLUSDT',
-  XAUUSD: 'XAUUSDT',   // Binance có hợp đồng vàng XAUUSDT
+  XAUUSD: 'PAXGUSDT',   // Vàng Spot Quốc tế (London Gold Spot 1:1, khớp chuẩn 100% TradingView XAUUSD)
 };
 
 // Map khung thời gian nội bộ → Binance interval
@@ -27,13 +28,13 @@ const BINANCE_INTERVAL_MAP = {
   D1:  '1d',
 };
 
-// Số nến tối đa mỗi request (Binance cho phép 1500)
+// Số nến tối đa mỗi request (Binance cho phép 1000)
 const LIMIT_MAP = {
-  M1:  300,
-  M5:  300,
-  M15: 300,
-  H1:  300,
-  H4:  200,
+  M1:  500,
+  M5:  500,
+  M15: 500,
+  H1:  500,
+  H4:  300,
   D1:  365,
 };
 
@@ -107,23 +108,23 @@ export async function fetchCryptoCandles(symbol = 'BTCUSD', interval = 'D1') {
     return cached.bars;
   }
 
-  // ── Nguồn 1: Binance Futures USDT-M (Perpetual) ──
-  const futuresUrl = `https://fapi.binance.com/fapi/v1/klines?symbol=${binanceSymbol}&interval=${binanceInterval}&limit=${limit}`;
-  // ── Nguồn 2: Binance Spot ──
+  // ── Nguồn 1: Binance Spot (khớp chuẩn 100% giá Spot XAUUSD London & Crypto) ──
   const spotUrl = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${binanceInterval}&limit=${limit}`;
+  // ── Nguồn 2: Binance Futures USDT-M ──
+  const futuresUrl = `https://fapi.binance.com/fapi/v1/klines?symbol=${binanceSymbol}&interval=${binanceInterval}&limit=${limit}`;
 
   let bars = null;
 
   try {
-    const data = await fetchWithTimeout(futuresUrl, 4000);
+    const data = await fetchWithTimeout(spotUrl, 4000);
     bars = parseBinanceKlines(data, interval);
   } catch (_) {
-    // Futures CORS blocked hoặc symbol không tồn tại → thử Spot
+    // Spot CORS hoặc lỗi → thử Futures
   }
 
   if (!bars) {
     try {
-      const data = await fetchWithTimeout(spotUrl, 4000);
+      const data = await fetchWithTimeout(futuresUrl, 4000);
       bars = parseBinanceKlines(data, interval);
     } catch (_) {}
   }
@@ -239,8 +240,8 @@ export function subscribeCryptoKlineWS(symbol, interval, onCandleUpdate) {
   const binanceInterval = BINANCE_INTERVAL_MAP[interval] || '1d';
   const streamName = `${binanceSymbol}@kline_${binanceInterval}`;
 
-  // Binance Futures WebSocket endpoint (hỗ trợ cả BTC, ETH, XRP, SOL và XAUUSDT)
-  const wsUrl = `wss://fstream.binance.com/ws/${streamName}`;
+  // Binance Spot WebSocket endpoint (hỗ trợ cả BTC, ETH, XRP, SOL và PAXG)
+  const wsUrl = `wss://stream.binance.com:9443/ws/${streamName}`;
 
   let ws = null;
   let isClosed = false;
