@@ -87,6 +87,7 @@ class DiamondMarkerPrimitive {
 export default function GreenSmartOneChart({
   bars = [],
   symbol = 'FPT',
+  timeframe = '1D',
   indicators = {},
   theme = 'dark',
   toggles = {},
@@ -342,6 +343,29 @@ export default function GreenSmartOneChart({
       isLicActive
     } = indicators;
 
+    // Cập nhật hiển thị thời gian trong ngày cho khung M1, M5, M15, H1, H4
+    const isIntraday = (bars.length > 0 && typeof bars[0].time === 'number') || ['M1', 'M5', 'M15', 'H1', 'H4', '1H'].includes(timeframe);
+    try {
+      chartRef.current.timeScale().applyOptions({
+        timeVisible: isIntraday,
+        secondsVisible: false,
+      });
+    } catch (_) {}
+
+    // Điều chỉnh độ chính xác số thập phân động (XRP: 4 số thập phân, BTC/ETH/XAU/Cổ phiếu: 2 số thập phân)
+    const isSmallPrice = bars.some(b => b.close > 0 && b.close < 10);
+    const precision = isSmallPrice ? 4 : 2;
+    const minMove = isSmallPrice ? 0.0001 : 0.01;
+    try {
+      candleSeriesRef.current.applyOptions({
+        priceFormat: {
+          type: 'price',
+          precision,
+          minMove,
+        },
+      });
+    } catch (_) {}
+
     // 1. Gán Candlestick data
     const candleData = bars.map((b, idx) => {
       const col = (isLicActive && barColors && barColors[idx]) ? barColors[idx] : (b.close >= b.open ? '#e7dc3b' : '#da1d15');
@@ -526,7 +550,7 @@ export default function GreenSmartOneChart({
       cancelAnimationFrame(rafId);
       clearTimeout(t1);
     };
-  }, [symbol, bars, indicators, toggles]);
+  }, [symbol, timeframe, bars, indicators, toggles]);
 
   return (
     <div className="relative w-full h-full flex flex-col min-h-[560px]">
