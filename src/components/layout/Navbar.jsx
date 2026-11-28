@@ -8,6 +8,8 @@ import {
   User, Newspaper, Palette, LogIn, ExternalLink, Sparkles, Bot, Zap, Activity, MoreHorizontal, Wrench, BarChart3
 } from 'lucide-react'
 import { getSystemTabs } from '../../services/systemTabService'
+import ShinyText from '../react-bits/ShinyText'
+import Magnet from '../react-bits/Magnet'
 
 const NAV_ITEMS = [
   { id: 'posts', path: '/', icon: Newspaper, label: 'Tin Tức & Phân Tích' },
@@ -114,14 +116,16 @@ export default function Navbar() {
           {/* Cụm Bên Trái (Left Group): Logo + Menu điều hướng sát nhau */}
           <div className="flex items-center gap-3 xl:gap-5 flex-shrink min-w-0">
             {/* LOGO FINGREEN */}
-            <Link to="/" className="flex items-center gap-2 flex-shrink-0 group py-0.5">
-              <img
-                src={logoSrc}
-                alt="FinGreen - Kiến tạo giá trị thực"
-                fetchPriority="high"
-                className="h-10 sm:h-11 w-auto object-contain transition-transform duration-200 group-hover:scale-105 drop-shadow-sm"
-              />
-            </Link>
+            <Magnet padding={40} magnetStrength={1.5} maxOffset={5}>
+              <Link to="/" className="flex items-center gap-2 flex-shrink-0 group py-0.5">
+                <img
+                  src={logoSrc}
+                  alt="FinGreen - Kiến tạo giá trị thực"
+                  fetchPriority="high"
+                  className="h-10 sm:h-11 w-auto object-contain transition-transform duration-200 group-hover:scale-105 drop-shadow-sm"
+                />
+              </Link>
+            </Magnet>
 
             {/* Desktop Navigation Links (Progressive Disclosure - Không dùng scrollbar ngang) */}
             <div className="hidden lg:flex items-center gap-1.5 flex-shrink-0">
@@ -148,12 +152,17 @@ export default function Navbar() {
                     <item.icon className={`w-3.5 h-3.5 flex-shrink-0 ${active ? 'text-primary-400' : 'text-[var(--text-muted)]'}`} />
                     <span className="whitespace-nowrap">{item.label}</span>
                     {item.badge && (
-                      <span className={`px-1.5 py-0.2 text-[9px] font-extrabold rounded-md whitespace-nowrap ${
+                      <span className={`px-1.5 py-0.5 text-[9px] font-extrabold rounded-md whitespace-nowrap inline-flex items-center ${
                         item.isMaintenance
                           ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 animate-pulse'
                           : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                       }`}>
-                        {item.badge}
+                        <ShinyText
+                          text={item.badge}
+                          color={item.isMaintenance ? '#f59e0b' : '#34d399'}
+                          shineColor={isLight ? '#065f46' : '#ffffff'}
+                          speed={2.5}
+                        />
                       </span>
                     )}
                   </Link>
@@ -434,10 +443,11 @@ export default function Navbar() {
               </div>
             )}
 
-            {/* Mobile menu button */}
+            {/* Mobile menu button (>=44px touch target) */}
             <button
               onClick={() => setMenuOpen(o => !o)}
-              className="lg:hidden p-2 rounded-xl bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-color)]"
+              className="lg:hidden p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-[var(--bg-subtle)] text-[var(--text-muted)] hover:text-[var(--text-main)] border border-[var(--border-color)]"
+              aria-label={menuOpen ? "Đóng menu" : "Mở menu"}
             >
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -461,7 +471,7 @@ export default function Navbar() {
                   key={item.path}
                   to={item.path}
                   onClick={handleMobileClick}
-                  className={`flex items-center justify-between px-4 py-2.5 text-xs font-semibold rounded-xl transition-all ${
+                  className={`flex items-center justify-between px-4 py-3 min-h-[44px] text-xs font-semibold rounded-xl transition-all ${
                     isActive(item.path)
                       ? 'bg-primary-500/15 text-primary-400'
                       : 'text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-subtle)]'
@@ -472,12 +482,17 @@ export default function Navbar() {
                     <span>{item.label}</span>
                   </div>
                   {item.badge && (
-                    <span className={`px-1.5 py-0.2 text-[9px] font-extrabold rounded-md whitespace-nowrap ${
+                    <span className={`px-1.5 py-0.5 text-[9px] font-extrabold rounded-md whitespace-nowrap inline-flex items-center ${
                       item.isMaintenance
                         ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 animate-pulse'
                         : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                     }`}>
-                      {item.badge}
+                      <ShinyText
+                        text={item.badge}
+                        color={item.isMaintenance ? '#f59e0b' : '#34d399'}
+                        shineColor={isLight ? '#065f46' : '#ffffff'}
+                        speed={2.5}
+                      />
                     </span>
                   )}
                 </Link>

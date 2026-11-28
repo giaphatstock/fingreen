@@ -4,6 +4,9 @@ import { Search, TrendingUp, Hash, Eye, Heart, Clock, Sparkles, Filter, ChevronR
 import { Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
+import GradientText from '../components/react-bits/GradientText'
+import ShinyText from '../components/react-bits/ShinyText'
+import SpotlightCard from '../components/react-bits/SpotlightCard'
 
 const TEMPLATE_ICONS = {
   standard: '📰',
@@ -113,12 +116,24 @@ export default function NewsPage() {
     <div className="bg-mesh min-h-screen">
       {/* Hero section */}
       <div className="mb-10 text-center relative">
-        <div className="inline-flex items-center gap-2 bg-primary-500/10 border border-primary-500/20 text-primary-400 text-xs font-bold px-3.5 py-1.5 rounded-full mb-4 shadow-sm">
-          <Sparkles className="w-3.5 h-3.5" />
-          FinGreen • Kiến Tạo Giá Trị Thực
+        <div className="inline-flex items-center gap-2 bg-primary-500/10 border border-primary-500/20 px-3.5 py-1.5 rounded-full mb-4 shadow-sm">
+          <Sparkles className="w-3.5 h-3.5 text-primary-400" />
+          <ShinyText
+            text="FinGreen • Kiến Tạo Giá Trị Thực"
+            color={theme === 'light' ? '#4f46e5' : '#a8aaf8'}
+            shineColor={theme === 'light' ? '#1e1b4b' : '#ffffff'}
+            speed={2.8}
+            className="text-xs font-bold"
+          />
         </div>
-        <h1 className="text-3xl sm:text-5xl font-black text-gradient mb-3 tracking-tight">
-          Tin Tức & Phân Tích Chứng Khoán
+        <h1 className="text-3xl sm:text-5xl font-black mb-3 tracking-tight">
+          <GradientText
+            colors={theme === 'light' ? ['#3730a3', '#4f46e5', '#6366f1', '#4338ca'] : ['#818cf8', '#a78bfa', '#c084fc', '#818cf8']}
+            animationSpeed={6}
+            showBorder={false}
+          >
+            Tin Tức & Phân Tích Chứng Khoán
+          </GradientText>
         </h1>
         <p className="text-[var(--text-muted)] text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
           Cập nhật thị trường chứng khoán Việt Nam, tín hiệu kỹ thuật và góc nhìn chuyên sâu từ đội ngũ phân tích FinGreen.
@@ -256,7 +271,7 @@ export default function NewsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {posts.map(post => (
-            <PostCard key={post.id} post={post} formatDate={formatDate} defaultLogo={logoPlaceholderSrc} />
+            <PostCard key={post.id} post={post} formatDate={formatDate} defaultLogo={logoPlaceholderSrc} theme={theme} />
           ))}
         </div>
       )}
@@ -264,7 +279,8 @@ export default function NewsPage() {
   )
 }
 
-function PostCard({ post, formatDate }) {
+function PostCard({ post, formatDate, theme }) {
+  const isLight = theme === 'light'
   const author = Array.isArray(post.profiles) ? post.profiles[0] : post.profiles
   const authorName = author?.full_name || 'Bùi Gia Phát'
 
@@ -282,101 +298,110 @@ function PostCard({ post, formatDate }) {
   }
 
   return (
-    <Link to={`/bai-viet/${post.id}`} className="card-hover group flex flex-col h-full animate-fade-in overflow-hidden p-5">
-      {/* Cover image or Logo placeholder */}
-      {coverSrc ? (
-        <div className="h-44 bg-[var(--bg-subtle)] rounded-xl overflow-hidden mb-4 -mx-5 -mt-5 border-b border-[var(--border-color)] flex items-center justify-center">
-          <img
-            src={coverSrc}
-            alt={post.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            onError={(e) => {
-              e.currentTarget.onerror = null
-              e.currentTarget.src = '/logo-horizontal.png'
-              e.currentTarget.className = 'h-10 w-auto object-contain opacity-75 p-3'
-            }}
-          />
-        </div>
-      ) : (
-        <div className="h-44 bg-[var(--bg-subtle)] rounded-xl overflow-hidden mb-4 -mx-5 -mt-5 flex items-center justify-center border-b border-[var(--border-color)] p-6 group-hover:bg-[var(--bg-card-hover)] transition-colors">
-          <img
-            src="/logo-horizontal.png"
-            alt="FinGreen"
-            className="h-12 w-auto object-contain opacity-75 group-hover:opacity-100 group-hover:scale-105 transition-all"
-          />
-        </div>
-      )}
-
-      {/* Template badge & date */}
-      <div className="flex items-center justify-between mb-2.5">
-        <span className={`${TEMPLATE_COLORS[post.template]} text-[11px] font-semibold`}>
-          {TEMPLATE_ICONS[post.template]} {TEMPLATE_LABELS[post.template]}
-        </span>
-        <div className="flex items-center gap-1 text-[11px] text-[var(--text-muted)] font-medium">
-          <Clock className="w-3 h-3" />
-          {formatDate(post.published_at || post.created_at)}
-        </div>
-      </div>
-
-      {/* Title */}
-      <h3 className="font-bold text-[var(--text-main)] text-base mb-2 line-clamp-2 group-hover:text-primary-400 transition-colors leading-snug">
-        {post.title}
-      </h3>
-
-      {/* Summary */}
-      {post.summary && (
-        <p className="text-xs text-[var(--text-muted)] mb-3 line-clamp-2 leading-relaxed flex-1">
-          {post.summary}
-        </p>
-      )}
-
-      {/* Stock hashtags */}
-      {post.hashtags?.length > 0 && (
-        <div className="flex gap-1.5 flex-wrap mb-4">
-          {post.hashtags.slice(0, 4).map(tag => (
-            <span
-              key={tag}
-              className="text-[10px] bg-primary-500/10 text-primary-400 border border-primary-500/20 px-2 py-0.5 rounded-full font-bold"
-            >
-              #{tag}
-            </span>
-          ))}
-          {post.hashtags.length > 4 && (
-            <span className="text-[10px] text-[var(--text-muted)]">+{post.hashtags.length - 4}</span>
-          )}
-        </div>
-      )}
-
-      {/* Author & stats footer */}
-      <div className="flex items-center justify-between pt-3 border-t border-[var(--border-color)] mt-auto">
-        <div className="flex items-center gap-2">
-          {author?.avatar_url ? (
+    <SpotlightCard
+      theme={isLight ? 'light' : 'dark'}
+      spotlightColor={isLight ? 'rgba(99, 102, 241, 0.12)' : 'rgba(125, 127, 244, 0.18)'}
+      intensity={isLight ? 0.35 : 0.65}
+      proximity={80}
+      borderGlow={0.5}
+      className="border border-[var(--border-color)] hover:border-primary-500/40 transition-all duration-300 h-full flex flex-col group overflow-hidden"
+    >
+      <Link to={`/bai-viet/${post.id}`} className="group flex flex-col h-full p-5 relative z-10">
+        {/* Cover image or Logo placeholder */}
+        {coverSrc ? (
+          <div className="h-44 bg-[var(--bg-subtle)] rounded-xl overflow-hidden mb-4 -mx-5 -mt-5 border-b border-[var(--border-color)] flex items-center justify-center">
             <img
-              src={author.avatar_url}
-              alt={authorName}
-              className="w-6 h-6 rounded-full object-cover border border-primary-500/30"
+              src={coverSrc}
+              alt={post.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               onError={(e) => {
-                e.currentTarget.style.display = 'none'
-                if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex'
+                e.currentTarget.onerror = null
+                e.currentTarget.src = '/logo-horizontal.png'
+                e.currentTarget.className = 'h-10 w-auto object-contain opacity-75 p-3'
               }}
             />
-          ) : null}
-          <div
-            className={`w-6 h-6 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-[10px] font-bold ${
-              author?.avatar_url ? 'hidden' : 'flex'
-            }`}
-          >
-            {authorName.charAt(0)}
           </div>
-          <span className="text-xs text-[var(--text-muted)] font-medium truncate max-w-[140px]">
-            {authorName}
+        ) : (
+          <div className="h-44 bg-[var(--bg-subtle)] rounded-xl overflow-hidden mb-4 -mx-5 -mt-5 flex items-center justify-center border-b border-[var(--border-color)] p-6 group-hover:bg-[var(--bg-card-hover)] transition-colors">
+            <img
+              src="/logo-horizontal.png"
+              alt="FinGreen"
+              className="h-12 w-auto object-contain opacity-75 group-hover:opacity-100 group-hover:scale-105 transition-all"
+            />
+          </div>
+        )}
+
+        {/* Template badge & date */}
+        <div className="flex items-center justify-between mb-2.5">
+          <span className={`${TEMPLATE_COLORS[post.template]} text-[11px] font-semibold`}>
+            {TEMPLATE_ICONS[post.template]} {TEMPLATE_LABELS[post.template]}
           </span>
+          <div className="flex items-center gap-1 text-[11px] text-[var(--text-muted)] font-medium">
+            <Clock className="w-3 h-3" />
+            {formatDate(post.published_at || post.created_at)}
+          </div>
         </div>
-        <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
-          <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{post.view_count || 1}</span>
-          <span className="flex items-center gap-1"><Heart className="w-3 h-3" />{post.like_count || 0}</span>
+
+        {/* Title */}
+        <h3 className="font-bold text-[var(--text-main)] text-base mb-2 line-clamp-2 group-hover:text-primary-400 transition-colors leading-snug">
+          {post.title}
+        </h3>
+
+        {/* Summary */}
+        {post.summary && (
+          <p className="text-xs text-[var(--text-muted)] mb-3 line-clamp-2 leading-relaxed flex-1">
+            {post.summary}
+          </p>
+        )}
+
+        {/* Stock hashtags */}
+        {post.hashtags?.length > 0 && (
+          <div className="flex gap-1.5 flex-wrap mb-4">
+            {post.hashtags.slice(0, 4).map(tag => (
+              <span
+                key={tag}
+                className="text-[10px] bg-primary-500/10 text-primary-400 border border-primary-500/20 px-2 py-0.5 rounded-full font-bold"
+              >
+                #{tag}
+              </span>
+            ))}
+            {post.hashtags.length > 4 && (
+              <span className="text-[10px] text-[var(--text-muted)]">+{post.hashtags.length - 4}</span>
+            )}
+          </div>
+        )}
+
+        {/* Author & stats footer */}
+        <div className="flex items-center justify-between pt-3 border-t border-[var(--border-color)] mt-auto">
+          <div className="flex items-center gap-2">
+            {author?.avatar_url ? (
+              <img
+                src={author.avatar_url}
+                alt={authorName}
+                className="w-6 h-6 rounded-full object-cover border border-primary-500/30"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                  if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex'
+                }}
+              />
+            ) : null}
+            <div
+              className={`w-6 h-6 bg-gradient-to-br from-primary-500 to-primary-700 rounded-full flex items-center justify-center text-white text-[10px] font-bold ${
+                author?.avatar_url ? 'hidden' : 'flex'
+              }`}
+            >
+              {authorName.charAt(0)}
+            </div>
+            <span className="text-xs text-[var(--text-muted)] font-medium truncate max-w-[140px]">
+              {authorName}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 text-xs text-[var(--text-muted)]">
+            <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{post.view_count || 1}</span>
+            <span className="flex items-center gap-1"><Heart className="w-3 h-3" />{post.like_count || 0}</span>
+          </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+    </SpotlightCard>
   )
 }

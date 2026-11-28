@@ -1,8 +1,12 @@
 import React, { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import GradientText from '../components/react-bits/GradientText'
+import ShinyText from '../components/react-bits/ShinyText'
+import SpotlightCard from '../components/react-bits/SpotlightCard'
 import {
   Handshake, CheckCircle, ArrowRight, Building2, Phone, Mail,
   User, FileText, Loader2, Star, TrendingUp, Shield, Zap, LogIn
@@ -17,6 +21,8 @@ const BENEFITS = [
 
 export default function PartnerPage() {
   const { user, profile } = useAuth()
+  const { theme } = useTheme()
+  const isLight = theme === 'light'
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [form, setForm] = useState({
@@ -60,12 +66,24 @@ export default function PartnerPage() {
     <div className="max-w-4xl mx-auto">
       {/* Hero */}
       <div className="text-center mb-10">
-        <div className="inline-flex items-center gap-2 bg-primary-500/10 border border-primary-500/20 text-primary-400 text-xs font-bold px-3.5 py-1.5 rounded-full mb-4 shadow-sm">
-          <Handshake className="w-3.5 h-3.5" />
-          Chương Trình Đối Tác & Cộng Tác Viên
+        <div className="inline-flex items-center gap-2 bg-primary-500/10 border border-primary-500/20 px-3.5 py-1.5 rounded-full mb-4 shadow-sm">
+          <Handshake className="w-3.5 h-3.5 text-primary-400" />
+          <ShinyText
+            text="Chương Trình Đối Tác & Cộng Tác Viên"
+            color={isLight ? '#4f46e5' : '#a8aaf8'}
+            shineColor={isLight ? '#1e1b4b' : '#ffffff'}
+            speed={2.8}
+            className="text-xs font-bold"
+          />
         </div>
-        <h1 className="text-3xl sm:text-4xl font-black text-gradient mb-3">
-          Hợp Tác Phát Triển Cùng FinGreen
+        <h1 className="text-3xl sm:text-4xl font-black mb-3">
+          <GradientText
+            colors={isLight ? ['#3730a3', '#4f46e5', '#6366f1'] : ['#818cf8', '#a78bfa', '#c084fc']}
+            animationSpeed={6}
+            showBorder={false}
+          >
+            Hợp Tác Phát Triển Cùng FinGreen
+          </GradientText>
         </h1>
         <p className="text-[var(--text-muted)] text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
           Dành cho các chuyên gia phân tích kỹ thuật, Đối Tác IB (Broker) và Cộng Tác Viên tại các công ty chứng khoán (SSI, VPS, VNDIRECT, TCBS...). Hãy cùng FinGreen kiến tạo giá trị thực!
@@ -96,13 +114,21 @@ export default function PartnerPage() {
       {/* Benefits grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         {BENEFITS.map((b, i) => (
-          <div key={i} className="card p-5 group hover:border-primary-500/40 transition-all text-center">
+          <SpotlightCard
+            key={i}
+            theme={isLight ? 'light' : 'dark'}
+            spotlightColor={isLight ? 'rgba(99, 102, 241, 0.12)' : 'rgba(125, 127, 244, 0.18)'}
+            intensity={isLight ? 0.35 : 0.65}
+            proximity={60}
+            borderGlow={0.5}
+            className="border border-[var(--border-color)] hover:border-primary-500/40 transition-all p-5 text-center flex flex-col items-center group"
+          >
             <div className="w-10 h-10 bg-primary-500/10 rounded-xl flex items-center justify-center mx-auto mb-3 text-primary-400 group-hover:scale-110 transition-transform">
               {b.icon}
             </div>
             <h3 className="text-sm font-bold mb-1.5">{b.title}</h3>
             <p className="text-xs text-[var(--text-muted)] leading-relaxed">{b.desc}</p>
-          </div>
+          </SpotlightCard>
         ))}
       </div>
 
@@ -256,7 +282,7 @@ export default function PartnerPage() {
               />
             </div>
 
-            <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2 text-sm">
+            <button type="submit" disabled={loading} className="btn-primary w-full min-h-[46px] flex items-center justify-center gap-2 text-sm shadow-lg shadow-primary-500/25">
               {loading ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Đang gửi hồ sơ...</>
               ) : (

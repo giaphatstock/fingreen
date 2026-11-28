@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme } from '../../contexts/ThemeContext'
 import Navbar from './Navbar'
+import ClickSpark from '../react-bits/ClickSpark'
 import { TrendingUp, ShieldCheck, Award, Heart } from 'lucide-react'
 
 // Lazy-load floating AI robot để không kéo dnseService + aiService (~98 kB) vào initial bundle
@@ -26,9 +27,23 @@ export default function Layout({ children }) {
       <Navbar />
       
       <main className={`flex-1 ${profile?.is_banned ? 'pt-24' : 'pt-14 sm:pt-16'} ${isWideLayout ? 'overflow-hidden flex flex-col' : ''}`}>
-        <div className={`${isWideLayout ? 'w-full px-1 sm:px-2 py-1 flex-1 flex flex-col overflow-hidden' : 'max-w-7xl px-4 py-8'} mx-auto`}>
-          {children}
-        </div>
+        {!isWideLayout ? (
+          <ClickSpark
+            sparkColor={isLight ? '#5154F0' : '#8587F4'}
+            sparkSize={7}
+            sparkRadius={14}
+            sparkCount={6}
+            duration={320}
+          >
+            <div className="max-w-7xl px-4 py-8 mx-auto">
+              {children}
+            </div>
+          </ClickSpark>
+        ) : (
+          <div className="w-full px-1 sm:px-2 py-1 flex-1 flex flex-col overflow-hidden mx-auto">
+            {children}
+          </div>
+        )}
       </main>
 
       {/* Footer FinGreen (Ẩn trên Bảng Điện để loại bỏ 2 thanh cuộn) */}

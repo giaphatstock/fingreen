@@ -11,6 +11,9 @@ import IndicatorSettingsModal from '../components/chart/IndicatorSettingsModal';
 import ExpiredLicenseModal from '../components/chart/ExpiredLicenseModal';
 import DisclaimerModal from '../components/chart/DisclaimerModal';
 import TradingViewClassicWidget from '../components/chart/TradingViewClassicWidget';
+import ShinyText from '../components/react-bits/ShinyText';
+import BorderGlow from '../components/react-bits/BorderGlow';
+import DotGrid from '../components/react-bits/DotGrid';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchStockCandles, POPULAR_STOCKS } from '../services/stockPriceService';
@@ -366,27 +369,43 @@ export default function GreenSmartOnePage() {
   }, [timeframe, assetMode]);
 
   return (
-    <div className="min-h-screen pb-16 bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-200">
-      {/* Top Banner */}
-      <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 text-white px-4 py-2 text-xs font-semibold shadow-md">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="p-1 rounded-md bg-white/20">
-              <Zap className="w-3.5 h-3.5 animate-pulse" />
-            </span>
-            <span>
-              <strong>GreenSmartOne SmartAdaptive Engine</strong>: Đã tích hợp chỉ báo Pine Script v5 độc quyền lên biểu đồ thời gian thực.
-            </span>
-          </div>
-          <div className="hidden sm:flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-full bg-white/20 text-[10px] font-bold">
-              AI 7-SENS ADAPTIVE
-            </span>
-          </div>
-        </div>
+    <div className="min-h-screen pb-16 bg-[var(--bg-main)] text-[var(--text-main)] transition-colors duration-200 relative overflow-x-hidden">
+      {/* Interactive Ambient DotGrid Background */}
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-20">
+        <DotGrid
+          dotSize={2}
+          gap={32}
+          baseColor={theme === 'light' ? '#818cf8' : '#24294d'}
+          activeColor={theme === 'light' ? '#4f46e5' : '#10b981'}
+          glow={1}
+          mouseInteraction={true}
+        />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 space-y-4">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-4 space-y-4">
+        {/* Top Banner (Cyber-Glass Modern) */}
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/80 via-[#0a1c18]/90 to-teal-950/80 p-3.5 shadow-xl backdrop-blur-md">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative z-10">
+            <div className="flex items-center gap-2.5">
+              <span className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm shadow-emerald-500/20">
+                <Zap className="w-4 h-4 animate-pulse" />
+              </span>
+              <span className="text-xs sm:text-sm font-semibold text-emerald-100">
+                <strong className="text-emerald-300 font-extrabold">GreenSmartOne SmartAdaptive Engine</strong>: Đã tích hợp chỉ báo Pine Script v5 độc quyền lên biểu đồ thời gian thực.
+              </span>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black tracking-wider uppercase shadow-sm">
+                <ShinyText
+                  text="AI 7-SENS ADAPTIVE"
+                  color="#34d399"
+                  shineColor="#ffffff"
+                  speed={2.2}
+                />
+              </span>
+            </div>
+          </div>
+        </div>
 
         {/* ══ Chuyển đổi chế độ tài sản: Chứng khoán VN / Tài sản số ══ */}
         <div className="flex items-center gap-2 p-1 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] w-fit shadow-md">
@@ -444,8 +463,19 @@ export default function GreenSmartOnePage() {
           </div>
         )}
 
-        {/* ══ Header Toolbar ══ */}
-        <div className="rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-3 sm:p-4 shadow-xl">
+        {/* ══ Header Toolbar (Neon BorderGlow) ══ */}
+        <BorderGlow
+          animated={true}
+          borderRadius={16}
+          glowColor="160 84 60"
+          colors={['#10b981', '#06b6d4', '#6366f1']}
+          glowRadius={22}
+          glowIntensity={0.85}
+          fillOpacity={0.12}
+          className="shadow-2xl"
+          backgroundColor="var(--bg-card)"
+        >
+          <div className="p-3 sm:p-4">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             {/* Cụm Bên Trái */}
             <div className="flex flex-wrap items-center gap-3">
@@ -672,6 +702,7 @@ export default function GreenSmartOnePage() {
             </div>
           </div>
         </div>
+      </BorderGlow>
 
         {/* ══ Crypto info strip (chỉ hiện khi crypto mode) ══ */}
         {assetMode === 'crypto' && cryptoTicker && (

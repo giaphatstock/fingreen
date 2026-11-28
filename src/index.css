@@ -37,6 +37,13 @@
   --text-main: #f3f4f6;
   --text-muted: #9ca3af;
   --nav-bg: rgba(10, 11, 22, 0.92);
+
+  /* React-Bits & Motion Tokens */
+  --glow-color: 239 84% 67%;
+  --spotlight-color: #7D7FF4;
+  --shiny-shine: #ffffff;
+  --shiny-base: #a8aaf8;
+  --spark-color: #7D7FF4;
 }
 
 html.theme-dark {
@@ -50,6 +57,13 @@ html.theme-dark {
   --text-main: #ffffff;
   --text-muted: #9aa0a6;
   --nav-bg: rgba(0, 0, 0, 0.94);
+
+  /* React-Bits & Motion Tokens */
+  --glow-color: 239 84% 72%;
+  --spotlight-color: #8587F4;
+  --shiny-shine: #ffffff;
+  --shiny-base: #bbbdfd;
+  --spark-color: #8587F4;
 }
 
 html.theme-light {
@@ -63,6 +77,13 @@ html.theme-light {
   --text-main: #1d182b;
   --text-muted: #6a627a;
   --nav-bg: rgba(243, 236, 251, 0.94);
+
+  /* React-Bits & Motion Tokens (Calibrated for Light #F3ECFB) */
+  --glow-color: 243 75% 58%;
+  --spotlight-color: #6366F1;
+  --shiny-shine: #312E81;
+  --shiny-base: #4F46E5;
+  --spark-color: #5154F0;
 }
 
 @layer base {
@@ -75,6 +96,15 @@ html.theme-light {
     color: var(--text-main);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     transition: background-color 0.25s ease, color 0.25s ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 
   ::-webkit-scrollbar {

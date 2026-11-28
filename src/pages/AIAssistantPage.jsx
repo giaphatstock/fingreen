@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
+import GradientText from '../components/react-bits/GradientText'
+import ShinyText from '../components/react-bits/ShinyText'
 import {
   Bot, Send, Sparkles, TrendingUp, Building2, Shield,
   Trash2, Loader2, ChevronRight, CheckCircle2
@@ -25,6 +28,8 @@ Tôi có thể giúp bạn phân tích mã cổ phiếu, báo cáo tài chính, 
 
 export default function AIAssistantPage() {
   const { user } = useAuth()
+  const { theme } = useTheme()
+  const isLight = theme === 'light'
   
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem('fingreen_ai_history_v2')
@@ -139,12 +144,23 @@ export default function AIAssistantPage() {
             <Bot className="w-7 h-7 text-cyan-300" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-black text-[var(--text-main)]">
-                FinGreen AI Workspace
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-black">
+                <GradientText
+                  colors={isLight ? ['#3730a3', '#4f46e5', '#6366f1'] : ['#818cf8', '#a78bfa', '#c084fc']}
+                  animationSpeed={6}
+                  showBorder={false}
+                >
+                  FinGreen AI Workspace
+                </GradientText>
               </h1>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                AI Chuyên Gia
+                <ShinyText
+                  text="AI Chuyên Gia"
+                  color="#34d399"
+                  shineColor={isLight ? '#065f46' : '#ffffff'}
+                  speed={2.5}
+                />
               </span>
             </div>
             <p className="text-xs sm:text-sm text-[var(--text-muted)] mt-1">
@@ -213,8 +229,13 @@ export default function AIAssistantPage() {
                 Trợ Lý FinGreen AI
               </span>
             </div>
-            <div className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-              ● Trực Tuyến
+            <div className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20 inline-flex items-center">
+              <ShinyText
+                text="● Trực Tuyến"
+                color="#34d399"
+                shineColor={isLight ? '#065f46' : '#ffffff'}
+                speed={2.2}
+              />
             </div>
           </div>
 
@@ -307,7 +328,7 @@ export default function AIAssistantPage() {
                 <button
                   type="submit"
                   disabled={loading || !input.trim()}
-                  className="btn-primary py-3 px-5 text-xs sm:text-sm font-bold rounded-xl flex items-center gap-1.5 flex-shrink-0"
+                  className="btn-primary min-w-[44px] min-h-[44px] py-2.5 px-5 text-xs sm:text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 flex-shrink-0"
                 >
                   <span>Gửi</span>
                   <Send className="w-4 h-4" />
